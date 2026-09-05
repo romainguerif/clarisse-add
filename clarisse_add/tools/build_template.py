@@ -101,6 +101,7 @@ def run(payload=None):
     with scene.command_batch("ClarisseAdd - Scene de depart"):
         report = _build(ix, name, parent, settings)
 
+    _verify(ix, report)
     _report(ix, report, settings)
     return True
 
@@ -110,7 +111,7 @@ def run(payload=None):
 
 def _build(ix, name, parent, settings):
     report = {"created": [], "wired": [], "failed": [], "notes": [],
-              "unverified": [], "attrs": {}, "image": None}
+              "unverified": [], "pending": [], "attrs": {}, "image": None}
     made = {}
 
     ctx = scene.ensure_context(name, parent)
@@ -162,17 +163,18 @@ def _build(ix, name, parent, settings):
             return False
 
         if not simple:
-            # Chemin compose : pas de relecture possible par get_attribute.
-            # On ne peut donc pas certifier, et on le dit plutot que de faire
-            # semblant.
+            # Chemin compose : get_attribute ne sait pas le relire, donc pas de
+            # verification possible. On le dit au lieu de faire semblant.
             report["unverified"].append("%s.%s" % (target.get_name(), attribute))
             return True
 
-        if not _written(target, attribute, vals[0]):
-            report["failed"].append("%s.%s : ecriture refusee (valeur inchangee)"
-                                    % (target.get_name(), attribute))
-            report["attrs"][target.get_name()] = _attributes(target)
-            return False
+        # On ne relit PAS maintenant. Dans un command batch, Clarisse differe
+        # l'execution des commandes -- le SDK est explicite la-dessus : "there's
+        # a good chance it is delayed". Relire ici renverrait l'ancienne valeur
+        # et ferait passer pour un echec toute ecriture parfaitement valide.
+        # La verification a lieu apres la fermeture du batch, dans _verify().
+        report["pending"].append((target, attribute, str(vals[0]),
+                                  "%s.%s" % (target.get_name(), attribute)))
         return True
 
     # -- les cinq objets de la scene de demarrage --------------------------
@@ -391,6 +393,30 @@ def _assembly(ix, name, ctx, report, made):
 
 
 # ---------------------------------------------------------------------------
+
+
+def _verify(ix, report):
+    """Relit toutes les ecritures, une fois le batch ferme.
+
+    Clarisse differe l'execution des commandes lancees depuis un script, et
+    davantage encore a l'interieur d'un batch. `check_for_events` force le
+    traitement de ce qui est en attente ; sans lui, la relecture porte sur
+    l'etat d'avant.
+    """
+    if not report.get("pending"):
+        return
+    try:
+        ix.application.check_for_events()
+    except Exception:
+        log.debug("check_for_events indisponible avant verification")
+
+    for target, attribute, expected, label in report["pending"]:
+        if _written(target, attribute, expected):
+            report["wired"].append(label)
+        else:
+            report["failed"].append("%s : ecriture sans effet" % label)
+            report["attrs"][target.get_name()] = _attributes(target)
+    report["pending"] = []
 
 
 def _written(target, attribute, expected):
