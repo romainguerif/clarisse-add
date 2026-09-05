@@ -1,0 +1,1402 @@
+#Isotropix_Serial_Version 1.1
+
+#Isotropix_Clarisse_Version 3.5
+#Isotropix_Clarisse_Project_Version 0.94
+Context "Scene_Noise_OSL" {
+    #created 1455809270
+    GeometrySphere {
+        name "sphere"
+        #version 0.9
+        #created 1520196175
+        #modified 1520196182
+        uv_maps "parametric"
+        uv_maps_loaded yes
+        shading_groups "surface"
+        materials "matte"
+        clip_maps ""
+        displacements ""
+        sg_shading_variables ""
+        visibles yes
+    }
+    MaterialMatte {
+        name "matte"
+        #version 0.91
+        #created 1520196180
+        #modified 1520200609
+        color {
+            value 0.0 0.0 0.0
+            texture "OSL/Alligator_Noise_OSL"
+        }
+    }
+    Context "OSL" {
+        #created 1520200586
+        TextureOslScript {
+            name "Simplex_Noise_OSL"
+            #version 0.92
+            #created 1520194099
+            #modified 1520197059
+            positions "project://Scene_Noise_OSL/OSL" 0 0
+            projection 6
+            OSL_shader_script "/// 3D Simplex noise implementation.\n/// Returned values are in the [0, 1] range.\nfloat simplexNoise3D(point position) {\n    int perm[512] = {\n        151,160,137,91,90,15,\n        131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,\n        190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,\n        88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,\n        77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,\n        102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,\n        135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,\n        5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,\n        223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,\n        129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,\n        251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,\n        49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,\n        138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180,\n        151,160,137,91,90,15,\n        131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,\n        190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,\n        88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,\n        77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,\n        102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,\n        135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,\n        5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,\n        223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,\n        129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,\n        251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,\n        49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,\n        138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180\n    };\n     \n    vector gradient[16] = {\n        vector( 1.0,  1.0,  0.0),\n        vector(-1.0,  1.0,  0.0),\n        vector( 1.0, -1.0,  0.0),\n        vector(-1.0, -1.0,  0.0),\n        vector( 1.0,  0.0,  1.0),\n        vector(-1.0,  0.0,  1.0),\n        vector( 1.0,  0.0, -1.0),\n        vector(-1.0,  0.0, -1.0),\n        vector( 0.0,  1.0,  1.0),\n        vector( 0.0, -1.0,  1.0),\n        vector( 0.0,  1.0, -1.0),\n        vector( 0.0, -1.0, -1.0),\n        vector( 1.0,  1.0,  0.0),\n        vector( 0.0, -1.0,  1.0),\n        vector(-1.0,  1.0,  0.0),\n        vector( 0.0, -1.0, -1.0)\n    };\n     \n    float evaluatePointContribution(int i, int j, int k, vector offset) {\n        float t = 0.6 - dot(offset, offset);\n        if (t < 0.0) {\n            return 0.0;\n        }\n         \n        float t2 = t * t;\n        float t4 = t2 * t2;\n         \n        int gradientIndex = perm[i + perm[j + perm[k]]];\n        int safeGradientIndex = gradientIndex % 16;\n         \n        return t4 * dot(gradient[safeGradientIndex], offset);\n    }\n     \n    // Skewing factors for the 3D simplex grid.\n    float F3 = 0.333333333;\n    float G3 = 0.166666667;\n    float G3a = 2.0 * G3;\n    float G3b = 3.0 * G3 - 1.0;\n \n    // Skew the input space to determine the simplex cell we are in.\n    float skew = (position[0] + position[1] + position[2]) * F3;\n    point skewedPosition = position + skew;\n    point skewedCellOrigin = floor(skewedPosition);\n \n    // Unskew the cell origin\n    float unskew = (skewedCellOrigin[0] + skewedCellOrigin[1] + skewedCellOrigin[2]) * G3;\n    point cellOrigin = skewedCellOrigin - unskew;\n     \n    // The offset from the cell\'s origin a.k.a point 0\n    vector offset0 = position - cellOrigin;\n \n    // The second point offset from the cell origin in skewed space.\n    vector skewedOffset1;\n    // The third point offset from the cell origin in skewed space.\n    vector skewedOffset2;\n \n    if (offset0[0] >= offset0[1]) {\n        if (offset0[1] >= offset0[2]) {\n            // X Y Z order\n            skewedOffset1 = vector(1, 0, 0);\n            skewedOffset2 = vector(1, 1, 0);\n        } else if (offset0[0] >= offset0[2]) {\n            // X Z Y order\n            skewedOffset1 = vector(1, 0, 0);\n            skewedOffset2 = vector(1, 0, 1);\n        } else {\n            // Z X Y order\n            skewedOffset1 = vector(0, 0, 1);\n            skewedOffset2 = vector(1, 0, 1);\n        }\n    } else {\n        if (offset0[1] < offset0[2]) {\n            // Z Y X order\n            skewedOffset1 = vector(0, 0, 1);\n            skewedOffset2 = vector(0, 1, 1);\n        } else if (offset0[0] < offset0[2]) {\n            // Y Z X order\n            skewedOffset1 = vector(0, 1, 0);\n            skewedOffset2 = vector(0, 1, 1);\n        } else {\n            // Y X Z order\n            skewedOffset1 = vector(0, 1, 0);\n            skewedOffset2 = vector(1, 1, 0);\n        }\n    }\n \n    // A step of (1, 0, 0) in skewed space means a step of (1 - G3, -G3, -G3) in regular space.\n    // A step of (0, 1, 0) in skewed space means a step of (-G3, 1 - G3, -G3) in regular space.\n    // A step of (0, 0, 1) in skewed space means a step of (-G3, -G3, 1 - G3) in regular space.\n \n    // The offset from point 1 in regular space.\n    vector offset1 = offset0 - skewedOffset1 + G3;\n     \n    // The offset from point 2 in regular space.\n    vector offset2 = offset0 - skewedOffset2 + G3a;\n \n    // The offset from point 3 in regular space.\n    vector offset3 = offset0 + G3b;\n \n    // Wrap the integer indices at 256, to avoid indexing perm[] out of bounds.\n    int i = int(skewedCellOrigin[0]) & 255;\n    int j = int(skewedCellOrigin[1]) & 255;\n    int k = int(skewedCellOrigin[2]) & 255;\n \n    // Accumulate the contributions from the four points.\n    float noiseValue = 0.0;\n    noiseValue += evaluatePointContribution(i, j, k, offset0);\n    noiseValue += evaluatePointContribution(i + int(skewedOffset1[0]), j + int(skewedOffset1[1]), k + int(skewedOffset1[2]), offset1);\n    noiseValue += evaluatePointContribution(i + int(skewedOffset2[0]), j + int(skewedOffset2[1]), k + int(skewedOffset2[2]), offset2);\n    noiseValue += evaluatePointContribution(i + 1, j + 1, k + 1, offset3);\n \n    // Scale to the [-1,1] range.\n    noiseValue *= 32.0;\n     \n    // Scale to the [0, 1] range.\n    return 0.5 * noiseValue + 0.5;\n}\n \n/// 3D Fractal Simplex noise implementation.\n/// Returned values are in the [-1, 1] range.\nfloat fractalSimplexNoise3D(\n    point position,\n    float lacunarity,\n    float gain,\n    int octaveCount\n) {\n    float noiseValue = 0.0;\n     \n    float amplitude = 1.0;\n     \n    for (int octave = 0; octave < octaveCount; ++octave) {\n        noiseValue += amplitude * (simplexNoise3D(position) - 0.5);\n        position *= lacunarity;\n        amplitude *= gain;\n    }\n     \n    return noiseValue;\n}\n \nshader FractalSimplexNoise\n    [[ string description = \"Fractal Simplex noise\" ]]\n(\n    float start_frequency = 1.0\n        [[ string description = \"Initial sampling position multiplier that affects the overall granularity.\" ]],\n    vector start_offset = vector(0.0)\n        [[ string description = \"Offsets the initial sampling position effectively shifting the pattern in the specified direction.\" ]],\n         \n    float lacunarity = 2.0\n        [[ string description = \"Position (frequency) multiplier per iteration.\" ]],\n    float gain = 0.5\n        [[ string description = \"Amplitude multiplier per iteration.\" ]],\n    int octaves = 8\n        [[ string description = \"Number of fractal iterations.\" ]],\n     \n    float attenuation = 1.0\n        [[ string description = \"The power of the falloff applied to the final result.\" ]],\n         \n    output color result = 0.0\n) {\n    point objectPosition = transform(\"object\", P);\n    point startPosition = start_frequency * objectPosition - start_offset;\n     \n    float noiseValue = fractalSimplexNoise3D(startPosition, lacunarity, gain, octaves);\n     \n    noiseValue = 0.5 * noiseValue + 0.5;\n    noiseValue = pow(noiseValue, attenuation);\n     \n    result = color(noiseValue);\n}"
+            custom_attributes {
+                attribute_group "output" {
+                    string "OSL_output_name" {
+                        doc "Select shader output to fill texture RGB color."
+                        allow_expression no
+                        preset "result" "result"
+                        value "result"
+                    }
+                }
+                attribute_group "input" {
+                    double "OSL_start_frequency" {
+                        doc "start_frequency"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 4
+                    }
+                    double[3] "OSL_start_offset" {
+                        doc "start_offset"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.5 0.0 0.0
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 2
+                        }
+                    }
+                    double "OSL_lacunarity" {
+                        doc "lacunarity"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 1.5
+                    }
+                    double "OSL_gain" {
+                        doc "gain"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.65
+                    }
+                    long "OSL_octaves" {
+                        doc "octaves"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 8
+                    }
+                    double "OSL_attenuation" {
+                        doc "attenuation"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 2.5
+                    }
+                }
+            }
+        }
+        TextureOslScript {
+            name "Alligator_Noise_OSL"
+            #version 0.92
+            #created 1520194177
+            #modified 1520196738
+            positions "project://Scene_Noise_OSL/OSL" 0 0
+            projection 6
+            OSL_shader_script "/*\n * Copyright (c) 2016\n *  Side Effects Software Inc.  All rights reserved.\n *\n * Redistribution and use of Houdini Development Kit samples in source and\n * binary forms, with or without modification, are permitted provided that the\n * following conditions are met:\n * 1. Redistributions of source code must retain the above copyright notice,\n *    this list of conditions and the following disclaimer.\n * 2. The name of Side Effects Software may not be used to endorse or\n *    promote products derived from this software without specific prior\n *    written permission.\n *\n * THIS SOFTWARE IS PROVIDED BY SIDE EFFECTS SOFTWARE `AS IS\' AND ANY EXPRESS\n * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES\n * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN\n * NO EVENT SHALL SIDE EFFECTS SOFTWARE BE LIABLE FOR ANY DIRECT, INDIRECT,\n * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT\n * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,\n * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF\n * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING\n * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,\n * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n *\n *----------------------------------------------------------------------------\n */\n  \n/// Alligator Noise is provided by Side Effects Software Inc. and is licensed\n/// under a Creative Commons Attribution-ShareAlike 4.0 International License.\n///\n/// Author:  \"Side Effects Software Inc\"\n/// Source:  \"http://www.sidefx.com/docs/hdk15.0/alligator_2alligator_8_c-example.html\"\n/// License: \"http://creativecommons.org/licenses/by-sa/4.0/\"\n///\n/// Translated and modified by Ivan Mavrov, Chaos Group Ltd. 2016\n/// Contact: ivan.mavrov@chaosgroup.com\n \n/// 3D Alligator noise implementation.\n/// Returned values are in the [0, 1] range.\nfloat alligatorNoise3D(point position) {\n    vector cellOffsets[27] = {\n        vector( 0,  0,  0),\n        vector( 1,  0,  0),\n        vector( 1,  1,  0),\n        vector( 0,  1,  0),\n        vector(-1,  1,  0),\n        vector(-1,  0,  0),\n        vector(-1, -1,  0),\n        vector( 0, -1,  0),\n        vector( 1, -1,  0),\n         \n        vector( 0,  0, -1),\n        vector( 1,  0, -1),\n        vector( 1,  1, -1),\n        vector( 0,  1, -1),\n        vector(-1,  1, -1),\n        vector(-1,  0, -1),\n        vector(-1, -1, -1),\n        vector( 0, -1, -1),\n        vector( 1, -1, -1),\n \n        vector( 0,  0,  1),\n        vector( 1,  0,  1),\n        vector( 1,  1,  1),\n        vector( 0,  1,  1),\n        vector(-1,  1,  1),\n        vector(-1,  0,  1),\n        vector(-1, -1,  1),\n        vector( 0, -1,  1),\n        vector( 1, -1,  1)\n    };\n \n    point iPosition = floor(position);\n \n    float firstReverseSmoothPointDistance = 0.0;\n    float secondReverseSmoothPointDistance = 0.0;\n     \n    for (int cellIndex = 0; cellIndex < 27; ++cellIndex) {\n        point cellOrigin = iPosition + cellOffsets[cellIndex];\n        vector cellPointOffset = cellnoise(cellOrigin, 0.0);\n        point cellPointPosition = cellOrigin + cellPointOffset;\n \n        float cellPointDistance = distance(position, cellPointPosition);\n         \n        if (cellPointDistance < 1.0) {\n            float reverseSmoothDistance = smoothstep(0.0, 1.0, 1.0 - cellPointDistance);\n             \n            float distanceMultiplier = float(cellnoise(cellOrigin, 1.0));\n            reverseSmoothDistance *= distanceMultiplier;\n             \n            if (firstReverseSmoothPointDistance < reverseSmoothDistance) {\n                secondReverseSmoothPointDistance = firstReverseSmoothPointDistance;\n                firstReverseSmoothPointDistance = reverseSmoothDistance;\n            } else {\n                if (secondReverseSmoothPointDistance < reverseSmoothDistance) {\n                    secondReverseSmoothPointDistance = reverseSmoothDistance;\n                }\n            }\n        }\n    }\n \n    return firstReverseSmoothPointDistance - secondReverseSmoothPointDistance;\n}\n \n/// 3D Fractal Alligator noise implementation.\n/// Returned values are in the [-1, 1] range.\nfloat fractalAlligatorNoise3D(\n    point position,\n    float lacunarity, // Houdini 2.0\n    float gain,       // Houdini rough\n    int octaveCount   // Houdini turbulence - 1\n) {\n    float noiseValue = 0.0;\n     \n    float amplitude = 1.0;\n \n    for (int octave = 0; octave < octaveCount; ++octave) {\n        noiseValue += amplitude * (alligatorNoise3D(position) - 0.5);      \n        position *= lacunarity;\n        amplitude *= gain;\n    }\n     \n    return noiseValue;\n}\n \nshader FractalAlligatorNoise\n    [[ string description = \"Fractal Alligator noise\" ]]\n(\n    float start_frequency = 1.0\n        [[ string description = \"Initial sampling position multiplier that affects the overall granularity.\" ]],\n    vector start_offset = vector(0.0)\n        [[ string description = \"Offsets the initial sampling position effectively shifting the pattern in the specified direction.\" ]],\n         \n    float lacunarity = 2.0\n        [[ string description = \"Position (frequency) multiplier per iteration.\" ]],\n    float gain = 0.5\n        [[ string description = \"Amplitude multiplier per iteration.\" ]],\n    int octaves = 8\n        [[ string description = \"Number of fractal iterations.\" ]],\n     \n    float attenuation = 1.0\n        [[ string description = \"The power of the falloff applied to the final result.\" ]],\n     \n    output color result = 0.0\n) {\n    point objectPosition = transform(\"object\", P);\n    point startPosition = start_frequency * objectPosition - start_offset;\n     \n    float noiseValue = fractalAlligatorNoise3D(startPosition, lacunarity, gain, octaves);\n     \n    noiseValue = 0.5 * noiseValue + 0.5;\n    noiseValue = pow(noiseValue, attenuation);\n     \n    result = color(noiseValue);\n}"
+            custom_attributes {
+                attribute_group "output" {
+                    string "OSL_output_name" {
+                        doc "Select shader output to fill texture RGB color."
+                        allow_expression no
+                        preset "result" "result"
+                        value "result"
+                    }
+                }
+                attribute_group "input" {
+                    double "OSL_start_frequency" {
+                        doc "start_frequency"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 10.5
+                    }
+                    double[3] "OSL_start_offset" {
+                        doc "start_offset"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.0 0.0 0.0
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 2
+                        }
+                    }
+                    double "OSL_lacunarity" {
+                        doc "lacunarity"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 2
+                    }
+                    double "OSL_gain" {
+                        doc "gain"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.5
+                    }
+                    long "OSL_octaves" {
+                        doc "octaves"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 8
+                    }
+                    double "OSL_attenuation" {
+                        doc "attenuation"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 1
+                    }
+                }
+            }
+        }
+        TextureOslScript {
+            name "Simplex_Flow_Noise_OSL"
+            #version 0.92
+            #created 1520194406
+            #modified 1520197261
+            positions "project://Scene_Noise_OSL/OSL" 0 0
+            projection 6
+            OSL_shader_script "/// Oiginal notice:\n \n/*\n * srdnoise23, Simplex noise with rotating gradients\n * and a true analytic derivative in 2D and 3D.\n *\n * This is version 2 of srdnoise23 written in early 2008.\n * A stupid bug was corrected. Do not use earlier versions.\n *\n * Author: Stefan Gustavson, 2003-2008\n *\n * Contact: stefan.gustavson@gmail.com\n *\n * This code was GPL licensed until February 2011.\n * As the original author of this code, I hereby\n * release it into the public domain.\n * Please feel free to use it for whatever you want.\n * Credit is appreciated where appropriate, and I also\n * appreciate being told where this code finds any use,\n * but you may do as you like.\n */\n  \n/// Translated and modified by Ivan Mavrov, Chaos Group Ltd. 2016\n/// Contact: ivan.mavrov@chaosgroup.com\n \n/// 3D Simplex flow noise implementation.\n/// Returned values are in the [0, 1] range.\nfloat simplexFlowNoise3D(point position, float flow, output vector dNoise) {\n    int perm[512] = {\n        151,160,137,91,90,15,\n        131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,\n        190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,\n        88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,\n        77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,\n        102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,\n        135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,\n        5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,\n        223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,\n        129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,\n        251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,\n        49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,\n        138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180,\n        151,160,137,91,90,15,\n        131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,\n        190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,\n        88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,\n        77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,\n        102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,\n        135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,\n        5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,\n        223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,\n        129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,\n        251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,\n        49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,\n        138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180\n    };\n     \n    // Gradient component that leads to a vector of length sqrt(2).\n    // float a = sqrt(2)/sqrt(3);\n    float a = 0.81649658;\n     \n    vector gradientUBase[16] = {\n        vector( 1.0,  0.0,  1.0), vector( 0.0,  1.0,  1.0),\n        vector(-1.0,  0.0,  1.0), vector( 0.0, -1.0,  1.0),\n        vector( 1.0,  0.0, -1.0), vector( 0.0,  1.0, -1.0),\n        vector(-1.0,  0.0, -1.0), vector( 0.0, -1.0, -1.0),\n        vector( a,  a,  a), vector(-a,  a, -a),\n        vector(-a, -a,  a), vector( a, -a, -a),\n        vector(-a,  a,  a), vector( a, -a,  a),\n        vector( a, -a, -a), vector(-a,  a, -a)\n    };\n \n    vector gradientVBase[16] = {\n        vector(-a,  a,  a), vector(-a, -a,  a),\n        vector( a, -a,  a), vector( a,  a,  a),\n        vector(-a, -a, -a), vector( a, -a, -a),\n        vector( a,  a, -a), vector(-a,  a, -a),\n        vector( 1.0, -1.0,  0.0), vector( 1.0,  1.0,  0.0),\n        vector(-1.0,  1.0,  0.0), vector(-1.0, -1.0,  0.0),\n        vector( 1.0,  0.0,  1.0), vector(-1.0,  0.0,  1.0),\n        vector( 0.0,  1.0, -1.0), vector( 0.0, -1.0, -1.0)\n    };\n     \n    // Helper function to compute the rotated gradient.\n    vector getGradient(int index, float sinTheta, float cosTheta) {\n        int safeIndex = index % 16;\n        vector gradientU = gradientUBase[safeIndex];\n        vector gradientV = gradientVBase[safeIndex];\n        return cosTheta * gradientU + sinTheta * gradientV;\n    }\n     \n    // Skewing factors for the 3D simplex grid.\n    // float F3 = 1.0 / 3.0;\n    // float G3 = 1.0 / 6.0;\n    float F3 = 0.333333333;\n    float G3 = 0.166666667;\n    float G3a = 2.0 * G3;\n    float G3b = 3.0 * G3 - 1.0;\n \n    // Skew the input space to determine the simplex cell we are in.\n    float skew = (position[0] + position[1] + position[2]) * F3;\n    point skewedPosition = position + skew;\n    point skewedCellOrigin = floor(skewedPosition);\n \n    // Unskew the cell origin\n    float unskew = (skewedCellOrigin[0] + skewedCellOrigin[1] + skewedCellOrigin[2]) * G3;\n    point cellOrigin = skewedCellOrigin - unskew;\n     \n    // The offset from the cell\'s origin a.k.a point 0\n    vector offset0 = position - cellOrigin;\n \n    // The second point offset from the cell origin in skewed space.\n    vector skewedOffset1;\n    // The third point offset from the cell origin in skewed space.\n    vector skewedOffset2;\n \n    if (offset0[0] >= offset0[1]) {\n        if (offset0[1] >= offset0[2]) {\n            // X Y Z order\n            skewedOffset1 = vector(1, 0, 0);\n            skewedOffset2 = vector(1, 1, 0);\n        } else if (offset0[0] >= offset0[2]) {\n            // X Z Y order\n            skewedOffset1 = vector(1, 0, 0);\n            skewedOffset2 = vector(1, 0, 1);\n        } else {\n            // Z X Y order\n            skewedOffset1 = vector(0, 0, 1);\n            skewedOffset2 = vector(1, 0, 1);\n        }\n    } else {\n        if (offset0[1] < offset0[2]) {\n            // Z Y X order\n            skewedOffset1 = vector(0, 0, 1);\n            skewedOffset2 = vector(0, 1, 1);\n        } else if (offset0[0] < offset0[2]) {\n            // Y Z X order\n            skewedOffset1 = vector(0, 1, 0);\n            skewedOffset2 = vector(0, 1, 1);\n        } else {\n            // Y X Z order\n            skewedOffset1 = vector(0, 1, 0);\n            skewedOffset2 = vector(1, 1, 0);\n        }\n    }\n \n    // A step of (1, 0, 0) in skewed space means a step of (1 - G3, -G3, -G3) in regular space.\n    // A step of (0, 1, 0) in skewed space means a step of (-G3, 1 - G3, -G3) in regular space.\n    // A step of (0, 0, 1) in skewed space means a step of (-G3, -G3, 1 - G3) in regular space.\n \n    // The offset from point 1 in regular space.\n    vector offset1 = offset0 - skewedOffset1 + G3;\n     \n    // The offset from point 2 in regular space.\n    vector offset2 = offset0 - skewedOffset2 + G3a;\n \n    // The offset from point 3 in regular space.\n    vector offset3 = offset0 + G3b;\n \n    // Wrap the integer indices at 256, to avoid indexing perm[] out of bounds.\n    int i = int(skewedCellOrigin[0]) & 255;\n    int j = int(skewedCellOrigin[1]) & 255;\n    int k = int(skewedCellOrigin[2]) & 255;\n     \n    // Sine and cosine for the gradient rotation angle.\n    float sinTheta = 0.0;\n    float cosTheta = 0.0;\n    sincos(M_2PI * flow, sinTheta, cosTheta);\n     \n    // Calculate the contribution from the four points.\n    float t0 = 0.6 - dot(offset0, offset0);\n    float t02 = 0.0;\n    float t04 = 0.0;\n    vector gradient0 = vector(0.0);\n    float n0 = 0.0;\n    if (t0 < 0.0) {\n        t0 = 0.0;\n    } else {\n        t02 = t0 * t0;\n        t04 = t02 * t02;\n        gradient0 = getGradient(perm[i + perm[j + perm[k]]], sinTheta, cosTheta);\n        n0 = t04 * dot(gradient0, offset0);\n    }\n \n    float t1 = 0.6 - dot(offset1, offset1);\n    float t12 = 0.0;\n    float t14 = 0.0;\n    vector gradient1 = vector(0.0);\n    float n1 = 0.0;\n    if (t1 < 0.0) {\n        t1 = 0.0;\n    } else {\n        t12 = t1 * t1;\n        t14 = t12 * t12;\n        gradient1 = getGradient(perm[i + int(skewedOffset1[0]) + perm[j + int(skewedOffset1[1]) + perm[k + int(skewedOffset1[2])]]], sinTheta, cosTheta);\n        n1 = t14 * dot(gradient1, offset1);\n    }\n \n    float t2 = 0.6 - dot(offset2, offset2);\n    float t22 = 0.0;\n    float t24 = 0.0;\n    vector gradient2 = vector(0.0);\n    float n2 = 0.0;\n    if(t2 < 0.0) {\n        t2 = 0.0;\n    } else {\n        t22 = t2 * t2;\n        t24 = t22 * t22;\n        gradient2 = getGradient(perm[i + int(skewedOffset2[0]) + perm[j + int(skewedOffset2[1]) + perm[k + int(skewedOffset2[2])]]], sinTheta, cosTheta);\n        n2 = t24 * dot(gradient2, offset2);\n    }\n     \n    float t3 = 0.6 - dot(offset3, offset3);\n    float t32 = 0.0;\n    float t34 = 0.0;\n    vector gradient3 = vector(0.0);\n    float n3 = 0.0;\n    if(t3 < 0.0) {\n        t32 = 0.0;\n    } else {\n        t32 = t3 * t3;\n        t34 = t32 * t32;\n        gradient3 = getGradient(perm[i + 1 + perm[j + 1 + perm[k + 1]]], sinTheta, cosTheta);\n        n3 = t34 * dot(gradient3, offset3);\n    }\n \n    // Accumulate the contributions from each point to get the final noise value.\n    // The result is scaled to return values in the range [-1,1].\n    float noiseValue = 32.0 * (n0 + n1 + n2 + n3);\n \n    // Compute noise derivative.\n    //  *dnoise_dx = -8.0f * t02 * t0 * x0 * dot(gx0, gy0, gz0, x0, y0, z0) + t04 * gx0;\n    //  *dnoise_dy = -8.0f * t02 * t0 * y0 * dot(gx0, gy0, gz0, x0, y0, z0) + t04 * gy0;\n    //  *dnoise_dz = -8.0f * t02 * t0 * z0 * dot(gx0, gy0, gz0, x0, y0, z0) + t04 * gz0;\n    //  *dnoise_dx += -8.0f * t12 * t1 * x1 * dot(gx1, gy1, gz1, x1, y1, z1) + t14 * gx1;\n    //  *dnoise_dy += -8.0f * t12 * t1 * y1 * dot(gx1, gy1, gz1, x1, y1, z1) + t14 * gy1;\n    //  *dnoise_dz += -8.0f * t12 * t1 * z1 * dot(gx1, gy1, gz1, x1, y1, z1) + t14 * gz1;\n    //  *dnoise_dx += -8.0f * t22 * t2 * x2 * dot(gx2, gy2, gz2, x2, y2, z2) + t24 * gx2;\n    //  *dnoise_dy += -8.0f * t22 * t2 * y2 * dot(gx2, gy2, gz2, x2, y2, z2) + t24 * gy2;\n    //  *dnoise_dz += -8.0f * t22 * t2 * z2 * dot(gx2, gy2, gz2, x2, y2, z2) + t24 * gz2;\n    //  *dnoise_dx += -8.0f * t32 * t3 * x3 * dot(gx3, gy3, gz3, x3, y3, z3) + t34 * gx3;\n    //  *dnoise_dy += -8.0f * t32 * t3 * y3 * dot(gx3, gy3, gz3, x3, y3, z3) + t34 * gy3;\n    //  *dnoise_dz += -8.0f * t32 * t3 * z3 * dot(gx3, gy3, gz3, x3, y3, z3) + t34 * gz3;\n     \n    dNoise  = t02 * t0 * offset0 * dot(gradient0, offset0) + t04 * gradient0;\n    dNoise += t12 * t1 * offset1 * dot(gradient1, offset1) + t14 * gradient1;\n    dNoise += t22 * t2 * offset2 * dot(gradient2, offset2) + t24 * gradient2;\n    dNoise += t32 * t3 * offset3 * dot(gradient3, offset3) + t34 * gradient3;  \n    dNoise *= -8.0;\n     \n    // Scale noise derivative to match the noise scaling.\n    //dNoise *= (32.0 / 2.0);\n     \n    // Scale to the [0, 1] range.\n    return 0.5 * noiseValue + 0.5;\n}\n \n/// 3D Fractal Simplex flow noise implementation.\n/// Returned values are in the [-1, 1] range.\nfloat fractalSimplexFlowNoise3D(\n    point position,\n    float flow,\n    float lacunarity,\n    float flowRate,\n    float gain,\n    float advect,\n    int octaveCount\n) {\n    float noiseValue = 0.0;\n     \n    float flowValue = flow;\n     \n    float amplitude = 1.0;\n    float advectionAmount = advect;\n     \n    for (int octave = 0; octave < octaveCount; ++octave) {\n        vector flownoise3DGradient = vector(0.0);\n        float noiseOctave = amplitude * (simplexFlowNoise3D(position, flowValue, flownoise3DGradient) - 0.5);\n        noiseValue += noiseOctave;\n         \n        position -= advectionAmount * noiseOctave * flownoise3DGradient;\n \n        position *= lacunarity;\n        flowValue *= flowRate;\n        amplitude *= gain;\n        advectionAmount *= advect;\n    }\n     \n    return noiseValue;\n}\n \nshader FractalSimplexFlowNoise\n    [[ string description = \"Fractal Simplex flow noise\" ]]\n(\n    float start_frequency = 1.0\n        [[ string description = \"Initial sampling position multiplier that affects the overall granularity.\" ]],\n    vector start_offset = vector(0.0)\n        [[ string description = \"Offsets the initial sampling position effectively shifting the pattern in the specified direction.\" ]],\n         \n    float flow = 1.0\n        [[ string description = \"The coordinate of a special noise dimension with a period of 1 that naturally evolves the noise to animate it instead of sliding a 3D slice throught the noise space.\" ]],\n     \n    float lacunarity = 2.0\n        [[ string description = \"Position (frequency) multiplier per iteration.\" ]],\n    float flow_rate = 1.0\n        [[ string description = \"Flow coordinate multiplier per iteration.\" ]],\n    float gain = 0.5\n        [[ string description = \"Amplitude multiplier per iteration.\" ]],\n    float advect = 0.5\n        [[ string description = \"Both initial advection amount and advection multiplier per iteration.\" ]],\n    int octaves = 8\n        [[ string description = \"Number of fractal iterations.\" ]],\n \n    float attenuation = 1.0\n        [[ string description = \"The power of the falloff applied to the final result.\" ]],\n     \n    output color result = 0.0\n) {\n    point objectPosition = transform(\"object\", P);\n    point startPosition = start_frequency * objectPosition - start_offset;\n \n    float noiseValue = fractalSimplexFlowNoise3D(startPosition, flow, lacunarity, flow_rate, gain, advect, octaves);\n     \n    noiseValue = 0.5 * noiseValue + 0.5;\n    noiseValue = pow(noiseValue, attenuation);\n     \n    result = color(noiseValue);\n}"
+            custom_attributes {
+                attribute_group "output" {
+                    string "OSL_output_name" {
+                        doc "Select shader output to fill texture RGB color."
+                        allow_expression no
+                        preset "result" "result"
+                        value "result"
+                    }
+                }
+                attribute_group "input" {
+                    double "OSL_start_frequency" {
+                        doc "start_frequency"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 1
+                    }
+                    double[3] "OSL_start_offset" {
+                        doc "start_offset"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.0 0.0 0.0
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 2
+                        }
+                    }
+                    double "OSL_flow" {
+                        doc "flow"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 1
+                    }
+                    double "OSL_lacunarity" {
+                        doc "lacunarity"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 2
+                    }
+                    double "OSL_flow_rate" {
+                        doc "flow_rate"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 4
+                    }
+                    double "OSL_gain" {
+                        doc "gain"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 1
+                    }
+                    double "OSL_advect" {
+                        doc "advect"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.0
+                    }
+                    long "OSL_octaves" {
+                        doc "octaves"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 8
+                    }
+                    double "OSL_attenuation" {
+                        doc "attenuation"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 1
+                    }
+                }
+            }
+        }
+        TextureOslScript {
+            name "Perlin_Flow_Noise_OSL"
+            #version 0.92
+            #created 1520194335
+            #modified 1520197511
+            positions "project://Scene_Noise_OSL/OSL" 0 0
+            projection 6
+            OSL_shader_script "int fastFloor(float x) {\n    return (x < 0) ? int(x) - 1 : int(x);\n}\n \nfloat fade(float t) {\n    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);\n}\n \nfloat lerp(float t, float a, float b) {\n    return a + t * (b - a);\n}\n \n/// 3D Perlin flow noise implementation.\n/// Returned values are in the [0, 1] range.\nfloat perlinFlowNoise3D(point position, float flow) {\n    int perm[512] = {\n        151,160,137,91,90,15,\n        131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,\n        190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,\n        88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,\n        77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,\n        102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,\n        135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,\n        5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,\n        223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,\n        129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,\n        251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,\n        49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,\n        138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180,\n        151,160,137,91,90,15,\n        131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,\n        190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,\n        88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,\n        77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,\n        102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,\n        135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,\n        5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,\n        223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,\n        129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,\n        251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,\n        49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,\n        138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180\n    };\n     \n    // Gradient component that leads to a vector of length sqrt(2).\n    // float a = sqrt(2)/sqrt(3);\n    float a = 0.81649658;\n     \n    vector gradientUBase[16] = {\n        vector( 1.0,  0.0,  1.0), vector( 0.0,  1.0,  1.0),\n        vector(-1.0,  0.0,  1.0), vector( 0.0, -1.0,  1.0),\n        vector( 1.0,  0.0, -1.0), vector( 0.0,  1.0, -1.0),\n        vector(-1.0,  0.0, -1.0), vector( 0.0, -1.0, -1.0),\n        vector( a,  a,  a), vector(-a,  a, -a),\n        vector(-a, -a,  a), vector( a, -a, -a),\n        vector(-a,  a,  a), vector( a, -a,  a),\n        vector( a, -a, -a), vector(-a,  a, -a)\n    };\n \n    vector gradientVBase[16] = {\n        vector(-a,  a,  a), vector(-a, -a,  a),\n        vector( a, -a,  a), vector( a,  a,  a),\n        vector(-a, -a, -a), vector( a, -a, -a),\n        vector( a,  a, -a), vector(-a,  a, -a),\n        vector( 1.0, -1.0,  0.0), vector( 1.0,  1.0,  0.0),\n        vector(-1.0,  1.0,  0.0), vector(-1.0, -1.0,  0.0),\n        vector( 1.0,  0.0,  1.0), vector(-1.0,  0.0,  1.0),\n        vector( 0.0,  1.0, -1.0), vector( 0.0, -1.0, -1.0)\n    };\n     \n    // Helper function to compute the rotated gradient.\n    vector getGradient(int index, float sinTheta, float cosTheta) {\n        int safeIndex = index % 16;\n        vector gradientU = gradientUBase[safeIndex];\n        vector gradientV = gradientVBase[safeIndex];\n        return cosTheta * gradientU + sinTheta * gradientV;\n    }\n     \n    float gradientDot(int index, float sinTheta, float cosTheta, float x, float y, float z) {\n        vector gradient = getGradient(index, sinTheta, cosTheta);\n        vector value = vector(x, y, z);\n        return dot(gradient, value);\n    }\n \n    float x = position[0];\n    float y = position[1];\n    float z = position[2];\n     \n    int ix = fastFloor(x);\n    int iy = fastFloor(y);\n    int iz = fastFloor(z);\n     \n    float fx = x - float(ix);\n    float fy = y - float(iy);\n    float fz = z - float(iz);\n     \n    ix = ix & 255;\n    iy = iy & 255;\n    iz = iz & 255;\n     \n    float i = fade(fx);\n    float j = fade(fy);\n    float k = fade(fz);\n     \n    int A = perm[ix    ] + iy, AA = perm[A] + iz, AB = perm[A + 1] + iz;\n    int B = perm[ix + 1] + iy, BA = perm[B] + iz, BB = perm[B + 1] + iz;\n     \n    // Sine and cosine for the gradient rotation angle\n    float sinTheta = 0.0;\n    float cosTheta = 0.0;\n    sincos(M_2PI * flow, sinTheta, cosTheta);\n \n    float noiseValue =\n        lerp(k, lerp(j, lerp(i, gradientDot(perm[AA    ], sinTheta, cosTheta, fx      , fy      , fz      ),\n                                gradientDot(perm[BA    ], sinTheta, cosTheta, fx - 1.0, fy      , fz      )),\n                        lerp(i, gradientDot(perm[AB    ], sinTheta, cosTheta, fx      , fy - 1.0, fz      ),\n                                gradientDot(perm[BB    ], sinTheta, cosTheta, fx - 1.0, fy - 1.0, fz      ))),\n                lerp(j, lerp(i, gradientDot(perm[AA + 1], sinTheta, cosTheta, fx      , fy      , fz - 1.0),\n                                gradientDot(perm[BA + 1], sinTheta, cosTheta, fx - 1.0, fy      , fz - 1.0)),\n                        lerp(i, gradientDot(perm[AB + 1], sinTheta, cosTheta, fx      , fy - 1.0, fz - 1.0),\n                                gradientDot(perm[BB + 1], sinTheta, cosTheta, fx - 1.0, fy - 1.0, fz - 1.0))));\n     \n    // Scale to the [0, 1] range.\n    return 0.5 * noiseValue + 0.5;\n}\n \nvector perlinFlowNoise3DGradient(vector position, float flow, float delta) {\n    vector result = vector(\n        perlinFlowNoise3D(position + vector(delta, 0.0, 0.0), flow) -\n        perlinFlowNoise3D(position - vector(delta, 0.0, 0.0), flow),\n        perlinFlowNoise3D(position + vector(0.0, delta, 0.0), flow) -\n        perlinFlowNoise3D(position - vector(0.0, delta, 0.0), flow),\n        perlinFlowNoise3D(position + vector(0.0, 0.0, delta), flow) -\n        perlinFlowNoise3D(position - vector(0.0, 0.0, delta), flow)\n    );\n \n    result /= (2.0 * delta);\n \n    return result;\n}\n \n/// 3D Fractal Perlin flow noise implementation.\n/// Returned values are in the [-1, 1] range.\nfloat fractalPerlinFlowNoise3D(\n    point position,\n    float flow,\n    float lacunarity,\n    float flowRate,\n    float gain,\n    float advect,\n    int octaveCount\n) {\n    float noiseValue = 0.0;\n \n    float flowValue = flow;\n     \n    float amplitude = 1.0;\n    float advectionAmount = advect;\n \n    for (int octave = 0; octave < octaveCount; ++octave) {\n        float noiseOctave = amplitude * (perlinFlowNoise3D(position, flowValue) - 0.5);\n        noiseValue += noiseOctave;\n \n        if (advectionAmount != 0.0) {\n            position -= advectionAmount * noiseOctave * perlinFlowNoise3DGradient(position, flow, 0.01);\n        }\n \n        position *= lacunarity;\n        flowValue *= flowRate;\n        amplitude *= gain;\n        advectionAmount *= advect;\n    }\n     \n    return noiseValue;\n}\n \nshader FractalPerlinFlowNoise\n    [[ string description = \"Fractal Perlin flow noise\" ]]\n(\n    float start_frequency = 1.0\n        [[ string description = \"Initial sampling position multiplier that affects the overall granularity.\" ]],\n    vector start_offset = vector(0.0)\n        [[ string description = \"Offsets the initial sampling position effectively shifting the pattern in the specified direction.\" ]],\n         \n    float flow = 1.0\n        [[ string description = \"The coordinate of a special noise dimension with a period of 1 that naturally evolves the noise to animate it instead of sliding a 3D slice throught the noise space.\" ]],\n     \n    float lacunarity = 2.0\n        [[ string description = \"Position (frequency) multiplier per iteration.\" ]],\n    float flow_rate = 1.0\n        [[ string description = \"Flow coordinate multiplier per iteration.\" ]],\n    float gain = 0.5\n        [[ string description = \"Amplitude multiplier per iteration.\" ]],\n    float advect = 0.5\n        [[ string description = \"Both initial advection amount and advection multiplier per iteration.\" ]],\n    int octaves = 8\n        [[ string description = \"Number of fractal iterations.\" ]],\n \n    float attenuation = 1.0\n        [[ string description = \"The power of the falloff applied to the final result.\" ]],\n     \n    output color result = 0.0\n) {\n    point objectPosition = transform(\"object\", P);\n    point startPosition = start_frequency * objectPosition - start_offset;\n \n    float noiseValue = fractalPerlinFlowNoise3D(startPosition, flow, lacunarity, flow_rate, gain, advect, octaves);\n     \n    noiseValue = 0.5 * noiseValue + 0.5;\n    noiseValue = pow(noiseValue, attenuation);\n     \n    result = color(noiseValue);\n}"
+            custom_attributes {
+                attribute_group "output" {
+                    string "OSL_output_name" {
+                        doc "Select shader output to fill texture RGB color."
+                        allow_expression no
+                        preset "result" "result"
+                        value "result"
+                    }
+                }
+                attribute_group "input" {
+                    double "OSL_start_frequency" {
+                        doc "start_frequency"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 3
+                    }
+                    double[3] "OSL_start_offset" {
+                        doc "start_offset"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 2.5 2 0.0
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 2
+                        }
+                    }
+                    double "OSL_flow" {
+                        doc "flow"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.5
+                    }
+                    double "OSL_lacunarity" {
+                        doc "lacunarity"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value -1
+                    }
+                    double "OSL_flow_rate" {
+                        doc "flow_rate"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value -0.5
+                    }
+                    double "OSL_gain" {
+                        doc "gain"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 1
+                    }
+                    double "OSL_advect" {
+                        doc "advect"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 1
+                    }
+                    long "OSL_octaves" {
+                        doc "octaves"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 8
+                    }
+                    double "OSL_attenuation" {
+                        doc "attenuation"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 3
+                    }
+                }
+            }
+        }
+        TextureOslScript {
+            name "Cell_Noise_OSL"
+            #version 0.92
+            #created 1520194682
+            #modified 1520197632
+            positions "project://Scene_Noise_OSL/OSL" 0 0
+            projection 6
+            OSL_shader_script "float dist2cell(point p, string spacename, float freq, float jitter) {\n    point pp = transform(spacename, p) * freq;\n    point thiscell = point(floor(pp[0]) + 0.5,\n                           floor(pp[1]) + 0.5,\n                           floor(pp[2]) + 0.5);\n    float dist2nearest = 1000;\n    int i,j,k;\n    for(i = -1; i <= 1; i += 1)\n       for(j = -1; j <= 1; j += 1)\n           for(k = -1; k <= 1; k += 1) {\n              point testcell = thiscell + vector(i,j,k);\n              point pos = testcell + (noise(\"cell\", testcell) * jitter) - 0.5;\n              float dist = distance(pos, pp);\n              if(dist < dist2nearest)\n                 dist2nearest = dist;\n              }\n    return dist2nearest;\n    }\n//-------------------------------------------------------\nshader\ncellular(float cellfreq = 5,\n         float radius = 0.15,\n         float blur = 0.1,\n         float jitter = 1,\n         color patcolor = color(1,0,1),\n         color bakcolor = color(1,1,1),\n         string spacename = \"shader\",\n    output color resultRGB = 0,\n    output float resultMask = 0,\n    output float resultF = 0)\n{\nfloat d = dist2cell(P, spacename, cellfreq, jitter);\nresultF = 1 - smoothstep(radius, radius + blur, d);\nresultRGB = mix(bakcolor, patcolor, resultF); \nresultMask = (d <= radius) ? 1 : 0;\n}"
+            custom_attributes {
+                attribute_group "output" {
+                    string "OSL_output_name" {
+                        doc "Select shader output to fill texture RGB color."
+                        allow_expression no
+                        preset "resultRGB" "resultRGB"
+                        preset "resultMask" "resultMask"
+                        preset "resultF" "resultF"
+                        value "resultRGB"
+                    }
+                }
+                attribute_group "input" {
+                    double "OSL_cellfreq" {
+                        doc "cellfreq"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 10
+                    }
+                    double "OSL_radius" {
+                        doc "radius"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.3
+                    }
+                    double "OSL_blur" {
+                        doc "blur"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.5
+                    }
+                    double "OSL_jitter" {
+                        doc "jitter"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 1
+                    }
+                    rgb "OSL_patcolor" {
+                        doc "patcolor"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.0 0.0 0.0
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 4
+                        }
+                    }
+                    rgb "OSL_bakcolor" {
+                        doc "bakcolor"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 1 1 1
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 4
+                        }
+                    }
+                    string "OSL_spacename" {
+                        doc "spacename"
+                        allow_expression no
+                        value "shader"
+                    }
+                }
+            }
+        }
+        TextureOslScript {
+            name "Stone_OSL"
+            #version 0.92
+            #created 1520196160
+            #modified 1520197870
+            positions "project://Scene_Noise_OSL/OSL" 0 0
+            projection 6
+            OSL_shader_script "shader stones(\n  point p = P,\n  vector Scale = 1,\n  float w = 0.02,\n  float s = 2,\n    \n  output float Fac = 0\n){\n  point Pos = p * Scale;\n  \n  float bot = floor(Pos[1]-1)+cellnoise(Pos[1]-1);\n  float lev = floor(Pos[1])+cellnoise(Pos[1]);\n  float top = floor(Pos[1]+1)+cellnoise(Pos[1]+1);\n\n  if( Pos[1]<lev ){\n    Pos[0] += s*cellnoise(Pos[1]);\n  }else{\n    Pos[0] += s*cellnoise(Pos[1]+1);\n  }\n  float left = floor(Pos[0]-1)+cellnoise(Pos[0]-1);\n  float mid = floor(Pos[0])+cellnoise(Pos[0]);\n  float right = floor(Pos[0]+1)+cellnoise(Pos[0]+1);\n  if( \n    ((Pos[0] > left+w) && ( Pos[0] < mid - w )) \n    || \n    ((Pos[0] > mid+w ) && ( Pos[0] < right - w))\n  ){\n    if( \n      ((Pos[1] > bot+w) && ( Pos[1] < lev - w )) \n      || \n      ((Pos[1] > lev+w ) && ( Pos[1] < top - w))\n    ){\n      int stoneindex=0;\n      float seeda = left;\n      float seedb = bot;\n      float bounda = mid;\n      float boundb = lev;\n      \n      if( Pos[0]>mid ){ stoneindex += 2; seeda = mid; bounda = right; }\n      if( Pos[1]>lev ){ stoneindex += 1; seedb = lev; boundb = top; }\n      int pattern = (int)floor(cellnoise(seeda,seedb)*4);\n      if( pattern == 0 ){\n            // horizontally halved\n            float nlev = (seedb + boundb)/2;\n            if( (Pos[1] > nlev - w) &&  (Pos[1] < nlev + w) ){\n              Fac = 0;\n            } else {\n              Fac = cellnoise(vector(seeda,seedb,Pos[1]>nlev));\n            }\n      } else {\n        Fac = cellnoise(vector(seeda,seedb,-1));\n      }\n    }\n  }\n}"
+            custom_attributes {
+                attribute_group "output" {
+                    string "OSL_output_name" {
+                        doc "Select shader output to fill texture RGB color."
+                        allow_expression no
+                        preset "Fac" "Fac"
+                        value "Fac"
+                    }
+                }
+                attribute_group "input" {
+                    double[3] "OSL_p" {
+                        doc "p"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.0 0.0 0.0
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 1
+                        }
+                    }
+                    double[3] "OSL_Scale" {
+                        doc "Scale"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value -23.5 -67.5 5
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 2
+                        }
+                    }
+                    double "OSL_w" {
+                        doc "w"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.06
+                    }
+                    double "OSL_s" {
+                        doc "s"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 16.5
+                    }
+                }
+            }
+        }
+        TextureOslScript {
+            name "Squares_OSL"
+            #version 0.92
+            #created 1520198042
+            #modified 1520198319
+            positions "project://Scene_Noise_OSL/OSL" 0 0
+            projection 6
+            OSL_shader_script "#define flip(x) (mod(x,1)>0.5?1.0-mod(x,1):mod(x,1))\n#define mod2(x) ((int)(fabs(floor(x)))%2)\n\nshader squares(\n  point Pos=P,\n  float Scale=1,\n  float Var=0,\n\n  output float Edge=0.25,\n  output float Center=0.5,\n  output float Fac=0\n){\n  point p = Pos * Scale;\n  point c = 0.5;\n  \n  point pc = point(flip(p[0]), flip(p[1]), flip(p[2]));\n  \n  Edge = min(pc[0], min(pc[1], pc[2]));\n  Center = distance(pc, c);\n\n  Fac = (mod2(p[0]) == mod2(p[1])) == mod2(p[2]);\n  Fac = fabs(Fac - Var * noise(\"cell\", p));\n}\n"
+            custom_attributes {
+                attribute_group "output" {
+                    string "OSL_output_name" {
+                        doc "Select shader output to fill texture RGB color."
+                        allow_expression no
+                        preset "Edge" "Edge"
+                        preset "Center" "Center"
+                        preset "Fac" "Fac"
+                        value "Center"
+                    }
+                }
+                attribute_group "input" {
+                    double[3] "OSL_Pos" {
+                        doc "Pos"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.0 0.0 0.0
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 1
+                        }
+                    }
+                    double "OSL_Scale" {
+                        doc "Scale"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 17.5
+                    }
+                    double "OSL_Var" {
+                        doc "Var"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.0
+                    }
+                }
+            }
+        }
+        TextureOslScript {
+            name "Sprinkles_OSL"
+            #version 0.92
+            #created 1520198371
+            #modified 1520198511
+            positions "project://Scene_Noise_OSL/OSL" 0 0
+            projection 6
+            OSL_shader_script "shader sprinkles(\n point Pos = P,\n float Scale = 1,\n int Np = 1,\n int Seed = 42,\n float Radius = 0.05,\n float Size = 1,\n output float Fac = 0,\n output float Random = 0\n){\n point p = Pos * Scale;\n point f = floor(p);\n \n int xx,yy,np;\n vector one = 1;\n \n for( xx=-1; xx<=1; xx++){\n  for( yy=-1; yy<=1; yy++){\n   point ff = f + vector(xx,yy,0);\n   float u=Seed;\n \n   for( np=0; np < Np; np++){\n    vector pd1 = 2*noise(\"cell\",ff,u)-one;\n    vector pd2 = 2*noise(\"cell\",ff,u+1)-one;\n    \n    point p1 = ff + pd1;\n    point p2 = ff + pd2;\n    \n    p2 = (p2 - p1)*Size+p1;\n    \n    // reduce to 2D \n    p1[2]=0;\n    p2[2]=0;\n    p [2]=0;\n    \n    float r = distance(p1,p2,p);\n    if ( r < Radius ) {\n      Fac = 1 - r/Radius;\n      Random = noise(\"cell\",ff,u+2);\n    }\n    u+=3;\n   }\n  }\n }\n}"
+            custom_attributes {
+                attribute_group "output" {
+                    string "OSL_output_name" {
+                        doc "Select shader output to fill texture RGB color."
+                        allow_expression no
+                        preset "Fac" "Fac"
+                        preset "Random" "Random"
+                        value "Fac"
+                    }
+                }
+                attribute_group "input" {
+                    double[3] "OSL_Pos" {
+                        doc "Pos"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.0 0.0 0.0
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 1
+                        }
+                    }
+                    double "OSL_Scale" {
+                        doc "Scale"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 17.5
+                    }
+                    long "OSL_Np" {
+                        doc "Np"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 5
+                    }
+                    long "OSL_Seed" {
+                        doc "Seed"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 45
+                    }
+                    double "OSL_Radius" {
+                        doc "Radius"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.2
+                    }
+                    double "OSL_Size" {
+                        doc "Size"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 4.5
+                    }
+                }
+            }
+        }
+        TextureOslScript {
+            name "Voronoi_Noise_OSL"
+            #version 0.92
+            #created 1520199177
+            #modified 1520199253
+            positions "project://Scene_Noise_OSL/OSL" 0 0
+            projection 6
+            OSL_shader_script "/*\n * MA4D_voronoi.osl by Michel J. Anders (c)2012\n * from https://github.com/sambler/osl-shaders\n *\n * license: cc-by-sa\n *\n * original script from -\n * http://blenderthings.blogspot.com.au/2012/12/a-4d-voronoi-osl-shader-for-blender.html\n *\n */\n\n\nvoid cellnoise_color4d(float p[4], float c[4])\n{\n    c[0] = cellnoise(point(p[0],p[1],p[2]),p[3]);\n    c[1] = cellnoise(point(p[1],p[0],p[2]),p[3]);\n    c[2] = cellnoise(point(p[1],p[2],p[0]),p[3]);\n    c[3] = cellnoise(point(p[3],p[1],p[2]),p[0]);\n}\n\n/* Voronoi 4D . we always use distance squared as the distance metric */\n\nvoid voronoi4d(point p, float t, float da[4], point pa[4], float ta[4])\n{\n    /* returns distances in da, point coords in pa and time coords in ta*/\n    int xx, yy, zz, tt, xi, yi, zi, ti;\n\n    float op[4] = {p[0],p[1],p[2],t};\n\n    xi = (int)floor(p[0]);\n    yi = (int)floor(p[1]);\n    zi = (int)floor(p[2]);\n    ti = (int)floor(t);\n\n    da[0] = 1e10;\n    da[1] = 1e10;\n    da[2] = 1e10;\n    da[3] = 1e10;\n\n    for (xx = xi - 1; xx <= xi + 1; xx++) {\n        for (yy = yi - 1; yy <= yi + 1; yy++) {\n            for (zz = zi - 1; zz <= zi + 1; zz++) {\n                for (tt = ti - 1; tt <= ti + 1; tt++) {\n                    float ip[4] = {xx, yy, zz, tt};\n                    float vp[4];\n                    cellnoise_color4d(ip,vp);\n                    float pd[4] = { op[0] - (vp[0] + ip[0]),\n                        op[1] - (vp[1] + ip[1]),\n                        op[2] - (vp[2] + ip[2]),\n                        op[3] - (vp[3] + ip[3])};\n                    // always distance squared\n                    float d = pd[0]*pd[0]+pd[1]*pd[1]+pd[2]*pd[2]+pd[3]*pd[3];\n\n                    vp[0] += xx;\n                    vp[1] += yy;\n                    vp[2] += zz;\n                    vp[3] += tt;\n\n                    if (d < da[0]) {\n                        da[3] = da[2];\n                        da[2] = da[1];\n                        da[1] = da[0];\n                        da[0] = d;\n\n                        pa[3] = pa[2]; ta[3] = ta[2];\n                        pa[2] = pa[1]; ta[2] = ta[1];\n                        pa[1] = pa[0]; ta[1] = ta[0];\n                        pa[0] = point(vp[0],vp[1],vp[2]); ta[0] = vp[3];\n                    }\n                    else if (d < da[1]) {\n                        da[3] = da[2];\n                        da[2] = da[1];\n                        da[1] = d;\n\n                        pa[3] = pa[2]; ta[3] = ta[2];\n                        pa[2] = pa[1]; ta[2] = ta[1];\n                        pa[1] = point(vp[0],vp[1],vp[2]); ta[1] = vp[3];\n                    }\n                    else if (d < da[2]) {\n                        da[3] = da[2];\n                        da[2] = d;\n\n                        pa[3] = pa[2]; ta[3] = ta[2];\n                        pa[2] = point(vp[0],vp[1],vp[2]); ta[2] = vp[3];\n                    }\n                    else if (d < da[3]) {\n                        da[3] = d;\n                        pa[3] = point(vp[0],vp[1],vp[2]); ta[3] = vp[3];\n                    }\n                }\n            }\n        }\n    }\n}\n\nshader MA4D_voronoi(\n        vector Vector = P,\n        float Scale = 5.0,\n        float Time = 0,\n        output float Fac = 0.0,\n        output color Color = color(0.0) )\n{\n    /* compute distance and point coordinate of 4 nearest neighbours */\n    float da[4];\n    point pa[4];\n    float ta[4];\n\n    voronoi4d(Vector * Scale, Time * Scale, da, pa, ta);\n\n    Fac = fabs(da[0]); \n    Color = color(Fac);\n}\n"
+            custom_attributes {
+                attribute_group "output" {
+                    string "OSL_output_name" {
+                        doc "Select shader output to fill texture RGB color."
+                        allow_expression no
+                        preset "Fac" "Fac"
+                        preset "Color" "Color"
+                        value "Fac"
+                    }
+                }
+                attribute_group "input" {
+                    double[3] "OSL_Vector" {
+                        doc "Vector"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 0.0 0.0 0.0
+                        settings {
+                            key "osl_semantic"
+                            osl_settings 2
+                        }
+                    }
+                    double "OSL_Scale" {
+                        doc "Scale"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 16
+                    }
+                    double "OSL_Time" {
+                        doc "Time"
+                        texturable yes
+                        animatable yes
+                        shading_variable yes
+                        allow_expression no
+                        value 7
+                    }
+                }
+            }
+        }
+    }
+}
+#preferences {
+    categories {
+        rendering {
+            motion_blur_sample_count 3
+            motion_blur_direction 0
+            motion_blur_length 0.5
+            displacement_storage_mode 0
+            projection_master_eye 0
+        }
+        alembic {
+            visibility_mode 2
+        }
+        geometry {
+            subdivision_mode 1
+        }
+        animation {
+            frames_per_second 24
+        }
+    }
+    selection {
+        selection_slots {
+            slot "Global" "project://Scene_Noise_OSL"
+        }
+        slots_working_contexts {
+            slot "Global" "project://Scene_Noise_OSL"
+        }
+    }
+    isolate {
+        Group {
+            name "isolate"
+            #version 0.93
+            #created 1520194089
+            #modified 1520194089
+            update_mode {
+                hidden yes
+            }
+            inclusion_rule {
+                value ""
+                hidden yes
+            }
+            inclusion_items {
+                value <empty>
+                hidden yes
+            }
+            exclusion_rule {
+                value ""
+                hidden yes
+            }
+            exclusion_items {
+                value <empty>
+                hidden yes
+            }
+        }
+    }
+    color_picker_custom_colors 1 0.0 0.0 0.649999976158142 0.0900000035762787 0.0900000035762787 0.439999997615814 0.119999997317791 0.119999997317791 0.300000011920929 0.109999999403954 0.109999999403954 1 1 1 1 0.850000023841858 0.0 0.660000026226044 0.569999992847443 0.0900000035762787 0.439999997615814 0.389999985694885 0.119999997317791 0.300000011920929 0.270000010728836 0.109999999403954 0.800000011920929 0.800000011920929 0.800000011920929 0.300000011920929 1 0.0 0.259999990463257 0.660000026226044 0.0900000035762787 0.219999998807907 0.439999997615814 0.119999997317791 0.170000001788139 0.300000011920929 0.109999999403954 0.639999985694885 0.639999985694885 0.639999985694885 0.0 1 0.560000002384186 0.0900000035762787 0.660000026226044 0.400000005960464 0.119999997317791 0.439999997615814 0.28999999165535 0.109999999403954 0.300000011920929 0.209999993443489 0.479999989271164 0.479999989271164 0.479999989271164 0.0 0.600000023841858 1 0.0900000035762787 0.430000007152557 0.660000026226044 0.119999997317791 0.310000002384186 0.439999997615814 0.119999997317791 0.219999998807907 0.300000011920929 0.319999992847443 0.319999992847443 0.319999992847443 0.25 0.0 1 0.239999994635582 0.0900000035762787 0.660000026226044 0.200000002980232 0.119999997317791 0.439999997615814 0.159999996423721 0.119999997317791 0.300000011920929 0.159999996423721 0.159999996423721 0.159999996423721 1 0.0 0.899999976158142 0.660000026226044 0.0900000035762787 0.600000023841858 0.439999997615814 0.119999997317791 0.400000005960464 0.300000011920929 0.119999997317791 0.280000001192093 0.0 0.0 0.0
+    foreground_color 0.0 0.0 0.0
+    background_color 1 1 1
+    current_time 0.0
+    active_tool "project://ruler"
+    ui {
+        window {
+            is_maximized yes
+            layout {
+                split_v {
+                    ratio 0.022
+                    views {
+                        tab {
+                            editor "WidgetTools"
+                            settings {
+                                viewport_widget {
+                                    selection_slot "Local"
+                                    use_global yes
+                                    local_selection {
+                                    }
+                                }
+                            }
+                            selection_locked no
+                        }
+                        selected_tab 0
+                        toolbar_minimized yes
+                    }
+                    view {
+                        editor "WidgetTools"
+                        settings {
+                            viewport_widget {
+                                selection_slot "Local"
+                                use_global yes
+                                local_selection {
+                                }
+                            }
+                        }
+                        toolbar_minimized yes
+                        selection_locked no
+                    }
+                    split_v {
+                        ratio 0.610458911419424
+                        split_h {
+                            ratio 0.946
+                            split_h {
+                                ratio 0.7
+                                split_v {
+                                    ratio 0.784588441330998
+                                    views {
+                                        tab {
+                                            editor "Widget3dView"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                refresh_mode "Fps Driven"
+                                                sampling_quality 0.1
+                                                refinement_count 5
+                                                shading_mode "Progressive Rendering"
+                                                fit_on_select no
+                                                display_filter "Context"
+                                                exposure 0.0
+                                                gamma 1
+                                                pickmask "Cameras Lights Locators Scene_Objects "
+                                                show_overlay no
+                                                integration_model "IntegratorPathtracer"
+                                                integrator ".IntegratorPathtracer_embedded"
+                                                background_fit_mode 3
+                                                foreground_fit_mode 3
+                                                embedded_objects {
+                                                    MaterialGlView {
+                                                        name "embedded_previz_material"
+                                                        #version 0.91
+                                                        #created 1520194624
+                                                        #modified 1520194625
+                                                        private yes
+                                                        use_flat_normal no no no
+                                                        light_color 0.400000035762787 0.400000035762787 0.400000035762787
+                                                        dark_color 0.0167320277541876 0.0167320277541876 0.0167320277541876
+                                                        zoom_factor 0.535898384862104
+                                                    }
+                                                    IntegratorPathtracer {
+                                                        name "IntegratorPathtracer_embedded"
+                                                        #version 0.92
+                                                        #created 1520194090
+                                                        #modified 1520194090
+                                                        private yes
+                                                        cap_display no
+                                                        embedded_objects {
+                                                            MaterialPhysicalStandard {
+                                                                name "surface_default"
+                                                                #version 0.92
+                                                                #created 1520194090
+                                                                #modified 1520194624
+                                                                private yes
+                                                            }
+                                                            MaterialPhysicalVolume {
+                                                                name "volume_default"
+                                                                #version 0.9
+                                                                #created 1520194090
+                                                                #modified 1520194624
+                                                                private yes
+                                                                density_multiplier 100
+                                                            }
+                                                            MaterialPhysicalHair {
+                                                                name "curve_default"
+                                                                #version 0.9
+                                                                #created 1520194090
+                                                                #modified 1520194624
+                                                                private yes
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                lights 1
+                                                eye_dist 3.29534219281845
+                                                center -0.0258515596788703 0.00695768364354125 0.0131986609742923
+                                                rotation -14.8932384341639 34.2815027200837 0.0
+                                            }
+                                            selection_locked no
+                                            evaluation_mode yes
+                                        }
+                                        tab {
+                                            editor "WidgetImageView"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                show_squares yes
+                                                show_progress yes
+                                                min_quality "1/16 Resolution"
+                                                color_space "Use Default"
+                                                aov_group "rgba"
+                                                zoom_and_pan 6.48466110229492 -204 -595
+                                                exposure 0.0
+                                                gamma 1
+                                                auto_eval yes
+                                                enable_limited_region yes
+                                                limited_region 0.48199999332428 0.23199999332428 0.216000020503998 0.17399999499321
+                                                show_overlay yes
+                                            }
+                                            selection_locked no
+                                            evaluation_mode yes
+                                        }
+                                        tab {
+                                            editor "Widget3dView"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global no
+                                                    local_selection {
+                                                        global "project://Scene_Noise_OSL"
+                                                        tools <empty>
+                                                    }
+                                                }
+                                                refresh_mode "1/2 Resolution"
+                                                sampling_quality 0.1
+                                                refinement_count 0.0
+                                                shading_mode "Simple Shading (Smooth)"
+                                                fit_on_select yes
+                                                display_filter "Object"
+                                                exposure 0.0
+                                                gamma 1
+                                                pickmask "Cameras Lights Locators Scene_Objects "
+                                                show_overlay yes
+                                                integration_model "IntegratorPathtracer"
+                                                integrator ".IntegratorPathtracer_embedded"
+                                                background_fit_mode 3
+                                                foreground_fit_mode 3
+                                                embedded_objects {
+                                                    MaterialGlView {
+                                                        name "embedded_previz_material"
+                                                        #version 0.91
+                                                        #created 1520201489
+                                                        #modified 1520201489
+                                                        private yes
+                                                        use_flat_normal no no no
+                                                        light_color 0.400000035762787 0.400000035762787 0.400000035762787
+                                                        dark_color 0.0167320277541876 0.0167320277541876 0.0167320277541876
+                                                        zoom_factor 0.535898384862104
+                                                    }
+                                                    IntegratorPathtracer {
+                                                        name "IntegratorPathtracer_embedded"
+                                                        #version 0.92
+                                                        #created 1520201489
+                                                        #modified 1520201489
+                                                        cap_display no
+                                                        embedded_objects {
+                                                            MaterialPhysicalStandard {
+                                                                name "surface_default"
+                                                                #version 0.92
+                                                                #created 1520201489
+                                                                #modified 1520201489
+                                                                private yes
+                                                            }
+                                                            MaterialPhysicalVolume {
+                                                                name "volume_default"
+                                                                #version 0.9
+                                                                #created 1520201489
+                                                                #modified 1520201489
+                                                                private yes
+                                                                density_multiplier 100
+                                                            }
+                                                            MaterialPhysicalHair {
+                                                                name "curve_default"
+                                                                #version 0.9
+                                                                #created 1520201489
+                                                                #modified 1520201489
+                                                                private yes
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                lights 0
+                                                eye_dist 3.23205080756973
+                                                center 0.0 0.0 0.0
+                                                rotation -45 28 0.0
+                                            }
+                                            selection_locked yes
+                                            evaluation_mode yes
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "Widget3dView"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            refresh_mode "Fps Driven"
+                                            sampling_quality 0.1
+                                            refinement_count 5
+                                            shading_mode "Progressive Rendering"
+                                            fit_on_select no
+                                            display_filter "Context"
+                                            exposure 0.0
+                                            gamma 1
+                                            pickmask "Cameras Lights Locators Scene_Objects "
+                                            show_overlay no
+                                            integration_model "IntegratorPathtracer"
+                                            integrator ".IntegratorPathtracer_embedded"
+                                            background_fit_mode 3
+                                            foreground_fit_mode 3
+                                            embedded_objects {
+                                                MaterialGlView {
+                                                    name "embedded_previz_material"
+                                                    #version 0.91
+                                                    #created 1520194624
+                                                    #modified 1520194625
+                                                    private yes
+                                                    use_flat_normal no no no
+                                                    light_color 0.400000035762787 0.400000035762787 0.400000035762787
+                                                    dark_color 0.0167320277541876 0.0167320277541876 0.0167320277541876
+                                                    zoom_factor 0.535898384862104
+                                                }
+                                                IntegratorPathtracer {
+                                                    name "IntegratorPathtracer_embedded"
+                                                    #version 0.92
+                                                    #created 1520194090
+                                                    #modified 1520194090
+                                                    private yes
+                                                    cap_display no
+                                                    embedded_objects {
+                                                        MaterialPhysicalStandard {
+                                                            name "surface_default"
+                                                            #version 0.92
+                                                            #created 1520194090
+                                                            #modified 1520194624
+                                                            private yes
+                                                        }
+                                                        MaterialPhysicalVolume {
+                                                            name "volume_default"
+                                                            #version 0.9
+                                                            #created 1520194090
+                                                            #modified 1520194624
+                                                            private yes
+                                                            density_multiplier 100
+                                                        }
+                                                        MaterialPhysicalHair {
+                                                            name "curve_default"
+                                                            #version 0.9
+                                                            #created 1520194090
+                                                            #modified 1520194624
+                                                            private yes
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            lights 1
+                                            eye_dist 3.29534219281845
+                                            center -0.0258515596788703 0.00695768364354125 0.0131986609742923
+                                            rotation -14.8932384341639 34.2815027200837 0.0
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                    views {
+                                        tab {
+                                            editor "WidgetTextureView"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                view_transform 0 0 550.760009765625
+                                                show_squares no
+                                                show_overlay yes
+                                                show_texture yes
+                                                color_space "Use Default"
+                                                exposure 0.0
+                                                gamma 1
+                                                uv_range 0.0 0.0 1 1
+                                                axis "-Y"
+                                                last_selection "(First Available)"
+                                                display_polygons yes
+                                                visibility_mode "Show All"
+                                                auto_eval yes
+                                                show_uv_grid yes
+                                                uv_grid_type 0
+                                                uv_color 1 1 1 1
+                                                auto_fit_uv_range_enabled no
+                                            }
+                                            selection_locked no
+                                            evaluation_mode yes
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetTextureView"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            view_transform 0 0 550.760009765625
+                                            show_squares no
+                                            show_overlay yes
+                                            show_texture yes
+                                            color_space "Use Default"
+                                            exposure 0.0
+                                            gamma 1
+                                            uv_range 0.0 0.0 1 1
+                                            axis "-Y"
+                                            last_selection "(First Available)"
+                                            display_polygons yes
+                                            visibility_mode "Show All"
+                                            auto_eval yes
+                                            show_uv_grid yes
+                                            uv_grid_type 0
+                                            uv_color 1 1 1 1
+                                            auto_fit_uv_range_enabled no
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                }
+                                split_v {
+                                    ratio 0.5
+                                    views {
+                                        tab {
+                                            editor "WidgetBrowser"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                rows_expand "project:/" "project://Scene_Noise_OSL"
+                                                show_context_tree yes
+                                                view_mode 0
+                                                class_filter "Project Item"
+                                                width_context_tree 249
+                                                spreadsheet_sort_type -1
+                                                spreadsheet_sort_order 0
+                                                spreadsheet_column_type 0 4 3
+                                                spreadsheet_columns_width 240 170 150
+                                            }
+                                            selection_locked no
+                                        }
+                                        tab {
+                                            editor "WidgetHierarchyView"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                show_mode no
+                                                rows_expand <empty>
+                                            }
+                                            selection_locked no
+                                        }
+                                        tab {
+                                            editor "WidgetExplorer"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                rows_expand "project:/" "project://Scene_Noise_OSL"
+                                            }
+                                            selection_locked no
+                                        }
+                                        tab {
+                                            editor "WidgetSearch"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                text ""
+                                                spreadsheet_sort_type -1
+                                                spreadsheet_sort_order 0
+                                                spreadsheet_columns_width 240 150 170 115 115 270 270
+                                            }
+                                            selection_locked no
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetBrowser"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            rows_expand "project:/" "project://Scene_Noise_OSL"
+                                            show_context_tree yes
+                                            view_mode 0
+                                            class_filter "Project Item"
+                                            width_context_tree 249
+                                            spreadsheet_sort_type -1
+                                            spreadsheet_sort_order 0
+                                            spreadsheet_column_type 0 4 3
+                                            spreadsheet_columns_width 240 170 150
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                    views {
+                                        tab {
+                                            editor "WidgetImageGallery"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                force_refresh no
+                                                show_mode yes
+                                            }
+                                            selection_locked no
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetImageGallery"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            force_refresh no
+                                            show_mode yes
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                }
+                            }
+                            views {
+                                tab {
+                                    editor "WidgetTimeline"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                        first_frame 0
+                                        last_frame 50
+                                    }
+                                    selection_locked no
+                                }
+                                selected_tab 0
+                                toolbar_minimized yes
+                            }
+                            view {
+                                editor "WidgetTimeline"
+                                settings {
+                                    viewport_widget {
+                                        selection_slot "Local"
+                                        use_global yes
+                                        local_selection {
+                                        }
+                                    }
+                                    first_frame 0
+                                    last_frame 50
+                                }
+                                toolbar_minimized yes
+                                selection_locked no
+                            }
+                        }
+                        split_h {
+                            ratio 0.5
+                            views {
+                                tab {
+                                    editor "WidgetAttributeEditor"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                                global "project://Scene_Noise_OSL/matte"
+                                            }
+                                        }
+                                        attribute_groups "Scene Object Name" yes "Canvas" yes "Display" yes "Overscan" yes "Sampling" yes "Layers" yes "Output" yes "General" yes "Projection Mode" yes "Camera Projection" no "Projection Transform" yes "Uv Transform" yes "Shader" yes "Raytracing" yes "Informations" yes "Input" yes "Kinematics" yes "Advanced Kinematics" yes "3d View" yes "Rendering" yes "Lighting" yes "Arbitrary Output Variables" yes "Path Depth" yes "Visibility" yes "Anti Aliasing" yes "Tone Mapping" yes "Motion Blur" yes "Depth Of Field" yes "Alpha" yes "Material Sampling" yes "Light Visibility" yes "Indirect Path Depth" yes "Clamping" yes "Shading" yes "Deformation" yes "Displacement" yes "Utility" yes "Smoothing" yes "Geometry" yes "Caustics" no "Diffuse" yes "Diffuse Backlight" no "Diffuse Sss" no "Diffuse Advanced" no "Specular 1" yes "Specular 1 Fresnel" no "Specular 1 Advanced" no "Specular 2" no "Specular 2 Fresnel" no "Specular 2 Advanced" no "Transmission" no "Transmission Attenuation" no "Transmission Advanced" no "Emission" yes "Transform" yes "Blending" yes "Filters" yes "Channels" yes "Frame Range" yes "File Output" yes "Deep Output" yes "Uv Bake" yes "Range" yes "Aovs" yes "Sub Pixel Filters" yes "Subdivision Surfaces" yes "Attenuation" yes
+                                        attributes_filter ""
+                                    }
+                                    selection_locked no
+                                }
+                                selected_tab 0
+                                toolbar_minimized no
+                            }
+                            view {
+                                editor "WidgetAttributeEditor"
+                                settings {
+                                    viewport_widget {
+                                        selection_slot "Local"
+                                        use_global yes
+                                        local_selection {
+                                            global "project://Scene_Noise_OSL/matte"
+                                        }
+                                    }
+                                    attribute_groups "Scene Object Name" yes "Canvas" yes "Display" yes "Overscan" yes "Sampling" yes "Layers" yes "Output" yes "General" yes "Projection Mode" yes "Camera Projection" no "Projection Transform" yes "Uv Transform" yes "Shader" yes "Raytracing" yes "Informations" yes "Input" yes "Kinematics" yes "Advanced Kinematics" yes "3d View" yes "Rendering" yes "Lighting" yes "Arbitrary Output Variables" yes "Path Depth" yes "Visibility" yes "Anti Aliasing" yes "Tone Mapping" yes "Motion Blur" yes "Depth Of Field" yes "Alpha" yes "Material Sampling" yes "Light Visibility" yes "Indirect Path Depth" yes "Clamping" yes "Shading" yes "Deformation" yes "Displacement" yes "Utility" yes "Smoothing" yes "Geometry" yes "Caustics" no "Diffuse" yes "Diffuse Backlight" no "Diffuse Sss" no "Diffuse Advanced" no "Specular 1" yes "Specular 1 Fresnel" no "Specular 1 Advanced" no "Specular 2" no "Specular 2 Fresnel" no "Specular 2 Advanced" no "Transmission" no "Transmission Attenuation" no "Transmission Advanced" no "Emission" yes "Transform" yes "Blending" yes "Filters" yes "Channels" yes "Frame Range" yes "File Output" yes "Deep Output" yes "Uv Bake" yes "Range" yes "Aovs" yes "Sub Pixel Filters" yes "Subdivision Surfaces" yes "Attenuation" yes
+                                    attributes_filter ""
+                                }
+                                toolbar_minimized no
+                                selection_locked no
+                            }
+                            split_h {
+                                ratio 0.5
+                                views {
+                                    tab {
+                                        editor "WidgetMaterialLinker"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            filter ""
+                                            hierarchical_display yes
+                                        }
+                                        selection_locked no
+                                        evaluation_mode yes
+                                    }
+                                    selected_tab 0
+                                    toolbar_minimized no
+                                }
+                                view {
+                                    editor "WidgetMaterialLinker"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                        filter ""
+                                        hierarchical_display yes
+                                    }
+                                    toolbar_minimized no
+                                    selection_locked no
+                                }
+                                views {
+                                    tab {
+                                        editor "WidgetLayerEditor"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                        }
+                                        selection_locked no
+                                    }
+                                    selected_tab 0
+                                    toolbar_minimized no
+                                }
+                                view {
+                                    editor "WidgetLayerEditor"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                    }
+                                    toolbar_minimized no
+                                    selection_locked no
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    units {
+        units_file "$CLARISSE_BIN_DIR/units.cfg"
+        time "frame"
+        distance "metric"
+        distance_unit "meter"
+        angle "degree"
+        area "metric"
+        area_unit "square_meter"
+        frequency "frames_per_second"
+        color "float"
+        scale "multiplier"
+    }
+}

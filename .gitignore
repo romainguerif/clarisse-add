@@ -1,0 +1,22 @@
+# Stubs generes par install.py a partir du manifeste
+clarisse_add/entry/*.py
+!clarisse_add/entry/__init__.py
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+
+# Sauvegardes de shelf.cfg faites par l'installeur
+*.bak
+*.cfg.*.bak
+
+# Journal de l'addon
+clarisse_add.log
+
+# Systeme
+Thumbs.db
+.DS_Store
+desktop.ini

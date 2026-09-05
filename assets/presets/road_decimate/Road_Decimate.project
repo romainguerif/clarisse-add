@@ -1,0 +1,282 @@
+#Isotropix_Serial_Version 1.2
+
+#Isotropix_Clarisse_Version 4
+#Isotropix_Clarisse_Project_Version 0.94
+Context "scene" {
+    #created 1455809270
+    CameraPerspective {
+        name "camera"
+        #version 0.9
+        #created 1455809270
+        #modified 1568190015
+        translate 28 21 28
+        rotate -27.938 45 0.0
+        aim_distance 44.8218696620299
+        field_of_view 25
+    }
+    LightPhysicalDistant {
+        name "light"
+        #version 0.91
+        #created 1462886261
+        #modified 1568190015
+        rotate -35 125 0.0
+    }
+    RendererRaytracer {
+        name "path_tracer"
+        #version 1
+        #created 1462890443
+        #modified 1568190015
+        integration_model "IntegratorPathtracer"
+        integrator ".IntegratorPathtracer_embedded"
+        integrators ".IntegratorPathtracer_embedded" ".IntegratorLegacy_embedded" ".IntegratorAmbientOcclusion_embedded" ".IntegratorUtility_embedded"
+        embedded_objects {
+            IntegratorPathtracer {
+                name "IntegratorPathtracer_embedded"
+                #version 0.93
+                #created 1568190015
+                #modified 1568190015
+                cap_display no
+                embedded_objects {
+                    MaterialPhysicalStandard {
+                        name "surface_default"
+                        #version 0.94
+                        #created 1568190015
+                        #modified 1568190015
+                        private yes
+                    }
+                    MaterialPhysicalVolume {
+                        name "volume_default"
+                        #version 0.92
+                        #created 1568190015
+                        #modified 1568190015
+                        private yes
+                        density_multiplier 100
+                    }
+                    MaterialPhysicalHair {
+                        name "curve_default"
+                        #version 0.9
+                        #created 1568190015
+                        #modified 1568190015
+                        private yes
+                    }
+                }
+            }
+            IntegratorLegacy {
+                name "IntegratorLegacy_embedded"
+                #version 0.92
+                #created 1568190015
+                #modified 1568190015
+                cap_display no
+                embedded_objects {
+                    MaterialStandard {
+                        name "surface_default"
+                        #version 0.92
+                        #created 1568190015
+                        #modified 1568190015
+                        private yes
+                        specularity 1 1 1
+                    }
+                    MaterialVolume {
+                        name "volume_default"
+                        #version 0.9
+                        #created 1568190015
+                        #modified 1568190015
+                        private yes
+                        density_multiplier 100
+                    }
+                    MaterialMarschnerFur {
+                        name "curve_default"
+                        #version 0.9
+                        #created 1568190015
+                        #modified 1568190015
+                        private yes
+                    }
+                }
+            }
+            IntegratorAmbientOcclusion {
+                name "IntegratorAmbientOcclusion_embedded"
+                #version 0.92
+                #created 1568190015
+                #modified 1568190015
+                cap_display no
+            }
+            IntegratorUtility {
+                name "IntegratorUtility_embedded"
+                #version 0.92
+                #created 1568190015
+                #modified 1568190015
+                cap_display no
+            }
+        }
+    }
+    Image {
+        name "image"
+        #version 0.94
+        #created 1462886391
+        #modified 1568190015
+        active_layer 0
+        layers ".background"
+        first_frame 0
+        last_frame 50
+        embedded_objects {
+            Layer3d {
+                name "background"
+                #version 0.97
+                #created 1462886428
+                #modified 1568190015
+                first_frame 0
+                last_frame 50
+                deep_output_data_precision 0
+                max_sample_count 0
+                active_camera "camera"
+                renderer "path_tracer"
+                user_data {
+                    __context_objects__ {
+                    }
+                    __context_lights__ {
+                    }
+                }
+            }
+        }
+    }
+    GeometryPolygrid {
+        name "polygrid"
+        #version 0.9
+        #created 1568190022
+        #modified 1568190027
+        uv_maps "parametric"
+        uv_maps_loaded yes
+        shading_groups "grid"
+        materials "project://default/material"
+        clip_maps ""
+        displacements ""
+        sg_shading_variables ""
+        visibles yes
+        size 100 100
+    }
+    GeometryBox {
+        name "box"
+        #version 0.9
+        #created 1568190030
+        #modified 1568190040
+        display_color 2
+        uv_maps "horizontal unfold" "vertical unfold"
+        uv_maps_loaded yes
+        shading_groups "surface"
+        materials "project://default/material"
+        clip_maps ""
+        displacements ""
+        sg_shading_variables ""
+        visibles yes
+    }
+    GeometryPointCloud {
+        name "PTC_box"
+        #version 0.91
+        #created 1568190033
+        #modified 1568190234
+        positions "mat_1" 0 0
+        parent "polygrid"
+        display_visible no
+        uv_maps "parametric"
+        uv_maps_loaded yes
+        shading_groups "points"
+        materials "project://default/material"
+        clip_maps ""
+        displacements ""
+        sg_shading_variables ""
+        visibles yes
+        point_count 10000
+        geometry "polygrid"
+    }
+    SceneObjectScatterer {
+        name "SCT_box"
+        #version 0.93
+        #created 1568190033
+        #modified 1568190214
+        positions "mat_1" 360 343
+        geometry_support "PTC_box"
+        geometry "box"
+        decimate_value {
+            value 0.0
+            texture "rescale"
+        }
+    }
+    GeometryParticleContainer {
+        name "container"
+        #version 0.9
+        #created 1568190083
+        #modified 1568190294
+        resource 0 "E31C437F5887468971CC6D014E75892B"
+        resource 3 ""
+        translate 0.0 0.0 -24.4833034772168
+        uv_maps "parametric"
+        uv_maps_loaded yes
+        shading_groups "points"
+        materials "project://default/material"
+        clip_maps ""
+        displacements ""
+        sg_shading_variables ""
+        visibles yes
+    }
+    TexturePointCloud {
+        name "point_cloud"
+        #version 0.9
+        #created 1568190090
+        #modified 1568190258
+        positions "mat_1" -100 247
+        point_cloud "container"
+        point_radius 8
+    }
+    TextureRescale {
+        name "rescale"
+        #version 0.9
+        #created 1568190212
+        #modified 1568190220
+        positions "mat_1" 88 378
+        input {
+            value 1 1 1
+            texture "point_cloud"
+        }
+        input_max 0.541176470588235 0.541176470588235 0.541176470588235
+    }
+}
+#resources {
+    resource "E31C437F5887468971CC6D014E75892B" 0x01000000130000000149B341420000000076199140A1D62D420000000032F5D1406854174200000000FBE31241B4910242000000007A62294125C3D4410000000069EA1A4117C3B741000000008B4AAC409A119F4100000000882F543FF8E2824100000000190A85C049F3454100000000BD8A07C1AF9FE840000000007ECD3BC1C2F97A3F0000000064E455C1E564B6C0000000005A0E5EC1510149C100000000222260C162E99CC10000000059125FC15172D1C10000000056402DC10AA203C20000000034BB00C1CE3B1EC200000000D924A6C0BB8039C20000000064B103C06E0758C200000029E660513EBA460000
+}
+#preferences {
+    categories {
+        playblast {
+            frame_range 1
+            start 250
+            end 270
+            display_size 0
+            custom_size 720 486
+            display_HUD no
+            shading_mode 128
+            render_wireframe_overlay no
+            enable_ambient_occlusion no
+            ambient_occlusion_sample_count 1
+            ambient_occlusion_distance -1
+            refinement_count 0
+            format "image"
+            encoding 6
+            filename "U:/content_3.5demo/_Studio_Demo/render/playblast/blast_#####"
+        }
+        rendering {
+            motion_blur_sample_count 3
+            motion_blur_direction 0
+            motion_blur_length 0.5
+            displacement_storage_mode 0
+            projection_master_eye 0
+        }
+        geometry {
+            subdivision_mode 1
+            visibility_mode 2
+        }
+        animation {
+            frames_per_second 24
+            start_frame 0.0
+            end_frame 50
+        }
+    }
+}

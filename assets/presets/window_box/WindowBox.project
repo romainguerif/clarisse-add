@@ -1,0 +1,899 @@
+#Isotropix_Serial_Version 1.2
+
+#Isotropix_Clarisse_Version 5
+#Isotropix_Clarisse_Project_Version 0.97
+comment "Rollback to version 2"
+Context "scene" {
+    #created 1455809270
+    CameraPerspective {
+        name "camera"
+        #version 0.9
+        #created 1455809270
+        #modified 1623351269
+        translate 28 21 28
+        rotate -27.938 45 0.0
+        aim_distance 44.8218696620299
+        field_of_view 25
+    }
+    LightPhysicalDistant {
+        name "light"
+        #version 0.92
+        #created 1462886261
+        #modified 1623351269
+        rotate -35 125 0.0
+        volume_max_depth -1
+    }
+    RendererRaytracer {
+        name "path_tracer"
+        #version 1.4
+        #created 1462890443
+        #modified 1623351269
+        integration_model "IntegratorPathtracer"
+        integrator ".IntegratorPathtracer_embedded"
+        integrators ".IntegratorPathtracer_embedded" ".IntegratorAmbientOcclusion_embedded" ".IntegratorUtility_embedded"
+        embedded_objects {
+            IntegratorPathtracer {
+                name "IntegratorPathtracer_embedded"
+                #version 0.97
+                #created 1623351269
+                #modified 1623351269
+                cap_display no
+                embedded_objects {
+                    MaterialPhysicalStandard {
+                        name "surface_default"
+                        #version 0.97
+                        #created 1623351269
+                        #modified 1623351269
+                        private yes
+                    }
+                    MaterialPhysicalVolume {
+                        name "volume_default"
+                        #version 0.93
+                        #created 1623351269
+                        #modified 1623351269
+                        private yes
+                        density_multiplier 100
+                    }
+                    MaterialPhysicalHair {
+                        name "curve_default"
+                        #version 0.91
+                        #created 1623351269
+                        #modified 1623351269
+                        private yes
+                    }
+                }
+            }
+            IntegratorAmbientOcclusion {
+                name "IntegratorAmbientOcclusion_embedded"
+                #version 0.92
+                #created 1623351269
+                #modified 1623351269
+                cap_display no
+            }
+            IntegratorUtility {
+                name "IntegratorUtility_embedded"
+                #version 0.92
+                #created 1623351269
+                #modified 1623351269
+                cap_display no
+            }
+        }
+    }
+    Image {
+        name "image"
+        #version 0.96
+        #created 1462886391
+        #modified 1623351269
+        active_layer 0
+        resolution 1920 1080
+        display_ratio 1
+        layers ".background"
+        first_frame 0
+        last_frame 50
+        embedded_objects {
+            Layer3d {
+                name "background"
+                #version 0.97
+                #created 1462886428
+                #modified 1623351269
+                first_frame 0
+                last_frame 50
+                active_camera "camera"
+                renderer "path_tracer"
+                deep_output_data_precision 0
+                max_sample_count 0
+                light_path_expressions "Group@default://lpe/builtin"
+                user_data {
+                    __context_objects__ {
+                    }
+                    __context_lights__ {
+                    }
+                }
+            }
+        }
+    }
+    GeometryPolygrid {
+        name "polygrid"
+        #version 0.9
+        #created 1623351351
+        #modified 1623351611
+        translate 0.0 0.490790163514798 0.0
+        rotate -90 180 90
+        uv_maps "parametric"
+        uv_maps_loaded yes
+        shading_groups "grid"
+        materials "matte"
+        clip_maps ""
+        displacements ""
+        sg_shading_variables ""
+        visibles yes
+    }
+    MaterialMatte {
+        name "matte"
+        #version 0.91
+        #created 1623351363
+        #modified 1623351394
+        positions "mat_1" 29 -51
+        color {
+            value 0.0 0.0 0.0
+            texture "file"
+        }
+    }
+    TextureOslFile {
+        name "file"
+        #version 0.92
+        #created 1623351389
+        #modified 1623351547
+        positions "mat_1" -246 -73
+        projection 6
+        OSL_shader_filename "$PDIR/jiWindowBox_Arnold.osl"
+        custom_attributes {
+            attribute_group "output" {
+                string "OSL_output_name" {
+                    doc "Select shader output to fill texture RGB color."
+                    allow_expression no
+                    preset "outRGB" "outRGB"
+                    value "outRGB"
+                }
+            }
+            attribute_group "input" {
+                filename_open "OSL_filename" {
+                    doc "filename"
+                    value "$PDIR/WBX_Office_Day.png"
+                }
+                long "OSL_textureFlip" {
+                    doc "textureFlip"
+                    texturable yes
+                    animatable yes
+                    shading_variable yes
+                    value 0
+                }
+                long "OSL_textureFlop" {
+                    doc "textureFlop"
+                    texturable yes
+                    animatable yes
+                    shading_variable yes
+                    value 0
+                }
+                double "OSL_roomDepth" {
+                    doc "roomDepth"
+                    texturable yes
+                    animatable yes
+                    numeric_range yes 0.100000001490116 100
+                    ui_range yes 0.100000001490116 100
+                    shading_variable yes
+                    value 1.5
+                }
+                double "OSL_widthOverscan" {
+                    doc "widthOverscan"
+                    texturable yes
+                    animatable yes
+                    numeric_range yes 0.0 0.899999976158142
+                    ui_range yes 0.0 0.899999976158142
+                    shading_variable yes
+                    value 0.0
+                }
+                double "OSL_heightOverscan" {
+                    doc "heightOverscan"
+                    texturable yes
+                    animatable yes
+                    numeric_range yes 0.0 0.899999976158142
+                    ui_range yes 0.0 0.899999976158142
+                    shading_variable yes
+                    value 0.0
+                }
+                long "OSL_enableMidground" {
+                    doc "enableMidground"
+                    texturable yes
+                    animatable yes
+                    shading_variable yes
+                    value 0
+                }
+                double "OSL_midgroundDepth" {
+                    doc "midgroundDepth"
+                    texturable yes
+                    animatable yes
+                    numeric_range yes 0.0500000007450581 99
+                    ui_range yes 0.0500000007450581 99
+                    shading_variable yes
+                    value 0.0500000007450581
+                }
+                double "OSL_midgroundOffsetX" {
+                    doc "midgroundOffsetX"
+                    texturable yes
+                    animatable yes
+                    shading_variable yes
+                    value 0.0
+                }
+                double "OSL_midgroundOffsetY" {
+                    doc "midgroundOffsetY"
+                    texturable yes
+                    animatable yes
+                    shading_variable yes
+                    value 0.0
+                }
+                long "OSL_enableCurtains" {
+                    doc "enableCurtains"
+                    texturable yes
+                    animatable yes
+                    shading_variable yes
+                    value 0
+                }
+            }
+        }
+    }
+}
+#preferences {
+    categories {
+        USD {
+            purposes 0
+            purpose_render yes
+            purpose_proxy no
+            purpose_guide no
+            geometry_deduplication 0
+        }
+        playblast {
+            frame_range 0
+            start 0
+            end 50
+            step 1
+            display_size 0
+            custom_size 720 486
+            display_HUD yes
+            shading_mode -1
+            display_wireframe_overlay no
+            enable_ambient_occlusion no
+            ambient_occlusion_sample_count 1
+            ambient_occlusion_distance -1
+            refinement_count -1
+            format "image"
+            encoding 5
+            filename "$CTEMP\\blast_#####"
+        }
+        user_interface {
+            variable_hotbar "SignsOn"
+        }
+        rendering {
+            motion_blur_sample_count 3
+            motion_blur_direction 0
+            motion_blur_length 0.5
+            displacement_storage_mode 0
+            default_resolution_preset "Digital Video (HD)|1080p (1920x1080)"
+            default_x_resolution 1920
+            default_y_resolution 1080
+            default_display_aspect_ratio 1
+            projection_master_eye 0
+        }
+        geometry {
+            subdivision_mode 1
+            visibility_mode 2
+        }
+        animation {
+            frames_per_second 24
+            start_frame 0.0
+            end_frame 50
+        }
+    }
+    classes {
+        Widget3dView {
+        }
+        WidgetMaterialEditor {
+        }
+        WidgetBuildView {
+        }
+    }
+    selection {
+        selection_slots {
+        }
+        slots_working_contexts {
+            slot "Global" "build://project/scene"
+            slot "Slot 1" "build://project"
+            slot "Slot 2" "build://project"
+            slot "Slot 3" "build://project"
+        }
+    }
+    isolate {
+        Group {
+            name "isolate"
+            #version 0.93
+            #created 1558723066
+            #modified 1623339651
+            update_mode {
+                value 0
+                hidden yes
+            }
+            inclusion_rule {
+                value ""
+                hidden yes
+            }
+            inclusion_items {
+                value <empty>
+                hidden yes
+            }
+            exclusion_rule {
+                value ""
+                hidden yes
+            }
+            exclusion_items {
+                value <empty>
+                hidden yes
+            }
+        }
+    }
+    color_picker_custom_colors 1 0.345190316438675 0.0235294122248888 0.649999976158142 0.0900000035762787 0.0900000035762787 0.439999997615814 0.119999997317791 0.119999997317791 0.300000011920929 0.109999999403954 0.109999999403954 1 1 1 1 0.850000023841858 0.0 0.660000026226044 0.569999992847443 0.0900000035762787 0.439999997615814 0.389999985694885 0.119999997317791 0.300000011920929 0.270000010728836 0.109999999403954 0.800000011920929 0.800000011920929 0.800000011920929 0.300000011920929 1 0.0 0.259999990463257 0.660000026226044 0.0900000035762787 0.219999998807907 0.439999997615814 0.119999997317791 0.170000001788139 0.300000011920929 0.109999999403954 0.639999985694885 0.639999985694885 0.639999985694885 0.0 1 0.560000002384186 0.0900000035762787 0.660000026226044 0.400000005960464 0.119999997317791 0.439999997615814 0.28999999165535 0.109999999403954 0.300000011920929 0.209999993443489 0.479999989271164 0.479999989271164 0.479999989271164 0.0 0.600000023841858 1 0.0900000035762787 0.430000007152557 0.660000026226044 0.119999997317791 0.310000002384186 0.439999997615814 0.119999997317791 0.219999998807907 0.300000011920929 0.319999992847443 0.319999992847443 0.319999992847443 0.25 0.0 1 0.239999994635582 0.0900000035762787 0.660000026226044 0.200000002980232 0.119999997317791 0.439999997615814 0.159999996423721 0.119999997317791 0.300000011920929 0.159999996423721 0.159999996423721 0.159999996423721 1 0.0 0.899999976158142 0.660000026226044 0.0900000035762787 0.600000023841858 0.439999997615814 0.119999997317791 0.400000005960464 0.300000011920929 0.119999997317791 0.280000001192093 0.0 0.0 0.0
+    foreground_color 196.249603271484 196.249603271484 196.249603271484
+    background_color 1 1 1
+    current_time 0.5
+    active_tool "tools://translate_item"
+    ui {
+        window {
+            is_maximized yes
+            layout {
+                split_v {
+                    ratio 0.022
+                    views {
+                        tab {
+                            editor "WidgetTools"
+                            #version 0.9
+                            settings {
+                                viewport_widget {
+                                    selection_slot "Local"
+                                    use_global yes
+                                    local_selection {
+                                    }
+                                }
+                            }
+                            selection_locked no
+                        }
+                        selected_tab 0
+                        toolbar_minimized yes
+                    }
+                    view {
+                        editor "WidgetTools"
+                        settings {
+                            viewport_widget {
+                                selection_slot "Local"
+                                use_global yes
+                                local_selection {
+                                }
+                            }
+                        }
+                        toolbar_minimized yes
+                        selection_locked no
+                    }
+                    split_v {
+                        ratio 0.517075773745998
+                        split_h {
+                            ratio 0.946
+                            split_h {
+                                ratio 0.7
+                                views {
+                                    tab {
+                                        editor "Widget3dView"
+                                        #version 0.9
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            refresh_mode "Fps Driven"
+                                            sampling_quality 0.1
+                                            refinement_count 0.0
+                                            shading_mode "Previz"
+                                            ambient_occlusion no
+                                            ambient_occlusion_distance -1
+                                            fit_on_select no
+                                            display_filter "Context"
+                                            exposure 0.0
+                                            gamma 1
+                                            pickmask "Cameras Lights Locators Scene_Objects "
+                                            show_overlay no
+                                            renderer "IntegratorPathtracer"
+                                            integrator ".IntegratorPathtracer_embedded"
+                                            foreground_fit_mode 3
+                                            background_fit_mode 3
+                                            embedded_objects {
+                                                MaterialGlView {
+                                                    name "embedded_previz_material"
+                                                    #version 0.91
+                                                    #created 1623351269
+                                                    #modified 1623351270
+                                                    private yes
+                                                    use_flat_normal no no no
+                                                    light_color 0.400000035762787 0.400000035762787 0.400000035762787
+                                                    dark_color 0.0167320277541876 0.0167320277541876 0.0167320277541876
+                                                    zoom_factor 0.535898384862104
+                                                }
+                                                IntegratorPathtracer {
+                                                    name "IntegratorPathtracer_embedded"
+                                                    #version 0.97
+                                                    #created 1623351269
+                                                    #modified 1623351269
+                                                    cap_display no
+                                                    embedded_objects {
+                                                        MaterialPhysicalStandard {
+                                                            name "surface_default"
+                                                            #version 0.97
+                                                            #created 1623351269
+                                                            #modified 1623351269
+                                                            private yes
+                                                        }
+                                                        MaterialPhysicalVolume {
+                                                            name "volume_default"
+                                                            #version 0.93
+                                                            #created 1623351269
+                                                            #modified 1623351269
+                                                            private yes
+                                                            density_multiplier 100
+                                                        }
+                                                        MaterialPhysicalHair {
+                                                            name "curve_default"
+                                                            #version 0.91
+                                                            #created 1623351269
+                                                            #modified 1623351269
+                                                            private yes
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            lights 0
+                                            eye_dist 3.41518192619308
+                                            center 0.130895144232785 0.301481125187378 0.0410935218387769
+                                            rotation -0.839597303420305 90.2421056916937 0.0
+                                        }
+                                        selection_locked no
+                                        evaluation_mode yes
+                                    }
+                                    tab {
+                                        editor "WidgetImageView"
+                                        #version 0.92
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            show_squares yes
+                                            show_progress yes
+                                            min_quality "1/16 Resolution"
+                                            visual_hint -1
+                                            aov_group "rgba"
+                                            image_nodes <empty>
+                                            render_scene "build://project/scene/image.background"
+                                            zoom_and_pan 1 0.0 0.0
+                                            exposure 0.0
+                                            gamma 1
+                                            auto_eval yes
+                                            show_overlay yes
+                                            widget_color 0.234999999403954 0.234999999403954 0.234999999403954
+                                        }
+                                        selection_locked no
+                                        evaluation_mode yes
+                                    }
+                                    selected_tab 0
+                                    toolbar_minimized no
+                                }
+                                view {
+                                    editor "Widget3dView"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                        refresh_mode "Fps Driven"
+                                        sampling_quality 0.1
+                                        refinement_count 0.0
+                                        shading_mode "Previz"
+                                        ambient_occlusion no
+                                        ambient_occlusion_distance -1
+                                        fit_on_select no
+                                        display_filter "Context"
+                                        exposure 0.0
+                                        gamma 1
+                                        pickmask "Cameras Lights Locators Scene_Objects "
+                                        show_overlay no
+                                        renderer "IntegratorPathtracer"
+                                        integrator ".IntegratorPathtracer_embedded"
+                                        foreground_fit_mode 3
+                                        background_fit_mode 3
+                                        embedded_objects {
+                                            MaterialGlView {
+                                                name "embedded_previz_material"
+                                                #version 0.91
+                                                #created 1623351269
+                                                #modified 1623351270
+                                                private yes
+                                                use_flat_normal no no no
+                                                light_color 0.400000035762787 0.400000035762787 0.400000035762787
+                                                dark_color 0.0167320277541876 0.0167320277541876 0.0167320277541876
+                                                zoom_factor 0.535898384862104
+                                            }
+                                            IntegratorPathtracer {
+                                                name "IntegratorPathtracer_embedded"
+                                                #version 0.97
+                                                #created 1623351269
+                                                #modified 1623351269
+                                                cap_display no
+                                                embedded_objects {
+                                                    MaterialPhysicalStandard {
+                                                        name "surface_default"
+                                                        #version 0.97
+                                                        #created 1623351269
+                                                        #modified 1623351269
+                                                        private yes
+                                                    }
+                                                    MaterialPhysicalVolume {
+                                                        name "volume_default"
+                                                        #version 0.93
+                                                        #created 1623351269
+                                                        #modified 1623351269
+                                                        private yes
+                                                        density_multiplier 100
+                                                    }
+                                                    MaterialPhysicalHair {
+                                                        name "curve_default"
+                                                        #version 0.91
+                                                        #created 1623351269
+                                                        #modified 1623351269
+                                                        private yes
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        lights 0
+                                        eye_dist 3.41518192619308
+                                        center 0.130895144232785 0.301481125187378 0.0410935218387769
+                                        rotation -0.839597303420305 90.2421056916937 0.0
+                                    }
+                                    toolbar_minimized no
+                                    selection_locked no
+                                }
+                                split_v {
+                                    ratio 0.5
+                                    views {
+                                        tab {
+                                            editor "WidgetBrowser"
+                                            #version 0.9
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                tree_columns_type <empty>
+                                                tree_columns_width <empty>
+                                                tree_sort_type -1
+                                                tree_sort_order 0
+                                                rows_expand "build://project"
+                                                show_context_tree yes
+                                                view_mode 0
+                                                class_filter "Project Item"
+                                                width_context_tree 150
+                                                spreadsheet_sort_type -1
+                                                spreadsheet_sort_order 0
+                                                spreadsheet_column_type 0 4 3
+                                                spreadsheet_columns_width 240 170 150
+                                            }
+                                            selection_locked no
+                                        }
+                                        tab {
+                                            editor "WidgetHierarchyView"
+                                            #version 0.9
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                show_mode no
+                                                tree_columns_type 3
+                                                tree_columns_width 150
+                                                tree_sort_type -1
+                                                tree_sort_order 0
+                                                rows_expand <empty>
+                                            }
+                                            selection_locked no
+                                            evaluation_mode yes
+                                        }
+                                        tab {
+                                            editor "WidgetExplorer"
+                                            #version 0.9
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                tree_columns_type 3
+                                                tree_columns_width 150
+                                                tree_sort_type -1
+                                                tree_sort_order 0
+                                                rows_expand "build://project" "build://project/scene"
+                                                display_only_localized_button no
+                                                display_only_overridden_attrs no
+                                            }
+                                            selection_locked no
+                                            evaluation_mode yes
+                                        }
+                                        tab {
+                                            editor "WidgetSearch"
+                                            #version 0.0
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                text ""
+                                                spreadsheet_sort_type -1
+                                                spreadsheet_sort_order 0
+                                                spreadsheet_columns_width 240 150 170 115 115 270 270
+                                            }
+                                            selection_locked no
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetBrowser"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            tree_columns_type <empty>
+                                            tree_columns_width <empty>
+                                            tree_sort_type -1
+                                            tree_sort_order 0
+                                            rows_expand "build://project"
+                                            show_context_tree yes
+                                            view_mode 0
+                                            class_filter "Project Item"
+                                            width_context_tree 150
+                                            spreadsheet_sort_type -1
+                                            spreadsheet_sort_order 0
+                                            spreadsheet_column_type 0 4 3
+                                            spreadsheet_columns_width 240 170 150
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                    views {
+                                        tab {
+                                            editor "WidgetImageGallery"
+                                            #version 0.9
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                force_refresh no
+                                                show_mode yes
+                                            }
+                                            selection_locked no
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetImageGallery"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            force_refresh no
+                                            show_mode yes
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                }
+                            }
+                            views {
+                                tab {
+                                    editor "WidgetTimeline"
+                                    #version 0.9
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                    }
+                                    selection_locked no
+                                }
+                                selected_tab 0
+                                toolbar_minimized yes
+                            }
+                            view {
+                                editor "WidgetTimeline"
+                                settings {
+                                    viewport_widget {
+                                        selection_slot "Local"
+                                        use_global yes
+                                        local_selection {
+                                        }
+                                    }
+                                }
+                                toolbar_minimized yes
+                                selection_locked no
+                            }
+                        }
+                        split_h {
+                            ratio 0.5
+                            views {
+                                tab {
+                                    editor "WidgetAttributeEditor"
+                                    #version 4.5
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                        attribute_groups "Clearcoat" yes "MaterialPhysicalDisneyPrincipled::Subsurface" no "Emission" yes "Marble" yes "SceneObject::Rendering" yes "TextureSpatial::Projection>uvw Transformation" no "Layer3d::Rendering>clipping" no "MaterialPhysicalStandard::Transmission" no "Specular 1 Fresnel" no "Material Sampling" yes "Group::Result" yes "MaterialPhysical::Material Sampling>path Depths" yes "RendererRaytracer::Integrator" no "Uv Bake" yes "Diffuse Advanced" no "File Output" yes "MaterialPhysicalMultiblend::Layer 4" no "Light::Lighting" yes "ToolRotateItem::Rotate Tool" yes "LightPhysical::Lighting>attenuation" no "Switch" yes "Raytracing" yes "Open VDB" yes "SceneObjectScatterer::Scatterer>instances>decimation" yes "Arbitrary Output Variables" no "TextureSpatial::Projection" no "SearchPath::Paths" yes "ToolRotateItem::Increment Snapping" yes "TextureInvert::Input" yes "Aovs" yes "TextureStreamedMapFile::Image" yes "TextureColorCorrection::Input" yes "Layer 4" yes "OpenVDB" yes "MaterialPhysicalStandard::Diffuse>advanced" no "Visibility" yes "Transmittance" yes "SceneObjectScatterer::Scatterer" yes "Attenuation" yes "MaterialPhysicalDisneyPrincipled::Clear Coat" no "Anti Aliasing" yes "Inclusion" yes "Group 3" yes "Adaptive Subdivision Settings" yes "MaterialPhysicalStandard::Specular 1>fresnel" no "MaterialPhysicalDisneyPrincipled::Emission" yes "LightPhysicalGeometry::Lighting>shape" yes "Manipulator Initialization" yes "GeometrySphere::Geometry" yes "MaterialPhysicalMultiblend::Layer 3" yes "Advanced Transmission" no "Sub Surface Scattering" yes "Geometry::Geometry>deformation" yes "Content" yes "Subdivision Surfaces" yes "Group::Inclusion" yes "Wind" yes "LightPhysicalSpot::Lighting>projection" no "Guide Interpolation" yes "Override" yes "Subsurface" no "LightPhysicalSphere::Lighting>shape>ies" yes "Camera Projection" yes "ToolScaleItem::Picking" yes "Multiplier" yes "Quality" yes "Time" yes "CameraPerspectiveAdvanced::Camera>depth Of Field" no "MaterialPhysicalAutodeskStandardSurface::Emission" yes "IntegratorPathtracer::Sampling>path Depths" yes "Sun" yes "Debug" yes "GeometryPolymesh::Geometry>subdivision Surfaces>creases" yes "Motion Blur" yes "Inputs" yes "GeometryPolygrid::Geometry" yes "Extra" yes "Advanced Kinematics" yes "Result" yes "TextureBlend::Input" yes "SceneObjectScatterer::Scatterer>instances>time Variance" no "ToolRotateItem::Picking" yes "Gradient" yes "LayerScene::Rendering>materials" yes "MaterialPhysicalDisneyPrincipled::Sheen" no "TextureOcclusion::Occlusion>bias" yes "TextureStreamedMapFile::Image>sequence" no "TextureGetEmissionWeight::Emission" yes "Material 6" yes "ToolPickFit::Picking" yes "Mixing" yes "Input" yes "GeometryBox::Geometry" yes "Overscan" yes "Image::Quality" no "Primary Highlight" yes "Override Sets" yes "Overrides" yes "Sub Pixel Filters" yes "Diffuse Sss" no "Coating" yes "LightPhysical::Lighting>visibility>path Depth" no "SceneItem::Rendering>visibility" yes "MaterialPhysicalReflection::Specular>anisotropy" no "Caustics" no "Ray Casting" yes "Density" yes "Material 1" yes "Lpe" yes "Layer 6" yes "Deep Output" yes "Upload" yes "ToolTranslateItem::Increment Snapping" yes "Collision" yes "TextureGetEmissionColor::Input" yes "Utility" yes "Layer3d::Output>deep" no "Reflection" yes "Projection Transform" yes "MaterialPhysicalAutodeskStandardSurface::Thin Film" yes "MaterialPhysicalAutodeskStandardSurface::Sheen" yes "ToolTranslateItem::Picking" yes "IntegratorPathtracer::Sampling>advanced" yes "Shading Variables" yes "Light Path Expression" yes "SceneObjectScatterer::Scatterer>instances>transformation>offset" yes "MaterialPhysicalMultiblend::Blending Model" yes "Channels" yes "TextureGradient::Remap" yes "Tone Mapping" yes "Cached Upload List" yes "Iridescent" yes "MaterialPhysicalStandard::Specular 1" yes "CameraPerspectiveAdvanced::Camera" yes "Variance" yes "TextureHue::Color Correction" yes "LightPhysical::Lighting>visibility>weights>indirect" no "Material 3" yes "GeometryPointCloud::Geometry" yes "Anisotropy" no "Texture" yes "ToolTranslateItem::Surface Snapping" yes "Layer3d::Uv Baking" no "Alembic" yes "TextureMapFile::Image>color Correction" yes "TextureMapFile::Image" yes "MaterialPhysicalStandard::Transmission>attenuation" no "Foreground Plate" yes "TextureFractalNoise::Pattern" yes "LightPhysical::Lighting>visibility" no "Gamma" yes "Transform" yes "GeometryVolumeBox::Volume" yes "SceneItem::Motion Blur" no "Indirect Path Depth" yes "MaterialPhysicalAutodeskStandardSurface::Transmission" yes "Layer::Overscan" no "ToolScaleItem::Scale Tool" yes "GeometryPolysphere::Geometry" yes "Rendering" yes "Material 5" yes "GeometryPolyfile::Geometry" yes "Shape" yes "Snap" yes "MaterialPhysicalAutodeskStandardSurface::Base" yes "Lighting" yes "MaterialPhysicalLayered::Layer 1" yes "Geometry::Geometry>advanced" yes "Scattering Decimation" yes "MaterialPhysicalLayered::Layer 2" no "___Debug___" yes "RendererRaytracer::Sampling>advanced Anti Aliasing" yes "Shadow" yes "Transmission Highlight" yes "Ray Tracing" yes "Specular 2" no "Depth Of Field" yes "Aov" yes "Contribution" yes "Scope" yes "Process" yes "TextureReorder::Input" yes "Energy Conservation" yes "SceneItem::Display" yes "Packaging" yes "LightPathExpression::AOV" yes "MaterialPhysicalVolume::Volume" yes "GeometryVolumeBox::Volume>sampling" no "Frizziness" yes "MaterialPhysicalMultiblend::Layer 2" yes "Machines" yes "MaterialPhysicalStandard::Transmission>advanced" no "TextureSaturation::Input" yes "Normal" yes "TextureMapFile::Image>mip-mapping" no "Sheen" no "TextureGetEmissionWeight::Input" yes "Layer 5" yes "Frame Range" yes "MaterialPhysical::Caustics" no "TextureOsl::Raytracing" no "Normalization" yes "Clump" yes "Path" yes "Fresnel Specular 2" no "SceneObjectScatterer::Scatterer>instances>transformation" yes "Group 2" yes "Transparency" yes "CameraPerspective::Camera>depth Of Field" no "Image::Output" no "MaterialPhysicalEmitter::Emission" yes "Layer::Blending" no "ToolTranslateItem::Translate Tool" yes "MaterialPhysicalLayered::Layer 3" no "Clear Coat" no "Ambient Occlusion" yes "MaterialPhysicalStandard::Specular 1>advanced" no "Color Temperature" yes "TextureGrid::Pattern" yes "TextureStreamedMapFile::Image>color Management" yes "CAM" yes "LightPhysical::Lighting>visibility>shadows" no "MaterialPhysicalAutodeskStandardSurface::Specular" yes "Layer 8" yes "Environment" yes "TextureSpatial::Projection>camera" no "GeometryPolycylinder::Geometry" yes "MaterialPhysicalStandard::Specular 2>fresnel" no "Canvas" yes "Layer3d::Subpixel Filters" no "TextureStreamedMapFile::Image>color Correction" yes "Absorption" yes "Animation" yes "TextureOcclusion::Occlusion" yes "Material 2" yes "MaterialPhysicalMultiblend::Layer 5" no "TextureSpatial::Projection>transformation" no "Informations" no "MaterialPhysicalLayered::Layer 5" no "TextureOslFile::Input" yes "LayerScene::Rendering" yes "MaterialPhysicalDisneyPrincipled::Transmission" no "LightPhysicalEnvironment::Lighting>sampling>portals" no "LightPhysical::Lighting>visibility>weights>direct" no "MaterialPhysicalStandard::Specular 2" no "Layer 3" yes "Local Overrides" yes "GeometryAbcMesh::Alembic>playback" no "MaterialPhysicalStandard::Emission" yes "Opacity" yes "Pattern" yes "TextureMapFile::Image>sequence" yes "Property" yes "Geometry" yes "MaterialPhysicalDisneyPrincipled::Anisotropy" no "GeometryPolymesh::Geometry>subdivision Surfaces>advanced" yes "Advanced Diffuse" no "Advanced Specular 1" no "Image::Canvas" yes "MaterialPhysicalLayered::Base Layer" yes "TextureTriplanar::Input" yes "LightPhysicalSphere::Lighting>shape" yes "Test" yes "Kinematics" yes "Advanced Specular 2" no "SceneItem::Kinematics>advanced" no "Specular 1 Advanced" no "Image::Layers" yes "Incandescent" yes "LightPhysicalSphere::Lighting>shape>ies>advanced" no "Diffuse Backlight" no "MaterialPhysicalAutodeskStandardSurface::Coat" no "Layer 7" yes "File" yes "Group::Exclusion" yes "Deformation" yes "MaterialPhysicalAutodeskStandardSurface::Subsurface" no "TextureInvert::Invert" yes "General" yes "MaterialPhysical::Material Sampling" yes "Artistic Manipulation" yes "SceneObjectScatterer::Scatterer>advanced" no "Displacement::Displacement" yes "ToolSelect::Picking" yes "Return" yes "TextureTriplanar::Projection" yes "Blending" yes "Translucent" yes "Image::Overscan" no "GeometryPolybox::Geometry" yes "TextureColorSpace::Color Space" yes "Notifications" yes "Geometry::Geometry>displacement" yes "ToolTranslateItem::Manipulator Initialization" no "Sequence" yes "LightPhysical::Lighting>sampling" yes "MaterialPhysicalReflection::Specular>fresnel" no "RendererRaytracer::Tone Mapping" no "Projection Mode" yes "Parallax" yes "Shader" yes "Hierarchy" yes "Layer3d::AOV" no "MaterialPhysicalStandard::Diffuse>backlight" no "Outline" yes "Scattering" yes "TextureTriplanar::Projection>advanced" no "MaterialPhysicalLayered::Layer 4" no "Units Group" yes "Particle Properties" yes "Transmission" no "GeometryPointCloud::Geometry>decimation" yes "SceneItem::Kinematics>pivot/offset" no "RendererRaytracer::Sampling" yes "CameraPerspective::Camera" yes "CameraPerspectiveAdvanced::Camera>film Back" no "Back" yes "Task" yes "MaterialPhysicalStandard::Specular 2>advanced" no "Layer::Region" no "Reflection Advanced" no "Eraser" yes "Exclusion" yes "Materials" yes "MaterialPhysicalDisneyPrincipled::Reflection Advanced" no "Layer 2" yes "Brush" yes "SceneObject::Rendering>emission" yes "MaterialPhysicalDisneyPrincipled::Base" yes "Material Blending" yes "Range" yes "Frames" yes "ToolRotateItem::Manipulator Initialization" no "Diffuse" yes "Transmission Attenuation" no "Projection" yes "Image::Output>format" no "SceneObject::Rendering>lighting" yes "MaterialPhysicalMultiblend::Layer 6" no "3d View" yes "LightPathExpression::Variance Aov" no "Sss" no "MaterialMatte::Matte" yes "Density & Velocity" yes "MaterialPhysicalBlend::Materials" yes "MaterialPhysical::Surface Geometry" yes "MaterialPhysicalStandard::Diffuse>subsurface" no "SceneItem::Kinematics" yes "Material::AOV" no "TextureBumpMap::Input" yes "GeometryAbcMesh::Alembic" yes "Evaluation" yes "Speed Tree Model" yes "MaterialPhysicalReflection::Specular" yes "Crease Driven Subdivision Surfaces" yes "Back Light" no "Background Plate" yes "Alpha" yes "Settings" yes "Front" yes "Specular 2 Advanced" no "Texture::Output" no "SceneObjectCombiner::Combiner" yes "TextureColorSpace::Input" yes "TextureNormalMap::Input" yes "MaterialPhysical::Energy Conservation" yes "AovStore::AOV" yes "Shading" yes "Group 1" yes "Layer::Output" no "TextureOcclusion::Occlusion>falloffs" yes "Group::Settings" yes "LightPhysical::AOV" no "TextureSaturation::Color Correction" yes "Layer::Transformation" no "Secondary Highlight" yes "Display" yes "Uv Transform" yes "TextureOcclusion::Input" yes "Run" yes "Mapping" yes "RendererRaytracer::Sampling>motion Blur" yes "Ies" yes "Length" yes "Advanced Settings" yes "Filters" yes "SceneObjectScatterer::Scatterer>instances>collision" yes "Dielectric" yes "TextureConstantColor::Input" yes "Layer 1" yes "TextureMapFile::Image>color Management" yes "Glints" yes "ShadingLayer::Settings" yes "Layers" yes "Specular 2 Fresnel" no "Layer::Filtering" no "ToolScaleItem::Manipulator Initialization" no "TextureCellularNoise::Pattern" yes "Sampling" yes "LightPhysicalSpot::Lighting>shape" yes "ToolPicker::Picking" yes "GeometryPolymesh::Geometry>subdivision Surfaces" yes "Fresnel Specular 1" yes "TextureMultiply::Input" yes "MaterialPhysicalStandard::Diffuse" yes "Light Contribution" yes "Specular 1" yes "Output" yes "Snap To Surface" yes "Image::Region" no "Base" yes "LayerScene::Rendering>visibility" yes "MaterialPhysicalMultiblend::Layer 1" yes "Path Depth" yes "AbcXform::Alembic>playback" no "Curve" yes "Specular" yes "TextureGradient::Input" yes "MaterialPhysical::Transparent Shadows" yes "TextureOperator::Pass Through" no "Smoothing" yes "Pass Through" yes "LightPhysicalDistant::Lighting>shape" yes "TextureStreamedMapFile::Image>mip-mapping" no "TextureOcclusion::Occlusion>merge Objects" yes "Scene Object Name" yes "Scattering Variation" yes "AovStore::Variance Aov" no "Depth" yes "TextureChecker::Pattern" yes "ID" yes "Compression" yes "Actions" yes "Displacement" yes "Light Visibility" yes "Pbr" yes "Material 4" yes "Transmission Advanced" no "ToolScaleItem::Snapping" yes "Linking" yes "Layer::Output>format" no "LightPhysicalPlane::Lighting>shape" yes "TextureColorCorrection::Color Correction" yes "Clamping" yes "IntegratorPathtracer::Sampling>transparency" no "RendererRaytracer::AOV" no "TextureHue::Input" yes "TextureOsl::Shader" yes
+                                        attributes_filter ""
+                                        expression_mode yes
+                                        separator 634
+                                    }
+                                    selection_locked no
+                                }
+                                selected_tab 0
+                                toolbar_minimized no
+                            }
+                            view {
+                                editor "WidgetAttributeEditor"
+                                settings {
+                                    viewport_widget {
+                                        selection_slot "Local"
+                                        use_global yes
+                                        local_selection {
+                                        }
+                                    }
+                                    attribute_groups "Clearcoat" yes "MaterialPhysicalDisneyPrincipled::Subsurface" no "Emission" yes "Marble" yes "SceneObject::Rendering" yes "TextureSpatial::Projection>uvw Transformation" no "Layer3d::Rendering>clipping" no "MaterialPhysicalStandard::Transmission" no "Specular 1 Fresnel" no "Material Sampling" yes "Group::Result" yes "MaterialPhysical::Material Sampling>path Depths" yes "RendererRaytracer::Integrator" no "Uv Bake" yes "Diffuse Advanced" no "File Output" yes "MaterialPhysicalMultiblend::Layer 4" no "Light::Lighting" yes "ToolRotateItem::Rotate Tool" yes "LightPhysical::Lighting>attenuation" no "Switch" yes "Raytracing" yes "Open VDB" yes "SceneObjectScatterer::Scatterer>instances>decimation" yes "Arbitrary Output Variables" no "TextureSpatial::Projection" no "SearchPath::Paths" yes "ToolRotateItem::Increment Snapping" yes "TextureInvert::Input" yes "Aovs" yes "TextureStreamedMapFile::Image" yes "TextureColorCorrection::Input" yes "Layer 4" yes "OpenVDB" yes "MaterialPhysicalStandard::Diffuse>advanced" no "Visibility" yes "Transmittance" yes "SceneObjectScatterer::Scatterer" yes "Attenuation" yes "MaterialPhysicalDisneyPrincipled::Clear Coat" no "Anti Aliasing" yes "Inclusion" yes "Group 3" yes "Adaptive Subdivision Settings" yes "MaterialPhysicalStandard::Specular 1>fresnel" no "MaterialPhysicalDisneyPrincipled::Emission" yes "LightPhysicalGeometry::Lighting>shape" yes "Manipulator Initialization" yes "GeometrySphere::Geometry" yes "MaterialPhysicalMultiblend::Layer 3" yes "Advanced Transmission" no "Sub Surface Scattering" yes "Geometry::Geometry>deformation" yes "Content" yes "Subdivision Surfaces" yes "Group::Inclusion" yes "Wind" yes "LightPhysicalSpot::Lighting>projection" no "Guide Interpolation" yes "Override" yes "Subsurface" no "LightPhysicalSphere::Lighting>shape>ies" yes "Camera Projection" yes "ToolScaleItem::Picking" yes "Multiplier" yes "Quality" yes "Time" yes "CameraPerspectiveAdvanced::Camera>depth Of Field" no "MaterialPhysicalAutodeskStandardSurface::Emission" yes "IntegratorPathtracer::Sampling>path Depths" yes "Sun" yes "Debug" yes "GeometryPolymesh::Geometry>subdivision Surfaces>creases" yes "Motion Blur" yes "Inputs" yes "GeometryPolygrid::Geometry" yes "Extra" yes "Advanced Kinematics" yes "Result" yes "TextureBlend::Input" yes "SceneObjectScatterer::Scatterer>instances>time Variance" no "ToolRotateItem::Picking" yes "Gradient" yes "LayerScene::Rendering>materials" yes "MaterialPhysicalDisneyPrincipled::Sheen" no "TextureOcclusion::Occlusion>bias" yes "TextureStreamedMapFile::Image>sequence" no "TextureGetEmissionWeight::Emission" yes "Material 6" yes "ToolPickFit::Picking" yes "Mixing" yes "Input" yes "GeometryBox::Geometry" yes "Overscan" yes "Image::Quality" no "Primary Highlight" yes "Override Sets" yes "Overrides" yes "Sub Pixel Filters" yes "Diffuse Sss" no "Coating" yes "LightPhysical::Lighting>visibility>path Depth" no "SceneItem::Rendering>visibility" yes "MaterialPhysicalReflection::Specular>anisotropy" no "Caustics" no "Ray Casting" yes "Density" yes "Material 1" yes "Lpe" yes "Layer 6" yes "Deep Output" yes "Upload" yes "ToolTranslateItem::Increment Snapping" yes "Collision" yes "TextureGetEmissionColor::Input" yes "Utility" yes "Layer3d::Output>deep" no "Reflection" yes "Projection Transform" yes "MaterialPhysicalAutodeskStandardSurface::Thin Film" yes "MaterialPhysicalAutodeskStandardSurface::Sheen" yes "ToolTranslateItem::Picking" yes "IntegratorPathtracer::Sampling>advanced" yes "Shading Variables" yes "Light Path Expression" yes "SceneObjectScatterer::Scatterer>instances>transformation>offset" yes "MaterialPhysicalMultiblend::Blending Model" yes "Channels" yes "TextureGradient::Remap" yes "Tone Mapping" yes "Cached Upload List" yes "Iridescent" yes "MaterialPhysicalStandard::Specular 1" yes "CameraPerspectiveAdvanced::Camera" yes "Variance" yes "TextureHue::Color Correction" yes "LightPhysical::Lighting>visibility>weights>indirect" no "Material 3" yes "GeometryPointCloud::Geometry" yes "Anisotropy" no "Texture" yes "ToolTranslateItem::Surface Snapping" yes "Layer3d::Uv Baking" no "Alembic" yes "TextureMapFile::Image>color Correction" yes "TextureMapFile::Image" yes "MaterialPhysicalStandard::Transmission>attenuation" no "Foreground Plate" yes "TextureFractalNoise::Pattern" yes "LightPhysical::Lighting>visibility" no "Gamma" yes "Transform" yes "GeometryVolumeBox::Volume" yes "SceneItem::Motion Blur" no "Indirect Path Depth" yes "MaterialPhysicalAutodeskStandardSurface::Transmission" yes "Layer::Overscan" no "ToolScaleItem::Scale Tool" yes "GeometryPolysphere::Geometry" yes "Rendering" yes "Material 5" yes "GeometryPolyfile::Geometry" yes "Shape" yes "Snap" yes "MaterialPhysicalAutodeskStandardSurface::Base" yes "Lighting" yes "MaterialPhysicalLayered::Layer 1" yes "Geometry::Geometry>advanced" yes "Scattering Decimation" yes "MaterialPhysicalLayered::Layer 2" no "___Debug___" yes "RendererRaytracer::Sampling>advanced Anti Aliasing" yes "Shadow" yes "Transmission Highlight" yes "Ray Tracing" yes "Specular 2" no "Depth Of Field" yes "Aov" yes "Contribution" yes "Scope" yes "Process" yes "TextureReorder::Input" yes "Energy Conservation" yes "SceneItem::Display" yes "Packaging" yes "LightPathExpression::AOV" yes "MaterialPhysicalVolume::Volume" yes "GeometryVolumeBox::Volume>sampling" no "Frizziness" yes "MaterialPhysicalMultiblend::Layer 2" yes "Machines" yes "MaterialPhysicalStandard::Transmission>advanced" no "TextureSaturation::Input" yes "Normal" yes "TextureMapFile::Image>mip-mapping" no "Sheen" no "TextureGetEmissionWeight::Input" yes "Layer 5" yes "Frame Range" yes "MaterialPhysical::Caustics" no "TextureOsl::Raytracing" no "Normalization" yes "Clump" yes "Path" yes "Fresnel Specular 2" no "SceneObjectScatterer::Scatterer>instances>transformation" yes "Group 2" yes "Transparency" yes "CameraPerspective::Camera>depth Of Field" no "Image::Output" no "MaterialPhysicalEmitter::Emission" yes "Layer::Blending" no "ToolTranslateItem::Translate Tool" yes "MaterialPhysicalLayered::Layer 3" no "Clear Coat" no "Ambient Occlusion" yes "MaterialPhysicalStandard::Specular 1>advanced" no "Color Temperature" yes "TextureGrid::Pattern" yes "TextureStreamedMapFile::Image>color Management" yes "CAM" yes "LightPhysical::Lighting>visibility>shadows" no "MaterialPhysicalAutodeskStandardSurface::Specular" yes "Layer 8" yes "Environment" yes "TextureSpatial::Projection>camera" no "GeometryPolycylinder::Geometry" yes "MaterialPhysicalStandard::Specular 2>fresnel" no "Canvas" yes "Layer3d::Subpixel Filters" no "TextureStreamedMapFile::Image>color Correction" yes "Absorption" yes "Animation" yes "TextureOcclusion::Occlusion" yes "Material 2" yes "MaterialPhysicalMultiblend::Layer 5" no "TextureSpatial::Projection>transformation" no "Informations" no "MaterialPhysicalLayered::Layer 5" no "TextureOslFile::Input" yes "LayerScene::Rendering" yes "MaterialPhysicalDisneyPrincipled::Transmission" no "LightPhysicalEnvironment::Lighting>sampling>portals" no "LightPhysical::Lighting>visibility>weights>direct" no "MaterialPhysicalStandard::Specular 2" no "Layer 3" yes "Local Overrides" yes "GeometryAbcMesh::Alembic>playback" no "MaterialPhysicalStandard::Emission" yes "Opacity" yes "Pattern" yes "TextureMapFile::Image>sequence" yes "Property" yes "Geometry" yes "MaterialPhysicalDisneyPrincipled::Anisotropy" no "GeometryPolymesh::Geometry>subdivision Surfaces>advanced" yes "Advanced Diffuse" no "Advanced Specular 1" no "Image::Canvas" yes "MaterialPhysicalLayered::Base Layer" yes "TextureTriplanar::Input" yes "LightPhysicalSphere::Lighting>shape" yes "Test" yes "Kinematics" yes "Advanced Specular 2" no "SceneItem::Kinematics>advanced" no "Specular 1 Advanced" no "Image::Layers" yes "Incandescent" yes "LightPhysicalSphere::Lighting>shape>ies>advanced" no "Diffuse Backlight" no "MaterialPhysicalAutodeskStandardSurface::Coat" no "Layer 7" yes "File" yes "Group::Exclusion" yes "Deformation" yes "MaterialPhysicalAutodeskStandardSurface::Subsurface" no "TextureInvert::Invert" yes "General" yes "MaterialPhysical::Material Sampling" yes "Artistic Manipulation" yes "SceneObjectScatterer::Scatterer>advanced" no "Displacement::Displacement" yes "ToolSelect::Picking" yes "Return" yes "TextureTriplanar::Projection" yes "Blending" yes "Translucent" yes "Image::Overscan" no "GeometryPolybox::Geometry" yes "TextureColorSpace::Color Space" yes "Notifications" yes "Geometry::Geometry>displacement" yes "ToolTranslateItem::Manipulator Initialization" no "Sequence" yes "LightPhysical::Lighting>sampling" yes "MaterialPhysicalReflection::Specular>fresnel" no "RendererRaytracer::Tone Mapping" no "Projection Mode" yes "Parallax" yes "Shader" yes "Hierarchy" yes "Layer3d::AOV" no "MaterialPhysicalStandard::Diffuse>backlight" no "Outline" yes "Scattering" yes "TextureTriplanar::Projection>advanced" no "MaterialPhysicalLayered::Layer 4" no "Units Group" yes "Particle Properties" yes "Transmission" no "GeometryPointCloud::Geometry>decimation" yes "SceneItem::Kinematics>pivot/offset" no "RendererRaytracer::Sampling" yes "CameraPerspective::Camera" yes "CameraPerspectiveAdvanced::Camera>film Back" no "Back" yes "Task" yes "MaterialPhysicalStandard::Specular 2>advanced" no "Layer::Region" no "Reflection Advanced" no "Eraser" yes "Exclusion" yes "Materials" yes "MaterialPhysicalDisneyPrincipled::Reflection Advanced" no "Layer 2" yes "Brush" yes "SceneObject::Rendering>emission" yes "MaterialPhysicalDisneyPrincipled::Base" yes "Material Blending" yes "Range" yes "Frames" yes "ToolRotateItem::Manipulator Initialization" no "Diffuse" yes "Transmission Attenuation" no "Projection" yes "Image::Output>format" no "SceneObject::Rendering>lighting" yes "MaterialPhysicalMultiblend::Layer 6" no "3d View" yes "LightPathExpression::Variance Aov" no "Sss" no "MaterialMatte::Matte" yes "Density & Velocity" yes "MaterialPhysicalBlend::Materials" yes "MaterialPhysical::Surface Geometry" yes "MaterialPhysicalStandard::Diffuse>subsurface" no "SceneItem::Kinematics" yes "Material::AOV" no "TextureBumpMap::Input" yes "GeometryAbcMesh::Alembic" yes "Evaluation" yes "Speed Tree Model" yes "MaterialPhysicalReflection::Specular" yes "Crease Driven Subdivision Surfaces" yes "Back Light" no "Background Plate" yes "Alpha" yes "Settings" yes "Front" yes "Specular 2 Advanced" no "Texture::Output" no "SceneObjectCombiner::Combiner" yes "TextureColorSpace::Input" yes "TextureNormalMap::Input" yes "MaterialPhysical::Energy Conservation" yes "AovStore::AOV" yes "Shading" yes "Group 1" yes "Layer::Output" no "TextureOcclusion::Occlusion>falloffs" yes "Group::Settings" yes "LightPhysical::AOV" no "TextureSaturation::Color Correction" yes "Layer::Transformation" no "Secondary Highlight" yes "Display" yes "Uv Transform" yes "TextureOcclusion::Input" yes "Run" yes "Mapping" yes "RendererRaytracer::Sampling>motion Blur" yes "Ies" yes "Length" yes "Advanced Settings" yes "Filters" yes "SceneObjectScatterer::Scatterer>instances>collision" yes "Dielectric" yes "TextureConstantColor::Input" yes "Layer 1" yes "TextureMapFile::Image>color Management" yes "Glints" yes "ShadingLayer::Settings" yes "Layers" yes "Specular 2 Fresnel" no "Layer::Filtering" no "ToolScaleItem::Manipulator Initialization" no "TextureCellularNoise::Pattern" yes "Sampling" yes "LightPhysicalSpot::Lighting>shape" yes "ToolPicker::Picking" yes "GeometryPolymesh::Geometry>subdivision Surfaces" yes "Fresnel Specular 1" yes "TextureMultiply::Input" yes "MaterialPhysicalStandard::Diffuse" yes "Light Contribution" yes "Specular 1" yes "Output" yes "Snap To Surface" yes "Image::Region" no "Base" yes "LayerScene::Rendering>visibility" yes "MaterialPhysicalMultiblend::Layer 1" yes "Path Depth" yes "AbcXform::Alembic>playback" no "Curve" yes "Specular" yes "TextureGradient::Input" yes "MaterialPhysical::Transparent Shadows" yes "TextureOperator::Pass Through" no "Smoothing" yes "Pass Through" yes "LightPhysicalDistant::Lighting>shape" yes "TextureStreamedMapFile::Image>mip-mapping" no "TextureOcclusion::Occlusion>merge Objects" yes "Scene Object Name" yes "Scattering Variation" yes "AovStore::Variance Aov" no "Depth" yes "TextureChecker::Pattern" yes "ID" yes "Compression" yes "Actions" yes "Displacement" yes "Light Visibility" yes "Pbr" yes "Material 4" yes "Transmission Advanced" no "ToolScaleItem::Snapping" yes "Linking" yes "Layer::Output>format" no "LightPhysicalPlane::Lighting>shape" yes "TextureColorCorrection::Color Correction" yes "Clamping" yes "IntegratorPathtracer::Sampling>transparency" no "RendererRaytracer::AOV" no "TextureHue::Input" yes "TextureOsl::Shader" yes
+                                    attributes_filter ""
+                                    expression_mode yes
+                                    separator 634
+                                }
+                                toolbar_minimized no
+                                selection_locked no
+                            }
+                            views {
+                                tab {
+                                    editor "WidgetMaterialEditor"
+                                    #version 0.9
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global no
+                                            local_selection {
+                                                global "build://project/scene/file"
+                                            }
+                                        }
+                                        GuiNodal {
+                                            pos_x -355
+                                            pos_y -267
+                                            zoom_factor 446
+                                            grid no yes 40
+                                            magnet no
+                                            cull_links no
+                                            highlight_links yes
+                                            link_node_autoinsert yes
+                                            display_node_label 1
+                                            smooth_transitions yes
+                                            autozoom no
+                                            default_node_state 0
+                                            node_max_width 0
+                                            node_cropping no
+                                        }
+                                        NodalBase {
+                                        }
+                                        MaterialNodal {
+                                            is_locked no
+                                            autofit yes
+                                            display_dependencies yes
+                                            selected_materials "build://project/scene/matte"
+                                            display_classes yes
+                                        }
+                                    }
+                                    selection_locked yes
+                                }
+                                selected_tab 0
+                                toolbar_minimized no
+                            }
+                            view {
+                                editor "WidgetMaterialEditor"
+                                settings {
+                                    viewport_widget {
+                                        selection_slot "Local"
+                                        use_global no
+                                        local_selection {
+                                            global "build://project/scene/file"
+                                        }
+                                    }
+                                    GuiNodal {
+                                        pos_x -355
+                                        pos_y -267
+                                        zoom_factor 446
+                                        grid no yes 40
+                                        magnet no
+                                        cull_links no
+                                        highlight_links yes
+                                        link_node_autoinsert yes
+                                        display_node_label 1
+                                        smooth_transitions yes
+                                        autozoom no
+                                        default_node_state 0
+                                        node_max_width 0
+                                        node_cropping no
+                                    }
+                                    NodalBase {
+                                    }
+                                    MaterialNodal {
+                                        is_locked no
+                                        autofit yes
+                                        display_dependencies yes
+                                        selected_materials "build://project/scene/matte"
+                                        display_classes yes
+                                    }
+                                }
+                                toolbar_minimized no
+                                selection_locked yes
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    units {
+        units_file "$CLARISSE_BIN_DIR/units.cfg"
+        time "frame"
+        distance "metric"
+        distance_unit "meter"
+        angle "degree"
+        area "metric"
+        area_unit "square_meter"
+        frequency "frames_per_second"
+        color "float"
+        scale "multiplier"
+    }
+}

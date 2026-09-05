@@ -1,0 +1,626 @@
+Commandes ix.cmds de Clarisse 5.0 SP14
+======================================
+
+Extrait de J:/Clarisse-SDK/docs/sdk/namespacecmds.html (documentation Doxygen
+hors ligne livree avec Clarisse). Reference de travail : Isotropix a ferme, la
+documentation en ligne a disparu.
+
+206 signatures.
+
+ActivateExpression(attr_fullnames, enable_states)
+    Enable consideration of the expression for specified attribute values.
+
+ActivatePackageEditLayer(build_package_path, layer_index)
+    Set active edit layer for a build package.
+
+ActivateShadingVariable(attr_paths, values)
+    Activate shading variable to multiple attributes.
+
+AddCurveValue(attr_pathes, serial)
+    Add keys to already existing curves for given attributes.
+
+AddLayer(attr_path, class_name)
+    Add a new layer for an image.
+
+AddPackageEditLayer(build_package_path, layer_name, layer_index, group_index)
+    Add a new empty edit layer in a build package.
+
+AddPackagePreset(build_package_path, name, is_published, description)
+    Add a new preset corresponding to the current layers visibilities.
+
+AddParticle(item, positions)
+    Add particles to the specified Particle cloud.
+
+AddParticle(item, positions, normals)
+    Add particles to the specified Particle cloud.
+
+AddReferenceFilename(contexts, filenames)
+    Adds filenames that will be referenced by the specified contexts.
+
+AddShadingLayerRule(shading_layer, index, sl_params)
+    Adds a rule to a shading layer.
+
+AddTableRow(table_path)
+    Append a new row at the end of an attribute table.
+
+AddTableRow(table_path, row_index)
+    Insert a new row in an attribute table.
+
+AddToGroup(groups, items)
+    Adds items to groups.
+
+AddValue(attr, value)
+    Adds value to an attribute.
+
+AddValues(attrs, values)
+    Adds values to multiple attributes.
+
+BakeFCurve(attr_paths, step)
+    Set an animation key on each frame for given attributes.
+
+BakeParticle(items, location)
+    Create a GeometryParticle baking the point clouds of all specified geometries.
+
+BindToShadingVariable(attr_paths, values)
+    Binds a shading variable to multiple attributes.
+
+CenterObjectsPivots(objects)
+    Center objects pivots to bounding box center.
+
+CenterObjectsPivots(objects, side)
+    Center objects pivots to bounding box center or any side.
+
+CleanupContextOverrides(context)
+    Clean all stored overrides from a referenced context.
+
+ClearContextOverrides(context)
+    Clear all overrides from a referenced context.
+
+ClearPackageEditLayers(build_package_path, layer_indices)
+    Clear all edits of the given edit layers in a build package.
+
+ClearParticle(items)
+    Empties specified Particle cloud(s).
+
+ClearTable(table_path)
+    Clear the whole table values.
+
+ColorTagItems(items, tag)
+    Set a color tag on items.
+
+CombineItems(items, location)
+    Create a combiner with all specified items in it.
+
+CombineItems(items, location, pivot_location)
+    Create a combiner with all specified items in it.
+
+CommentItem(item, comment)
+    Set a comment on item.
+
+CommentItems(items, comment)
+    Set a comment on items.
+
+CommentPackageLayers(build_package_path, layer_indices, comment)
+    Comment the given layers in a build package.
+
+CommentPackagePreset(build_package_path, name, description)
+    Change the description of a preset in a build package.
+
+ConvertToUsdReference(context_paths)
+    Convert classic file reference contexts ( OfFileReferenceContextEngine ) referencing USD filesinto contexts using the dedicated UsdReferenceContextEngine and re
+
+CopyItemTo(item, location)
+    Copy item to a specified location.
+
+CopyItemsTo(items, location)
+    Copy items to a specified location.
+
+CreateCAMAttribute(context_paths, attr_name, attr_type, additionnal_params, additionnal_params_values, cam_rule, cam_exclusion_rule)
+    Create specified CAM attributes.
+
+CreateCAMAttribute(context_paths, attr_name, attr_type, attr_container, attr_visual_hint, group_name, cam_rule, cam_exclusion_rule)
+    Create specified CAM attributes.
+
+CreateContext(context_name)
+    Create a new context in application current context.
+
+CreateContext(context_name, context_path)
+    Create a new context at a specified location.
+
+CreateCustomAttribute(item_paths, attr_name, attr_type, additionnal_params, additionnal_params_values)
+    Create specified custom attributes.
+
+CreateCustomAttribute(item_paths, attr_name, attr_type, attr_container, attr_visual_hint, group_name)
+    Create specified custom attributes.
+
+CreateCustomContext(context_name, context_engine, context_path)
+    Create a new context at a specified location with a specified context engine.
+
+CreateCustomContext(context_name, context_engine, selection_slot, context_path)
+    Create a new context at a specified location with a specified context engine.
+
+CreateFileReference(context, filenames)
+    Create new file reference contexts in the specified context.
+
+CreateInstanceTo(item, location)
+    Create instance of an item to a specified location.
+
+CreateInstancesTo(items, location)
+    Create instance of items to a specified location.
+
+CreateObject(object_name, class_name)
+    Creates a new object in factory.
+
+CreateObject(object_name, class_name, context_path)
+    Creates a new object in factory.
+
+CreateOverrideSet(context)
+    Create an override set from overrides on a referenced context.
+
+CreateParticlesProperty(item, name, type, dim, value)
+    Add property to specified Particle cloud, according to given type, dimension and value.
+
+CreateShadingLayerForItems(items, creation_mode, context_path)
+    Create shading layer and create rules from existing items.
+
+DebugUsd()
+    Dump debug information about USD stuff.
+
+DeleteItem(item)
+    Deletes item.
+
+DeleteItems(items)
+    Deletes items.
+
+DeleteLayer(image, indices)
+    Delete one or more layers from an image.
+
+DeleteParticlesProperties(item, names)
+    Remove properties from a given Particle cloud.
+
+DeleteSelection()
+    Deletes current application selected items.
+
+DisableAttributeValue(attr_paths, value_indices, disable)
+    Disable or enable specified index of attribute values.
+
+DisableAttributes(attr_paths, disable)
+    Disable or enable existency of specified attributes.
+
+DisableCAM(attribute_paths, disabled)
+    Disable CAM override.
+
+DisableItems(items, disable)
+    Disable items.
+
+DisablePackageLayer(build_package_path, layer_indices, value)
+    Disable the given layers in a build package.
+
+DuplicateLayer(attr_path, selected_layers)
+    Duplicate layers in an image. Detailed Description This module defines Python Clarisse commands. The module is automatically imported directly inside the ix mod
+
+DuplicatePackageEditLayer(build_package_path, layer_index, new_layer_index)
+    Duplicate an edit layer in a build package.
+
+DuplicatePackagePreset(build_package_path, name)
+    Duplicate a preset in a build package.
+
+EditCAMAttribute(attr_paths, attr_name, attr_type, attr_container, attr_visual_hint, group_name, cam_rule, cam_exclusion_rule)
+    Edit specified CAM attributes.
+
+EditCAMAttribute(context_paths, attr_name, attr_type, additionnal_params, additionnal_params_values, cam_rule, cam_exclusion_rule)
+    Edit specified CAM attributes.
+
+EditCAMRule(attribute_paths, cam_rule)
+    Edit specified CAM rule.
+
+EditCAMRule(attribute_paths, cam_rule, cam_exclusion_rule)
+    Edit specified CAM rule.
+
+EditCustomAttribute(attr_paths, attr_name, attr_type, additionnal_params, additionnal_params_values)
+    Edit specified custom attributes.
+
+EditCustomAttribute(attr_paths, attr_name, attr_type, attr_container, attr_visual_hint, group_name)
+    Edit specified custom attributes.
+
+EditParticlesProperty(item, name, ids, mode, value)
+    Change properties of specified Particle cloud, modifying specified property for the particles whom ids are provided, according to given mode and value.
+
+EnableTableRow(table_path, row_index, enabled)
+    Enable or disable a specific row of an attribute table.
+
+EnableTableRows(table_path, row_indices, enabled)
+    Enable or disable multiple rows from a table.
+
+ExportContextAsReference(context, filename)
+    Exports the specified context as a standalone project and makes it a reference in the current project.
+
+ExportContextAsReference(context, filename, include_dependencies)
+    Exports the specified context as a standalone project and makes it a reference in the current project.
+
+GoToNextKeyframe()
+    Change time to the time of next keyframe within the current selection keyframes.
+
+GoToPreviousKeyframe()
+    Change time to the time of previous keyframe within the current selection keyframes.
+
+GroupItems(items, location)
+    Create a group with all specified items in it.
+
+GroupPackageLayers(build_package_path, group_name, layer_index, layer_count, parent_group_index)
+    Add a new group of layers in a build package.
+
+HideTable(table_path, hidden)
+    Hide or show the whole table.
+
+ImportProject(filenames)
+    Import specified project(s) in current context.
+
+ImportProject(filenames, import_as_root_project)
+    Import specified project(s) in current context.
+
+InsertKeysAt(attr_pathes, time)
+    Insert animation keys from given attrs at specified time.
+
+Instantiate(items)
+    Instantiate items.
+
+Isolate(items)
+    Set isolation content (replace any existing content).
+
+IsolateAdd(items)
+    Add items to isolation content.
+
+IsolateRemove(items)
+    Remove items from isolation content.
+
+IsolateSwap()
+    Reverses isolation content.
+
+JitterParticle(items, variance, space, signed)
+    Jitter specified Particle cloud(s).
+
+LocalizeAttributes(attr_paths, localize)
+    Localize or unlocalize specified attributes.
+
+LocalizeTable(table_path, localize)
+    (un)Localize the whole table.
+
+LockAttributeValues(attr_paths, value_indices, lock)
+    
+
+LockAttributes(attr_paths, lock)
+    Lock or unlock specified attributes.
+
+LockItem(item)
+    Lock item.
+
+LockItems(items)
+    Lock items.
+
+LockPackageLayers(build_package_path, layer_indices, value)
+    Lock/unlock the given layers in a build package.
+
+LockTable(table_path, locked)
+    Lock or unlock the whole table.
+
+MakeInstance(item_names, source)
+    Instantiate any item.
+
+MakeLocal(item_names)
+    Localize any instantiated item.
+
+MakeLocal(item_names, keep_values)
+    Localize any instantiated item.
+
+MakeLocalContext(context)
+    Make local a referenced context.
+
+MakeLocalContexts(context_paths)
+    Make local a referenced context.
+
+MergePackageEditLayers(build_package_path, layer_indices, discard_disabled, preserve_locked)
+    Merge a list of edit layers into the first one.
+
+MergeProject(filenames)
+    Merge specified project(s) in current context.
+
+MoveItemTo(item, location)
+    Move item to a specified location.
+
+MoveItemsTo(items, location)
+    Move items to a specified location.
+
+MovePackageLayer(build_package_path, layer_index, new_layer_index)
+    Move a layer in a build package.
+
+MoveParticle(item, ids, delta, space)
+    Move particles from specified Particle cloud, applying to the particles whom ids are provided a given amount of translation, expressed either in world, object o
+
+MoveParticle(item, ids, positions)
+    Move particles from specified Particle cloud, setting the particles whom ids are provided to specified locations.
+
+MoveParticle(item, ids, positions, normals, velocities)
+    Move particles from specified Particle cloud, setting the particles whom ids are provided to specified locations, with specified normals and velocities.
+
+MoveShadingLayerRules(shading_layer, indexes, move_delta)
+    Move rules positions in a shading layer.
+
+MoveShadingLayerRules(shading_layer, indexes, offset, is_relative)
+    Move rules positions in a shading layer.
+
+MoveTableRow(table_path, from_index, to_index)
+    Move a row to another index, while preserving the relative order of the other rows.
+
+MoveValue(attr_path, index_from, index_to)
+    Move a value from an attribute value index to another.
+
+MuteLocalValueAttributes(attr_paths, mute)
+    Mute or un-mute local value consideration for specified attributes.
+
+PaintCopy(source_name, context_name, wpos, rot, scl)
+    Creates an object instance with specified translate-rotate-scale.
+
+PaintInstance(source_name, context_name, wpos, rot, scl)
+    Creates an object instance with specified translate-rotate-scale.
+
+PermutePackageLayers(build_package_path, layer_indices, layers_to_reparent, new_parent)
+    Reorder all layers in a build package.
+
+PermuteReferenceFilename(contexts, permutations)
+    Permute filename values in the specified contexts.
+
+PermuteValues(attr_paths, permutations)
+    Permute values in specified attribute.
+
+PublishPackagePreset(build_package_path, name, is_published)
+    Specify if a preset must be displayed in the attribute editor of a build package.
+
+RecordObjectsOffsets(objects)
+    Record objects transformations as offsets.
+
+RemoveAllCAMAttributes(context_paths)
+    Remove specified CAM attributes.
+
+RemoveAllPresets(build_package_path)
+    
+
+RemoveAllValues(attr)
+    Removes all values from specified attributes.
+
+RemoveCAMAttribute(attr_paths)
+    Remove specified CAM attributes.
+
+RemoveCurveValue(attr_pathes, key_ids)
+    Remove keys for given attributes.
+
+RemoveCustomAttribute(attr_paths)
+    Remove specified custom attributes.
+
+RemoveFCurve(attr_paths)
+    Remove animation for given attributes.
+
+RemoveKey(attr_pathes, ids)
+    Removes animation keys from given attrs with specified ids.
+
+RemoveKeysAt(attr_pathes, time)
+    Removes animation keys from given attrs at specified time.
+
+RemoveObjectsOffsets(objects)
+    Remove objects offsets.
+
+RemovePackageEditLayers(build_package_path, layer_indices)
+    Remove the given edit layers from a build package.
+
+RemovePackagePreset(build_package_path, name)
+    Remove a preset from a build package.
+
+RemoveParticle(item, ids)
+    Remove particles from specified Particle cloud, decimating the particles whom ids are provided.
+
+RemoveReferenceFilename(contexts, indices)
+    Remove filenames referenced by the specified contexts.
+
+RemoveShadingLayerRules(shading_layer, indexes)
+    Removes rules from a shading layer.
+
+RemoveTableRow(table_path)
+    Remove the last row of an attribute table.
+
+RemoveTableRow(table_path, row_index)
+    Remove a specific row of an attribute table.
+
+RemoveTableRows(table_path, row_indices)
+    Remove multiple rows from a table.
+
+RemoveUsdBundleFilename(attribute_path, indices)
+    Remove filename values on the specified USD bundles.
+
+RemoveValue(attr, indices)
+    Removes values from attributes.
+
+RenameItem(item, name)
+    Renames an item.
+
+RenamePackageLayer(build_package_path, layer_index, name)
+    Rename the given layer in a build package.
+
+RenamePackagePreset(build_package_path, name, new_name)
+    Rename a preset in a build package.
+
+RenameParticlesProperty(items, name, new_name)
+    Rename a given property for the specified Particle cloud(s).
+
+ResetAttributes(attributes)
+    Reset the attributes to its default value.
+
+ResetObjectsPivots(objects)
+    Reset objects pivots.
+
+ResetObjectsPivots(objects, use_global_pivot)
+    Reset objects pivots.
+
+ResetObjectsTransform(objects)
+    Reset objects transformation matrix.
+
+ResetTable(table_path)
+    Reset the whole table.
+
+RevertAttributes(attributes)
+    Revert attribute to its initial(deserialized) value.
+
+RevertItemsOverrides(items)
+    Revert overrides on specified items.
+
+RevertSubItemsOverrides(items)
+    Revert overrides on sub-items of specified items.
+
+RevertTable(table_path)
+    Revert the whole table.
+
+SetAutofitMode(attr_path, values, indices)
+    Enable/disable backdrop autofitting.
+
+SetChannel(attr_pathes, channel)
+    Set channel for specified attribute.
+
+SetCurrentFrame(frame)
+    Set application current frame.
+
+SetCurrentFrameRange(min, max)
+    Set application current frame range.
+
+SetCurrentFrameRangeMax(max)
+    Set application current frame range max.
+
+SetCurrentFrameRangeMin(min)
+    Set application current frame range min.
+
+SetCurrentTime(time)
+    Set application current time.
+
+SetCurve(attr_pathes, serial, behaviors)
+    Set curve for specified attributes (replace any existing curve).
+
+SetCurveExtrapolationMode(attr_pathes, behavior, where)
+    Set curve extrapolation mode for specified attributes.
+
+SetCurveKeyPosition(attr_pathes, positions, key_ids)
+    Set keys positions for specified attributes.
+
+SetCurveKeyType(attr_pathes, serial)
+    Set keys types for specified attributes.
+
+SetCurveKeyValue(attr_pathes, values, key_ids)
+    Set keys values for specified attributes.
+
+SetExpression(attr_fullnames, expressions)
+    Set the expression for specified attribute values.
+
+SetFps(value)
+    Set application Fps.
+
+SetItemNodalProperty(item, position, prop, slot)
+    Sets item property in nodal.
+
+SetItemNodalProperty(item, prop, slot)
+    Sets item property in nodal.
+
+SetItemPosition(item, item_position, position_slot)
+    Sets item position in nodal.
+
+SetItemViewPoint(item_name, px, py, pz, rx, ry, rz, ad)
+    Set item view point.
+
+SetItemsNodalProperties(items, positions, props, slot)
+    Sets items properties in nodal.
+
+SetItemsNodalProperties(items, props, slot)
+    Sets items properties in nodal.
+
+SetItemsPositions(items, items_positions, position_slot)
+    Sets items position in nodal.
+
+SetKey(attr_pathes, time, values, type)
+    Add an animation key in one or more attributes.
+
+SetKeyTangents(attr_path, key_id, tangents_values)
+    Sets keyframe tangents values.
+
+SetKeysPropertyValues(attr_pathes, key_ids, property_name, property_values)
+    Sets keyframe property value.
+
+SetObjectsGlobalTransform(objects, values)
+    Set objects global transformation matrix.
+
+SetObjectsLocalTransform(objects, values)
+    Set objects local transformation matrix.
+
+SetObjectsRotation(objects, values, axis)
+    
+
+SetObjectsScaling(objects, values, axis)
+    
+
+SetObjectsTranslation(objects, values, axis)
+    
+
+SetOutputBinding(attrs, plug_output)
+    Connect an output plug to specified attributes.
+
+SetParent(attr_path, values, indices)
+    Set the parent kinematic object.
+
+SetParentInPlace(value)
+    Set application parent in place.
+
+SetReferenceFilename(contexts, filename)
+    Sets the filename that will be referenced by the specified contexts.
+
+SetReferenceFilenames(contexts, indices, filenames)
+    Sets the filenames that will be referenced by the specified contexts.
+
+SetShadingLayerRulesProperty(shading_layer, indexes, property_name, property_values)
+    Set values for a property of shading layer rules.
+
+SetTableCell(table_path, row_index, column_index, value, value_index)
+    Set an attribute table's cell value.
+
+SetTableCell(table_path, row_index, column_index, values)
+    Set an attribute table's cell values.
+
+SetTableRow(table_path, row_index, values)
+    Set an attribute table's row values.
+
+SetTexture(attrs, texture)
+    Set a texture for specified attributes.
+
+SetUsdBundleFilename(attribute_paths, values, indices)
+    Set filename values on the specified USD bundles.
+
+SetValue(attr, values)
+    Sets the values of an attribute.
+
+SetValueCount(attrs, counts)
+    Sets the number of values of specified attributes.
+
+SetValues(attrs, values)
+    Sets the values for multiple attributes.
+
+SwapTableRows(table_path, first_index, second_index)
+    Swap 2 rows of an attribute table.
+
+TrashItems(items)
+    Not undoable delete items command.
+
+UnbindShadingVariable(attr_paths)
+    Unbinds multiple attributes from a shading variable.
+
+UngroupPackageLayers(build_package_path, group_indices, preserve_locked)
+    Remove group layers from a build package.
+
+UnlockItem(item)
+    Unlock item.
+
+UnlockItems(items)
+    Unlock items.

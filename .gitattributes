@@ -1,0 +1,12 @@
+# Normalisation des fins de ligne : LF dans le depot, quelle que soit la machine.
+* text=auto eol=lf
+
+# Formats Isotropix : du texte, mais on ne veut pas que git y touche.
+*.project -text
+*.cfg     -text
+*.osl     text eol=lf
+
+# Binaires
+*.png binary
+*.obj binary
+*.exr binary

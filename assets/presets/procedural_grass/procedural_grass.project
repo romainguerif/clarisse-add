@@ -1,0 +1,1369 @@
+#Isotropix_Serial_Version 1.2
+
+#Isotropix_Clarisse_Version 4
+#Isotropix_Clarisse_Project_Version 0.94
+comment "Rollback to version 2"
+Context "scene" {
+    #created 1455809270
+    CameraPerspective {
+        name "camera"
+        #version 0.9
+        #created 1455809270
+        #modified 1609671111
+        translate -63.485632188621 63.3926539045626 -167.725337117635
+        rotate -19.1630001961366 -157.5000035204 -7.9513867036608e-16
+        aim_distance 191.914392519857
+        field_of_view 25
+    }
+    LightPhysicalDistant {
+        name "light"
+        #version 0.91
+        #created 1462886261
+        #modified 1609671097
+        positions "mat_1" 0 0
+        rotate -11.6550821318519 -70.5246519282878 -15.9811777661956
+        scale 36.09 36.09 36.09
+        color {
+            value 1 1 1
+            texture "black_body"
+        }
+        angle 4
+    }
+    RendererRaytracer {
+        name "path_tracer"
+        #version 1.1
+        #created 1462890443
+        #modified 1609671097
+        integration_model "IntegratorPathtracer"
+        integrator ".IntegratorPathtracer_embedded"
+        integrators ".IntegratorPathtracer_embedded" ".IntegratorLegacy_embedded" ".IntegratorAmbientOcclusion_embedded" ".IntegratorUtility_embedded"
+        embedded_objects {
+            IntegratorPathtracer {
+                name "IntegratorPathtracer_embedded"
+                #version 0.94
+                #created 1609669643
+                #modified 1609671097
+                cap_display no
+                material_sample_count 32
+                embedded_objects {
+                    MaterialPhysicalStandard {
+                        name "surface_default"
+                        #version 0.95
+                        #created 1609669643
+                        #modified 1609671097
+                        private yes
+                    }
+                    MaterialPhysicalVolume {
+                        name "volume_default"
+                        #version 0.92
+                        #created 1609669643
+                        #modified 1609671097
+                        private yes
+                        density_multiplier 100
+                    }
+                    MaterialPhysicalHair {
+                        name "curve_default"
+                        #version 0.9
+                        #created 1609669643
+                        #modified 1609671097
+                        private yes
+                    }
+                }
+            }
+            IntegratorLegacy {
+                name "IntegratorLegacy_embedded"
+                #version 0.92
+                #created 1609669643
+                #modified 1609669643
+                cap_display no
+                embedded_objects {
+                    MaterialStandard {
+                        name "surface_default"
+                        #version 0.92
+                        #created 1609669643
+                        #modified 1609671097
+                        private yes
+                        specularity 1 1 1
+                    }
+                    MaterialVolume {
+                        name "volume_default"
+                        #version 0.9
+                        #created 1609669643
+                        #modified 1609671097
+                        private yes
+                        density_multiplier 100
+                    }
+                    MaterialMarschnerFur {
+                        name "curve_default"
+                        #version 0.9
+                        #created 1609669643
+                        #modified 1609671097
+                        private yes
+                    }
+                }
+            }
+            IntegratorAmbientOcclusion {
+                name "IntegratorAmbientOcclusion_embedded"
+                #version 0.92
+                #created 1609669643
+                #modified 1609669643
+                cap_display no
+            }
+            IntegratorUtility {
+                name "IntegratorUtility_embedded"
+                #version 0.92
+                #created 1609669643
+                #modified 1609669643
+                cap_display no
+            }
+        }
+    }
+    Image {
+        name "image"
+        #version 0.95
+        #created 1462886391
+        #modified 1609671097
+        active_layer 0
+        resolution_multiplier 2
+        layers ".background"
+        first_frame 0
+        last_frame 50
+        embedded_objects {
+            Layer3d {
+                name "background"
+                #version 0.97
+                #created 1462886428
+                #modified 1609671097
+                first_frame 0
+                last_frame 50
+                active_camera "camera"
+                renderer "path_tracer"
+                deep_output_data_precision 0
+                max_sample_count 0
+                user_data {
+                    __context_objects__ {
+                    }
+                    __context_lights__ {
+                    }
+                }
+            }
+        }
+    }
+    TextureBlackBody {
+        name "black_body"
+        #version 1
+        #created 1609669732
+        #modified 1609671097
+        positions "mat_1" 0 0
+        temperature 6400
+        energy_compression 0.75
+    }
+    LightPhysicalEnvironment {
+        name "environment"
+        #version 0.95
+        #created 1609669771
+        #modified 1609671097
+        positions "mat_1" 0 0
+        color 0.648 0.780517647058824 1
+        exposure 0.0
+    }
+    SceneObjectCombiner {
+        name "terrain"
+        #version 0.9
+        #created 1609670765
+        #modified 1609671097
+        positions "project://scene" 0 0
+        translate 0.0 0.0 0.0
+        scale_pivot 0.0 0.0 0.0
+        rotate_pivot 0.0 0.0 0.0
+        scale_pivot_offset 0.0 0.0 0.0
+        rotate_pivot_offset 0.0 0.0 0.0
+        translate_offset 0.0 0.0 0.0
+        objects "project://terrain_setup/terrain"
+    }
+}
+Context "terrain_setup" {
+    #created 1609669790
+    Displacement {
+        name "displacement"
+        #version 0.91
+        #created 1609669804
+        #modified 1609671097
+        positions "mat_1" 663 54
+        bound 0.0 10 0.0
+        front_value {
+            value 10
+            texture "blur"
+        }
+    }
+    TexturePerlinNoise {
+        name "perlin_noise"
+        #version 0.91
+        #created 1609669813
+        #modified 1609671097
+        positions "mat_1" 0 0
+        projection 6
+        turbulence yes
+        octaves 3
+        amplitude 1
+        offset 0.0
+        persistence 1
+        lacunarity 2
+        frequency 1
+    }
+    TextureBlur {
+        name "blur"
+        #version 0.9
+        #created 1609669948
+        #modified 1609671097
+        positions "mat_1" 235 59
+        color {
+            value 0.0 0.0 0.0 0.0
+            texture "perlin_noise"
+        }
+        radius 5
+        quality 4
+    }
+    GeometryPolygrid {
+        name "terrain"
+        #version 0.9
+        #created 1609669658
+        #modified 1609671097
+        positions "project://terrain_setup" 0 0
+        uv_maps "parametric"
+        uv_maps_loaded yes
+        shading_groups "grid"
+        materials "project://proc_grass/grass"
+        clip_maps ""
+        displacements "displacement"
+        sg_shading_variables ""
+        visibles yes
+        displacement_adaptive_span_count 500
+        enable_subdivision_surface no
+        size 100 100
+        spans 20 20
+    }
+}
+Context "proc_grass" {
+    #created 1542928955
+    MaterialPhysicalStandard {
+        name "grass"
+        #version 0.95
+        #created 1542929406
+        #modified 1609671097
+        positions "mat_1" 634 492
+        colortag "red"
+        normal_input {
+            value 1
+            texture "bump_map"
+        }
+        automatic_sidedness {
+            value yes
+            hidden no
+        }
+        fresnel_energy_conservation no
+        diffuse_front_color {
+            value 0.114064709019063 0.180392156862745 0.0128949531806645
+            texture "cl_mix3"
+        }
+        diffuse_front_strength 0.416
+        diffuse_roughness 0.0
+        specular_1_color {
+            value 0.08 0.08 0.08
+            texture "color_correction1"
+        }
+        specular_1_strength 0.6
+        specular_1_roughness {
+            value 0.8
+            texture "color_correction"
+        }
+    }
+    TextureBumpMap {
+        name "bump_map"
+        #version 0.9
+        #created 1542929922
+        #modified 1609671097
+        positions "mat_1" 416 348 2
+        input {
+            value 0.1
+            texture "blend_bump"
+        }
+    }
+    TextureFractalNoise {
+        name "fractal_noise1"
+        #version 0.91
+        #created 1603674962
+        #modified 1609671097
+        positions "mat_1" -597 766 2
+        colortag "blue"
+        projection 0
+        space 1
+        axis 1
+        object_space 2
+        uv_translate 0.0 0.0 0.0
+        uv_scale 50 50 50
+        color1 1 1 1
+        color2 0.482352941176471 0.318965813148789 0.246964705882353
+        lacunarity 1.99
+        octaves 12
+        contrast 0.0
+        turbulent yes
+        normalize yes
+    }
+    TexturePerlinNoise {
+        name "pn_green"
+        #version 0.91
+        #created 1542996435
+        #modified 1609671097
+        positions "mat_1" -804 1003 2
+        colortag "blue"
+        projection 0
+        axis 1
+        object_space 2
+        uv_scale 6.02 6.02 6.02
+        turbulence no
+        octaves 4
+        color_1 0.138517859159038 0.180392161011696 0.0128949536010623
+        color_2 0.0337737957020223 0.0470588235294118 0.00811995342319427
+        amplitude 0.52
+        offset 0.0
+        persistence 0.565
+        lacunarity 5
+        frequency 1
+    }
+    TexturePerlinNoise {
+        name "pn_yellow"
+        #version 0.91
+        #created 1603634181
+        #modified 1609671097
+        positions "mat_1" -798 922 2
+        colortag "blue"
+        projection 0
+        axis 1
+        object_space 2
+        uv_scale 10.46 10.46 10.46
+        turbulence no
+        octaves 4
+        color_1 0.701960784313725 0.587801071985888 0.0550557477893118
+        color_2 0.156862745098039 0.0648076491706028 0.00922722036433604
+        amplitude 0.465
+        offset 0.0
+        persistence 0.56
+        lacunarity 5
+        frequency 1.9
+        enable_marble no
+    }
+    TextureFractalNoise {
+        name "mix_green_yellow"
+        #version 0.91
+        #created 1603634888
+        #modified 1609671097
+        positions "mat_1" -806 845 2
+        colortag "blue"
+        projection 0
+        space 1
+        axis 1
+        object_space 2
+        uv_scale 100 100 100
+        color1 0.0 0.0 0.0
+        color2 0.227450980392157 0.227450980392157 0.227450980392157
+        contrast 0.0
+        turbulent yes
+        normalize yes
+    }
+    TextureBlend {
+        name "blend1"
+        #version 0.9
+        #created 1603675217
+        #modified 1609671097
+        positions "mat_1" -375 686 1
+        colortag "blue"
+        mode 7
+        mix {
+            value 1
+            texture "fractal_noise2"
+        }
+        input1 {
+            value 0.0 0.0 0.0
+            texture "fractal_noise1"
+        }
+        input2 {
+            value 0.0 0.0 0.0
+            texture "cl_mix1"
+        }
+    }
+    TextureFractalNoise {
+        name "fractal_noise2"
+        #version 0.91
+        #created 1603675684
+        #modified 1609671097
+        positions "mat_1" -589 684 1
+        colortag "blue"
+        projection 0
+        space 1
+        axis 1
+        object_space 2
+        uv_translate 500 500 500
+        uv_scale 50 50 50
+        color1 0.0 0.0 0.0
+        color2 1 1 1
+        lacunarity 1.99
+        octaves 12
+        contrast 0.077
+        turbulent yes
+        normalize yes
+    }
+    TextureFractalNoise {
+        name "fractal_noise3"
+        #version 0.91
+        #created 1603676381
+        #modified 1609671097
+        positions "mat_1" -386 600 2
+        colortag "blue"
+        projection 0
+        space 1
+        axis 1
+        object_space 2
+        uv_translate 250 250 250
+        uv_scale 150 150 150
+        color1 1 1 1
+        color2 0.376470588235294 0.088581314878893 0.0
+        lacunarity 1.99
+        octaves 12
+        contrast 0.0
+        turbulent yes
+        normalize yes
+    }
+    TextureFractalNoise {
+        name "fractal_noise4"
+        #version 0.91
+        #created 1603676481
+        #modified 1609671097
+        positions "mat_1" -386 512 2
+        colortag "blue"
+        projection 0
+        space 1
+        axis 1
+        object_space 2
+        uv_translate 100 100 100
+        uv_scale 50 50 50
+        color1 0.0 0.0 0.0
+        color2 1 1 1
+        lacunarity 1.99
+        octaves 12
+        contrast 0.0
+        turbulent yes
+        normalize yes
+    }
+    TextureBlend {
+        name "blend_bump"
+        #version 0.9
+        #created 1603680390
+        #modified 1609671097
+        positions "mat_1" 192 389 1
+        mode 6
+        input1 {
+            value 0.0 0.0 0.0
+            texture "perlin_noise1"
+        }
+        input2 {
+            value 0.0 0.0 0.0
+            texture "perlin_noise3"
+        }
+    }
+    TexturePerlinNoise {
+        name "perlin_noise1"
+        #version 0.91
+        #created 1603712767
+        #modified 1609671097
+        positions "mat_1" -4 348 2
+        projection 0
+        axis 1
+        object_space 2
+        uv_scale 1 1 1
+        turbulence no
+        octaves 6
+        color_1 5 5 5
+        amplitude 0.765
+        offset -0.35
+        persistence 1
+        lacunarity 3
+        frequency 1.2
+    }
+    TexturePerlinNoise {
+        name "perlin_noise3"
+        #version 0.91
+        #created 1603713473
+        #modified 1609671097
+        positions "mat_1" 1 448 2
+        projection 0
+        axis 1
+        object_space 2
+        uv_scale 100 100 100
+        turbulence no
+        octaves 6
+        color_1 1 1 1
+        amplitude 0.765
+        offset -0.26
+        persistence 5
+        lacunarity 4
+        frequency 1.2
+    }
+    TextureColorCorrection {
+        name "color_correction"
+        #version 0.9
+        #created 1603722503
+        #modified 1609671097
+        positions "mat_1" 266 827 2
+        input {
+            value 0.0 0.0 0.0
+            texture "blend_bump"
+        }
+        contrast 0.0
+        gamma 1
+        gain 1
+        offset 1
+    }
+    TextureColorCorrection {
+        name "color_correction1"
+        #version 0.9
+        #created 1603723121
+        #modified 1609671097
+        positions "mat_1" 292 726 2
+        input {
+            value 0.0 0.0 0.0
+            texture "blend_bump"
+        }
+        contrast 1.3
+        gamma 1
+        gain 0.1
+        offset 0.02
+    }
+    TextureFractalNoise {
+        name "fractal_noise5"
+        #version 0.91
+        #created 1603723952
+        #modified 1609671097
+        positions "mat_1" -179 839
+        colortag "blue"
+        projection 0
+        space 1
+        axis 1
+        object_space 2
+        uv_translate 100 100 100
+        uv_scale 6.31 6.31 6.31
+        color1 {
+            value 1 1 1
+            texture "fractal_noise8"
+        }
+        color2 {
+            value 0.0823529411764706 0.0271280276816609 0.0271280276816609
+            texture "fractal_noise6"
+        }
+        increment {
+            value 0.61
+            texture "fractal_noise10"
+        }
+        lacunarity 1.41
+        octaves 12
+        contrast 0.0
+        turbulent yes
+        normalize yes
+    }
+    TextureFractalNoise {
+        name "fractal_noise6"
+        #version 0.91
+        #created 1603724748
+        #modified 1609671097
+        positions "mat_1" -394 905
+        colortag "blue"
+        projection 0
+        space 1
+        axis 1
+        object_space 2
+        uv_translate 100 100 100
+        uv_scale 0.45 0.45 0.45
+        color1 0.16078431372549 0.0977168057534437 0.0233294886582085
+        color2 0.650980392156863 0.320579686545899 0.158277585544022
+        increment 0.0
+        lacunarity 1.305
+        octaves 12
+        contrast 1
+        turbulent no
+        normalize yes
+    }
+    MaterialMatte {
+        name "matte"
+        #version 0.91
+        #created 1603723960
+        #modified 1609671097
+        positions "mat_1" 56 895
+        color {
+            value 0.0 0.0 0.0
+            texture "fractal_noise5"
+        }
+    }
+    TextureFractalNoise {
+        name "fractal_noise8"
+        #version 0.91
+        #created 1603725109
+        #modified 1609671097
+        positions "mat_1" -356 1117
+        colortag "blue"
+        projection 0
+        space 1
+        axis 1
+        object_space 2
+        uv_translate 0.0 0.0 0.0
+        uv_scale 0.49 0.49 0.49
+        color1 {
+            value 1 1 1
+            texture "fractal_noise9"
+        }
+        color2 1 1 1
+        increment 0.0
+        lacunarity 2
+        octaves 12
+        contrast 0.828
+        turbulent no
+        normalize yes
+    }
+    TextureFractalNoise {
+        name "fractal_noise9"
+        #version 0.91
+        #created 1603731533
+        #modified 1609671097
+        positions "mat_1" -597 1140
+        colortag "blue"
+        projection 0
+        space 1
+        axis 1
+        object_space 2
+        uv_translate 10.21 10.21 10.21
+        uv_rotate 0.0 0.0 0.0
+        uv_scale 0.37 0.37 0.37
+        color1 1.95936 1.60768 10.048
+        color2 0.568627450980392 0.492416943709433 0.383544790465206
+        increment {
+            value 5
+            texture "fractal_noise10"
+        }
+        lacunarity 1.99
+        octaves 12
+        contrast 1
+        turbulent no
+        normalize yes
+    }
+    TextureFractalNoise {
+        name "fractal_noise10"
+        #version 0.91
+        #created 1603833015
+        #modified 1609671097
+        positions "mat_1" -893 1113
+        colortag "blue"
+        projection 0
+        space 1
+        axis 1
+        object_space 2
+        uv_translate 10.21 10.21 10.21
+        uv_scale 0.37 0.37 0.37
+        color1 1.95936 1.60768 10.048
+        color2 0.568627450980392 0.492416943709433 0.383544790465206
+        increment 5
+        lacunarity 1.99
+        octaves 12
+        contrast 1
+        turbulent no
+        normalize yes
+    }
+    TextureBlend {
+        name "cl_mix1"
+        #version 0.9
+        #created 1603634425
+        #modified 1609671097
+        positions "mat_1" -569 882 1
+        colortag "blue"
+        mode 6
+        mix {
+            value 1
+            texture "mix_green_yellow"
+        }
+        input1 {
+            value 0.0 0.0 0.0
+            texture "pn_yellow"
+        }
+        input2 {
+            value 0.0 0.0 0.0
+            texture "pn_green"
+        }
+    }
+    TextureBlend {
+        name "cl_mix2"
+        #version 0.9
+        #created 1603676385
+        #modified 1609671097
+        positions "mat_1" -175 652 1
+        colortag "blue"
+        mode 7
+        mix {
+            value 1
+            texture "fractal_noise4"
+        }
+        input1 {
+            value 0.0 0.0 0.0
+            texture "fractal_noise3"
+        }
+        input2 {
+            value 0.0 0.0 0.0
+            texture "blend1"
+        }
+    }
+    TextureBlend {
+        name "cl_mix3"
+        #version 0.9
+        #created 1603724449
+        #modified 1609671097
+        positions "mat_1" 28 668
+        mode 7
+        input1 {
+            value 0.874509803921569 0.874509803921569 0.874509803921569
+            texture "fractal_noise5"
+        }
+        input2 {
+            value 0.0 0.0 0.0
+            texture "cl_mix2"
+        }
+    }
+}
+#preferences {
+    categories {
+        playblast {
+            frame_range 0
+            start 0
+            end 50
+            step 1
+            display_size 0
+            custom_size 720 486
+            display_HUD yes
+            shading_mode -1
+            render_wireframe_overlay no
+            enable_ambient_occlusion no
+            ambient_occlusion_sample_count 1
+            ambient_occlusion_distance -1
+            refinement_count -1
+            format "image"
+            encoding 5
+            filename "$CTEMP/blast_#####"
+        }
+        rendering {
+            motion_blur_sample_count 3
+            motion_blur_direction 0
+            motion_blur_length 0.5
+            displacement_storage_mode 0
+            projection_master_eye 0
+        }
+        geometry {
+            subdivision_mode 1
+            visibility_mode 2
+        }
+        animation {
+            frames_per_second 24
+            start_frame 0.0
+            end_frame 50
+        }
+    }
+    channels {
+        #version 0.9
+        others {
+            blend_mode 1
+            filtering_mode 0
+            visual_hint_mode 0
+            bit_depth 4
+            bit_type 2
+            description ""
+            separator ""
+            channels <empty>
+        }
+    }
+    selection {
+        selection_slots {
+        }
+        slots_working_contexts {
+            slot "Global" "project://scene"
+        }
+    }
+    isolate {
+        Group {
+            name "isolate"
+            #version 0.93
+            #created 1542848424
+            #modified 1609671097
+            update_mode {
+                value 0
+                hidden yes
+            }
+            inclusion_rule {
+                value ""
+                hidden yes
+            }
+            inclusion_items {
+                value <empty>
+                hidden yes
+            }
+            exclusion_rule {
+                value ""
+                hidden yes
+            }
+            exclusion_items {
+                value <empty>
+                hidden yes
+            }
+        }
+    }
+    color_picker_custom_colors 0.114064708352089 0.180392161011696 0.0128949536010623 0.101321391761303 0.141176477074623 0.0243598613888025 0.439999997615814 0.119999997317791 0.119999997317791 0.300000011920929 0.109999999403954 0.109999999403954 1 1 1 0.5 0.5 1 0.660000026226044 0.569999992847443 0.0900000035762787 0.439999997615814 0.389999985694885 0.119999997317791 0.300000011920929 0.270000010728836 0.109999999403954 0.800000011920929 0.800000011920929 0.800000011920929 0.0666666701436043 0.0275432523339987 0.00392156885936856 0.259999990463257 0.660000026226044 0.0900000035762787 0.219999998807907 0.439999997615814 0.119999997317791 0.170000001788139 0.300000011920929 0.109999999403954 0.639999985694885 0.639999985694885 0.639999985694885 0.817830383777618 0.721104025840759 2.17199993133545 0.0900000035762787 0.660000026226044 0.400000005960464 0.119999997317791 0.439999997615814 0.28999999165535 0.109999999403954 0.300000011920929 0.209999993443489 0.479999989271164 0.479999989271164 0.479999989271164 0.0 0.600000023841858 1 0.0900000035762787 0.430000007152557 0.660000026226044 0.119999997317791 0.310000002384186 0.439999997615814 0.119999997317791 0.219999998807907 0.300000011920929 0.319999992847443 0.319999992847443 0.319999992847443 0.25 0.0 1 0.239999994635582 0.0900000035762787 0.660000026226044 0.200000002980232 0.119999997317791 0.439999997615814 0.159999996423721 0.119999997317791 0.300000011920929 0.159999996423721 0.159999996423721 0.159999996423721 0.333333343267441 1 0.0 0.660000026226044 0.0900000035762787 0.600000023841858 0.439999997615814 0.119999997317791 0.400000005960464 0.300000011920929 0.119999997317791 0.280000001192093 0.0 0.0 0.0
+    foreground_color 0.0 0.0 0.0
+    background_color 1 1 1
+    current_time 0.0
+    active_tool "project://rotate_item"
+    ui {
+        window {
+            is_maximized yes
+            layout {
+                split_v {
+                    ratio 0.022
+                    views {
+                        tab {
+                            editor "WidgetTools"
+                            settings {
+                                viewport_widget {
+                                    selection_slot "Local"
+                                    use_global yes
+                                    local_selection {
+                                    }
+                                }
+                            }
+                            selection_locked no
+                        }
+                        selected_tab 0
+                        toolbar_minimized yes
+                    }
+                    view {
+                        editor "WidgetTools"
+                        settings {
+                            viewport_widget {
+                                selection_slot "Local"
+                                use_global yes
+                                local_selection {
+                                }
+                            }
+                        }
+                        toolbar_minimized yes
+                        selection_locked no
+                    }
+                    split_v {
+                        ratio 0.8
+                        split_h {
+                            ratio 0.946
+                            split_h {
+                                ratio 0.7
+                                split_v {
+                                    ratio 0.686186186186186
+                                    views {
+                                        tab {
+                                            editor "Widget3dView"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                refresh_mode "Fps Driven"
+                                                sampling_quality 0.1
+                                                refinement_count 10
+                                                shading_mode "Simple Shading (Smooth)"
+                                                ambient_occlusion no
+                                                ambient_occlusion_distance -1
+                                                wireframe no
+                                                fit_on_select no
+                                                display_filter "Context"
+                                                exposure 0.0
+                                                gamma 1
+                                                pickmask "Cameras Lights Locators Scene_Objects "
+                                                show_overlay yes
+                                                integration_model "IntegratorPathtracer"
+                                                integrator ".IntegratorPathtracer_embedded"
+                                                background_fit_mode 3
+                                                foreground_fit_mode 3
+                                                ambient_occlusion_distance -1
+                                                embedded_objects {
+                                                    MaterialGlView {
+                                                        name "embedded_previz_material"
+                                                        #version 0.91
+                                                        #created 1609671097
+                                                        #modified 1609671530
+                                                        private yes
+                                                        use_flat_normal no no no
+                                                        light_color 0.400000035762787 0.400000035762787 0.400000035762787
+                                                        dark_color 0.0167320277541876 0.0167320277541876 0.0167320277541876
+                                                        zoom_factor 0.535898384862104
+                                                    }
+                                                    IntegratorPathtracer {
+                                                        name "IntegratorPathtracer_embedded"
+                                                        #version 0.94
+                                                        #created 1609669643
+                                                        #modified 1609669643
+                                                        private yes
+                                                        cap_display no
+                                                        embedded_objects {
+                                                            MaterialPhysicalStandard {
+                                                                name "surface_default"
+                                                                #version 0.95
+                                                                #created 1609669643
+                                                                #modified 1609671097
+                                                                private yes
+                                                            }
+                                                            MaterialPhysicalVolume {
+                                                                name "volume_default"
+                                                                #version 0.92
+                                                                #created 1609669643
+                                                                #modified 1609671097
+                                                                private yes
+                                                                density_multiplier 100
+                                                            }
+                                                            MaterialPhysicalHair {
+                                                                name "curve_default"
+                                                                #version 0.9
+                                                                #created 1609669643
+                                                                #modified 1609671097
+                                                                private yes
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                lights 0
+                                                eye_dist 60.7343255879703
+                                                center 0.0 0.0 0.0
+                                                rotation -10.125000779517 42.6249996731058 0.0
+                                            }
+                                            selection_locked no
+                                            evaluation_mode yes
+                                        }
+                                        tab {
+                                            editor "WidgetImageView"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                show_squares no
+                                                show_progress yes
+                                                min_quality "1/16 Resolution"
+                                                visual_hint -1
+                                                aov_group "rgba"
+                                                zoom_and_pan 1 0.0 0.0
+                                                exposure 0.0
+                                                gamma 1
+                                                auto_eval yes
+                                                show_overlay yes
+                                            }
+                                            selection_locked no
+                                            evaluation_mode yes
+                                        }
+                                        tab {
+                                            editor "WidgetImageHistory"
+                                            selection_locked no
+                                        }
+                                        selected_tab 1
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetImageView"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            show_squares no
+                                            show_progress yes
+                                            min_quality "1/16 Resolution"
+                                            visual_hint -1
+                                            aov_group "rgba"
+                                            zoom_and_pan 1 0.0 0.0
+                                            exposure 0.0
+                                            gamma 1
+                                            auto_eval yes
+                                            show_overlay yes
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                    views {
+                                        tab {
+                                            editor "WidgetMaterialEditor"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                GuiNodal {
+                                                    pos_x -155
+                                                    pos_y -470
+                                                    zoom_factor 796
+                                                    grid no yes 40
+                                                    magnet no
+                                                    cull_links no
+                                                    link_node_autoinsert yes
+                                                    display_node_label 1
+                                                    smooth_transitions yes
+                                                    autozoom no
+                                                    default_node_state 0
+                                                }
+                                                NodalBase {
+                                                    item_settings {
+                                                    }
+                                                }
+                                                MaterialNodal {
+                                                    is_locked no
+                                                    autofit yes
+                                                    display_dependencies yes
+                                                    selected_materials <empty>
+                                                    display_classes yes
+                                                }
+                                            }
+                                            selection_locked no
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetMaterialEditor"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            GuiNodal {
+                                                pos_x -155
+                                                pos_y -470
+                                                zoom_factor 796
+                                                grid no yes 40
+                                                magnet no
+                                                cull_links no
+                                                link_node_autoinsert yes
+                                                display_node_label 1
+                                                smooth_transitions yes
+                                                autozoom no
+                                                default_node_state 0
+                                            }
+                                            NodalBase {
+                                                item_settings {
+                                                }
+                                            }
+                                            MaterialNodal {
+                                                is_locked no
+                                                autofit yes
+                                                display_dependencies yes
+                                                selected_materials <empty>
+                                                display_classes yes
+                                            }
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                }
+                                split_v {
+                                    ratio 0.5
+                                    views {
+                                        tab {
+                                            editor "WidgetBrowser"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                rows_expand "project:/" "project://scene"
+                                                show_context_tree yes
+                                                view_mode 0
+                                                class_filter "Project Item"
+                                                width_context_tree 150
+                                                spreadsheet_sort_type -1
+                                                spreadsheet_sort_order 0
+                                                spreadsheet_column_type 0 4 3
+                                                spreadsheet_columns_width 240 170 150
+                                            }
+                                            selection_locked no
+                                        }
+                                        tab {
+                                            editor "WidgetHierarchyView"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                show_mode no
+                                                tree_columns_type 3
+                                                tree_columns_width 150
+                                                rows_expand <empty>
+                                            }
+                                            selection_locked no
+                                        }
+                                        tab {
+                                            editor "WidgetExplorer"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                tree_columns_type 3
+                                                tree_columns_width 150
+                                                rows_expand "project:/" "project://scene" "project://terrain_setup"
+                                                display_only_localized_button no
+                                                display_only_overridden_attrs no
+                                            }
+                                            selection_locked no
+                                        }
+                                        tab {
+                                            editor "WidgetSearch"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                text ""
+                                                spreadsheet_sort_type -1
+                                                spreadsheet_sort_order 0
+                                                spreadsheet_columns_width 240 150 170 115 115 270 270
+                                            }
+                                            selection_locked no
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetBrowser"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            rows_expand "project:/" "project://scene"
+                                            show_context_tree yes
+                                            view_mode 0
+                                            class_filter "Project Item"
+                                            width_context_tree 150
+                                            spreadsheet_sort_type -1
+                                            spreadsheet_sort_order 0
+                                            spreadsheet_column_type 0 4 3
+                                            spreadsheet_columns_width 240 170 150
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                    views {
+                                        tab {
+                                            editor "WidgetImageGallery"
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                force_refresh no
+                                                show_mode yes
+                                            }
+                                            selection_locked no
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetImageGallery"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            force_refresh no
+                                            show_mode yes
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                }
+                            }
+                            views {
+                                tab {
+                                    editor "WidgetTimeline"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                    }
+                                    selection_locked no
+                                }
+                                selected_tab 0
+                                toolbar_minimized yes
+                            }
+                            view {
+                                editor "WidgetTimeline"
+                                settings {
+                                    viewport_widget {
+                                        selection_slot "Local"
+                                        use_global yes
+                                        local_selection {
+                                        }
+                                    }
+                                }
+                                toolbar_minimized yes
+                                selection_locked no
+                            }
+                        }
+                        split_h {
+                            ratio 0.5
+                            views {
+                                tab {
+                                    editor "WidgetAttributeEditor"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                        attribute_groups "Scene Object Name" yes "Canvas" yes "Display" yes "Overscan" yes "Sampling" yes "Layers" yes "Output" yes "Kinematics" yes "Advanced Kinematics" yes "Rendering" yes "Visibility" yes "Lighting" yes "Shading" yes "3d View" yes "Utility" yes "Deformation" yes "Displacement" yes "Smoothing" no "Subdivision Surfaces" yes "Crease Driven Subdivision Surfaces" yes "Path" yes "Arbitrary Output Variables" no "Path Depth" yes "Geometry" yes "Material Sampling" yes "Energy Conservation" yes "Indirect Path Depth" yes "Caustics" no "Diffuse" yes "Diffuse Backlight" no "Diffuse Sss" no "Diffuse Advanced" no "Specular 1" yes "Specular 1 Fresnel" no "Specular 1 Advanced" no "Specular 2" no "Specular 2 Fresnel" no "Specular 2 Advanced" no "Transmission" no "Transmission Attenuation" no "Transmission Advanced" no "Emission" yes "General" yes "Input" yes "Process" yes "Projection" yes "Inputs" yes "Projection Mode" yes "Camera Projection" yes "Projection Transform" yes "Uv Transform" yes "Channels" yes "Sequence" yes "Gamma" yes "Multiplier" yes "Evaluation" yes "Blending" yes "Layer 1" yes "Layer 2" yes "Layer 3" yes "Layer 4" yes "Layer 5" yes "Layer 6" yes "Anti Aliasing" yes "Tone Mapping" yes "Motion Blur" yes "Alpha" yes "Light Visibility" yes "Clamping" yes "Depth Of Field" yes "Front" yes "Back" yes "Scattering" yes "Scattering Decimation" yes "Scattering Variation" yes "Normal" yes "Pattern" yes "Marble" yes "Time" yes "Scope" yes "Gradient" yes "Alembic" yes "Transform" yes "Filters" yes "Frame Range" yes "File Output" yes "Deep Output" yes "Uv Bake" yes "Range" yes "Aovs" yes "Sub Pixel Filters" yes "File" yes "Local Overrides" yes "Settings" yes "Inclusion" yes "Exclusion" yes "Result" yes "Artistic Manipulation" yes "Density" yes "Open VDB" yes "Density & Velocity" yes "Switch" yes "Layer 7" yes "Layer 8" yes "Environment" yes "Sun" yes "Debug" yes "Actions" yes "Test" yes "Return" yes "ID" yes "Terrain" yes "Depth" yes "Reflection" yes "Transparency" yes "Sub Surface Scattering" yes "Light Contribution" yes "Mapping" yes "Iridescent" yes "Transmittance" yes "Base" no "Snap To Surface" yes "Variance" yes "Snap" yes "Shading Variables" yes "Overrides" yes "Compression" yes "CAM" yes "Content" yes "Override Sets" yes "Aov" yes "Ambient Occlusion" yes "Parallax" yes "Attenuation" yes "Group 1" yes "Group 2" yes "Group 3" yes "Speed Tree Model" yes "Materials" yes "Wind" yes "Shader" yes "Raytracing" yes "Informations" yes
+                                        attributes_filter ""
+                                        expression_mode yes
+                                        separator 269
+                                    }
+                                    selection_locked no
+                                }
+                                selected_tab 0
+                                toolbar_minimized no
+                            }
+                            view {
+                                editor "WidgetAttributeEditor"
+                                settings {
+                                    viewport_widget {
+                                        selection_slot "Local"
+                                        use_global yes
+                                        local_selection {
+                                        }
+                                    }
+                                    attribute_groups "Scene Object Name" yes "Canvas" yes "Display" yes "Overscan" yes "Sampling" yes "Layers" yes "Output" yes "Kinematics" yes "Advanced Kinematics" yes "Rendering" yes "Visibility" yes "Lighting" yes "Shading" yes "3d View" yes "Utility" yes "Deformation" yes "Displacement" yes "Smoothing" no "Subdivision Surfaces" yes "Crease Driven Subdivision Surfaces" yes "Path" yes "Arbitrary Output Variables" no "Path Depth" yes "Geometry" yes "Material Sampling" yes "Energy Conservation" yes "Indirect Path Depth" yes "Caustics" no "Diffuse" yes "Diffuse Backlight" no "Diffuse Sss" no "Diffuse Advanced" no "Specular 1" yes "Specular 1 Fresnel" no "Specular 1 Advanced" no "Specular 2" no "Specular 2 Fresnel" no "Specular 2 Advanced" no "Transmission" no "Transmission Attenuation" no "Transmission Advanced" no "Emission" yes "General" yes "Input" yes "Process" yes "Projection" yes "Inputs" yes "Projection Mode" yes "Camera Projection" yes "Projection Transform" yes "Uv Transform" yes "Channels" yes "Sequence" yes "Gamma" yes "Multiplier" yes "Evaluation" yes "Blending" yes "Layer 1" yes "Layer 2" yes "Layer 3" yes "Layer 4" yes "Layer 5" yes "Layer 6" yes "Anti Aliasing" yes "Tone Mapping" yes "Motion Blur" yes "Alpha" yes "Light Visibility" yes "Clamping" yes "Depth Of Field" yes "Front" yes "Back" yes "Scattering" yes "Scattering Decimation" yes "Scattering Variation" yes "Normal" yes "Pattern" yes "Marble" yes "Time" yes "Scope" yes "Gradient" yes "Alembic" yes "Transform" yes "Filters" yes "Frame Range" yes "File Output" yes "Deep Output" yes "Uv Bake" yes "Range" yes "Aovs" yes "Sub Pixel Filters" yes "File" yes "Local Overrides" yes "Settings" yes "Inclusion" yes "Exclusion" yes "Result" yes "Artistic Manipulation" yes "Density" yes "Open VDB" yes "Density & Velocity" yes "Switch" yes "Layer 7" yes "Layer 8" yes "Environment" yes "Sun" yes "Debug" yes "Actions" yes "Test" yes "Return" yes "ID" yes "Terrain" yes "Depth" yes "Reflection" yes "Transparency" yes "Sub Surface Scattering" yes "Light Contribution" yes "Mapping" yes "Iridescent" yes "Transmittance" yes "Base" no "Snap To Surface" yes "Variance" yes "Snap" yes "Shading Variables" yes "Overrides" yes "Compression" yes "CAM" yes "Content" yes "Override Sets" yes "Aov" yes "Ambient Occlusion" yes "Parallax" yes "Attenuation" yes "Group 1" yes "Group 2" yes "Group 3" yes "Speed Tree Model" yes "Materials" yes "Wind" yes "Shader" yes "Raytracing" yes "Informations" yes
+                                    attributes_filter ""
+                                    expression_mode yes
+                                    separator 269
+                                }
+                                toolbar_minimized no
+                                selection_locked no
+                            }
+                            split_h {
+                                ratio 0.5
+                                views {
+                                    tab {
+                                        editor "WidgetMaterialLinker"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            filter ""
+                                            hierarchical_display yes
+                                        }
+                                        selection_locked no
+                                        evaluation_mode yes
+                                    }
+                                    selected_tab 0
+                                    toolbar_minimized no
+                                }
+                                view {
+                                    editor "WidgetMaterialLinker"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                        filter ""
+                                        hierarchical_display yes
+                                    }
+                                    toolbar_minimized no
+                                    selection_locked no
+                                }
+                                views {
+                                    tab {
+                                        editor "WidgetLayerEditor"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                        }
+                                        selection_locked no
+                                    }
+                                    selected_tab 0
+                                    toolbar_minimized no
+                                }
+                                view {
+                                    editor "WidgetLayerEditor"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                    }
+                                    toolbar_minimized no
+                                    selection_locked no
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    units {
+        units_file "$CLARISSE_BIN_DIR/units.cfg"
+        time "frame"
+        distance "metric"
+        distance_unit "meter"
+        angle "degree"
+        area "metric"
+        area_unit "square_meter"
+        frequency "frames_per_second"
+        color "float"
+        scale "multiplier"
+    }
+}

@@ -1,0 +1,1918 @@
+{
+  "version": 1,
+  "presets": [
+    {
+      "id": "cactus",
+      "title": "Cactus",
+      "description": "Cactus procedural : cinq degrades pilotent la forme, les epines et la coloration.",
+      "category": "Geometrie",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "cactus",
+      "filename": "Cactus.project",
+      "object_count": 87,
+      "classes": {
+        "SceneObjectCombiner": 1,
+        "Context": 1,
+        "TextureChecker": 1,
+        "TextureGradient": 5,
+        "GeometryPolysphere": 2,
+        "TextureConstantColor": 2,
+        "GeometryPointCloud": 1,
+        "SceneObjectScatterer": 1,
+        "TextureUtility": 1,
+        "TextureReorder": 1,
+        "TexturePerlinNoise": 1,
+        "TextureBlend": 2,
+        "TextureMultiply": 3,
+        "MaterialPhysicalDisneyPrincipled": 2,
+        "TextureFractalNoise": 2,
+        "TextureInstanceColor": 2,
+        "TextureHue": 1,
+        "TextureSaturation": 1,
+        "Displacement": 1,
+        "TextureInvert": 1,
+        "TextureRescale": 1
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "chain_fence_scatterer",
+      "title": "Chain Fence Scatterer",
+      "description": "Grillage genere par scatter : le maillon est instancie le long d'une grille de points, avec variation d'orientation.",
+      "category": "Scatter",
+      "credit": "communaute Clarisse",
+      "shelf": true,
+      "directory": "chain_fence_scatterer",
+      "filename": "Chain_Fence_Scatterer.project",
+      "object_count": 17,
+      "classes": {
+        "Context": 2,
+        "CameraPerspective": 1,
+        "LightPhysicalDistant": 1,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "GeometryParticleContainer": 1,
+        "SceneObjectScatterer": 1,
+        "TextureExtractProperty": 1,
+        "TextureVectorToEuler": 1,
+        "SceneObjectCombiner": 1,
+        "GeometryBox": 4
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "decal_multi_material",
+      "title": "Decal Multi Material",
+      "description": "Variante multi-materiaux du systeme de decals : plusieurs decals empiles sur une meme surface.",
+      "category": "Shading",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "decal_multi_material",
+      "filename": "DecalFinalMultiMat.project",
+      "object_count": 19,
+      "classes": {
+        "Scope": 1,
+        "MaterialPhysicalLayered": 1,
+        "MaterialPhysicalAutodeskStandardSurface": 2,
+        "TextureMapFile": 1,
+        "TextureGradient": 1,
+        "TextureReorder": 1,
+        "CameraPerspectiveAdvanced": 1
+      },
+      "parameters": [],
+      "external_files": [
+        "$PDIR/TexturesCom_DecalsRusted0055_2_masked_S.png"
+      ],
+      "missing_files": []
+    },
+    {
+      "id": "decal_perso",
+      "title": "Decal (variante)",
+      "description": "Decal sur materiau Disney Principled, avec reorientation des normales.",
+      "category": "Shading",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "decal_perso",
+      "filename": "Decal.project",
+      "object_count": 18,
+      "classes": {
+        "CameraPerspectiveAdvanced": 1,
+        "Scope": 1,
+        "MaterialPhysicalDisneyPrincipled": 1,
+        "TextureReorder": 1,
+        "TextureGradient": 1,
+        "TextureBumpMap": 1,
+        "TextureMapFile": 1
+      },
+      "parameters": [],
+      "external_files": [
+        "$PDIR/TexturesCom_DecalsRusted0055_2_masked_S.png"
+      ],
+      "missing_files": []
+    },
+    {
+      "id": "decals",
+      "title": "Decals",
+      "description": "Systeme de decals projetes par Scope, avec materiau en couches.",
+      "category": "Shading",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "decals",
+      "filename": "decals.project",
+      "object_count": 25,
+      "classes": {
+        "Context": 2,
+        "Image": 1,
+        "CameraPerspective": 1,
+        "RendererRaytracer": 1,
+        "GeometryPolygrid": 1,
+        "Scope": 1,
+        "MaterialPhysicalLayered": 1,
+        "MaterialPhysicalAutodeskStandardSurface": 2,
+        "TextureMapFile": 1,
+        "TextureGradient": 1,
+        "TextureReorder": 1,
+        "CameraPerspectiveAdvanced": 1
+      },
+      "parameters": [],
+      "external_files": [
+        "$PDIR/TexturesCom_DecalsRusted0055_2_masked_S.png"
+      ],
+      "missing_files": []
+    },
+    {
+      "id": "desert",
+      "title": "Desert",
+      "description": "Environnement desertique complet : dunes, dispersion de rochers et shading en trente et un contextes. Scene lourde.",
+      "category": "Environnement",
+      "credit": "Demian Hernandez",
+      "shelf": false,
+      "directory": "desert",
+      "filename": "Desert_v2_By_Demian.project",
+      "object_count": 707,
+      "classes": {
+        "Context": 31,
+        "SceneObjectCombiner": 28,
+        "TextureChecker": 2,
+        "TextureGradient": 24,
+        "GeometryPolysphere": 9,
+        "TextureConstantColor": 14,
+        "GeometryPointCloud": 5,
+        "SceneObjectScatterer": 8,
+        "TextureUtility": 5,
+        "TextureReorder": 5,
+        "TexturePerlinNoise": 6,
+        "TextureBlend": 27,
+        "TextureMultiply": 31,
+        "MaterialPhysicalDisneyPrincipled": 9,
+        "TextureFractalNoise": 28,
+        "TextureInstanceColor": 8,
+        "TextureHue": 3,
+        "TextureSaturation": 7,
+        "Displacement": 8,
+        "TextureInvert": 3,
+        "TextureRescale": 5,
+        "TextureBumpMap": 7,
+        "LightPhysicalDistant": 3,
+        "TextureClamp": 1,
+        "TextureQuantize": 1,
+        "TextureAdd": 4,
+        "GeometryPointArray": 2,
+        "TextureCellularNoise": 4,
+        "MaterialPhysicalStandard": 3,
+        "TextureRandom": 1,
+        "GeometrySphere": 5,
+        "MaterialMatte": 6,
+        "TextureBlur": 1,
+        "TextureMap": 2,
+        "GeometryPointVolume": 1,
+        "TextureOcclusion": 2,
+        "TextureColorSpace": 2,
+        "TextureTriplanar": 2,
+        "MaterialRaySwitch": 1,
+        "MaterialPhysicalEmitter": 1,
+        "RendererRaytracer": 2,
+        "Locator": 4,
+        "Image": 4,
+        "CameraPerspectiveAdvanced": 3,
+        "LightPhysicalEnvironment": 1,
+        "LightPhysicalSphere": 1,
+        "MaterialPhysicalVolume": 1,
+        "GeometryVolumeBox": 1,
+        "Group": 2,
+        "GeometryPolygrid": 2,
+        "TextureScope": 2,
+        "Scope": 3,
+        "TextureContrast": 1,
+        "CameraOrthographic": 1,
+        "GeometryBox": 2
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "face_to_camera_scatterer",
+      "title": "Face To Camera Scatterer",
+      "description": "Scatter dont chaque instance s'oriente vers la camera : billboards, cartes de vegetation, particules.",
+      "category": "Scatter",
+      "credit": "communaute Clarisse",
+      "shelf": true,
+      "directory": "face_to_camera_scatterer",
+      "filename": "Face_To_Camera_Scatterer.project",
+      "object_count": 14,
+      "classes": {
+        "Locator": 1,
+        "GeometryBox": 1,
+        "GeometryPointArray": 1,
+        "SceneObjectScatterer": 1,
+        "TextureSupportColor": 1,
+        "TextureUtility": 2,
+        "TextureVectorToEuler": 1,
+        "TextureSubtract": 1
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "instance_color",
+      "title": "Instance Color (attribut custom)",
+      "description": "Colorisation par instance pilotee par un attribut custom lu dans le materiau : chaque copie recoit sa propre teinte.",
+      "category": "Scatter",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "instance_color",
+      "filename": "Instance_Color_Custom_Attribute.project",
+      "object_count": 20,
+      "classes": {
+        "GeometrySphere": 3,
+        "SceneObjectCombiner": 4,
+        "TextureSwitch": 1,
+        "TextureConstantColor": 3,
+        "TextureUtility": 1,
+        "MaterialPhysicalStandard": 1,
+        "Context": 1,
+        "CameraPerspective": 1,
+        "LightPhysicalDistant": 1,
+        "RendererRaytracer": 1,
+        "Image": 1
+      },
+      "parameters": [
+        {
+          "owner": "combiner",
+          "name": "CColor",
+          "type": "color",
+          "group": "utility",
+          "doc": "",
+          "default": [
+            "1",
+            "1",
+            "1"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/combiner1",
+          "name": "CColor",
+          "type": "color",
+          "group": "utility",
+          "doc": "",
+          "default": [
+            "0.0352941176470588",
+            "0.0352941176470588",
+            "0.0352941176470588"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/combiner2",
+          "name": "CColor",
+          "type": "color",
+          "group": "utility",
+          "doc": "",
+          "default": [
+            "0.470588235294118",
+            "0.470588235294118",
+            "0.470588235294118"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        }
+      ],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "lpe_master",
+      "title": "LPE Master File",
+      "description": "Seize Light Path Expressions pretes a l'emploi, couvrant la decomposition complete diffuse / speculaire / transmission / SSS.",
+      "category": "Rendu",
+      "credit": "vandam",
+      "shelf": false,
+      "directory": "lpe_master",
+      "filename": "LPE_masterFile_vandam.project",
+      "object_count": 18,
+      "classes": {
+        "Context": 1,
+        "LightPathExpression": 16,
+        "Group": 1
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "menger_sponge",
+      "title": "Menger Sponge",
+      "description": "Eponge de Menger construite par douze niveaux de scatter imbriques. Bon test de charge pour l'instanciation.",
+      "category": "Geometrie",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "menger_sponge",
+      "filename": "MengerSponge_NoFiles.project",
+      "object_count": 47,
+      "classes": {
+        "Context": 13,
+        "CameraPerspective": 1,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "SceneObjectScatterer": 12,
+        "MaterialMatte": 1,
+        "TextureOcclusion": 1,
+        "GeometryBox": 1,
+        "TextureScope": 1,
+        "Scope": 3,
+        "GeometryPointArray": 11
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "micro_scratch",
+      "title": "Micro Scratch",
+      "description": "Rayures fines procedurales pour la rugosite et le speculaire, avec densite, orientation et contraste reglables.",
+      "category": "Shading",
+      "credit": "communaute Clarisse",
+      "shelf": true,
+      "directory": "micro_scratch",
+      "filename": "MicroScratch.project",
+      "object_count": 31,
+      "classes": {
+        "Context": 1,
+        "CameraPerspective": 1,
+        "RendererRaytracer": 1,
+        "GeometrySphere": 1,
+        "Image": 1,
+        "MaterialPhysicalDisneyPrincipled": 1,
+        "AovStore": 2,
+        "TextureUtility": 1,
+        "LightPhysicalEnvironment": 1,
+        "TextureMapFile": 1,
+        "TextureColorCorrection": 1,
+        "TextureFractalNoise": 1,
+        "TextureReorder": 3,
+        "TextureOslFile": 1
+      },
+      "parameters": [
+        {
+          "owner": "scene/OSL",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "Cf",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "Cf",
+              "Cf"
+            ]
+          ]
+        },
+        {
+          "owner": "scene/OSL",
+          "name": "OSL_density",
+          "type": "double",
+          "group": "input",
+          "doc": "density",
+          "default": 0.25,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/OSL",
+          "name": "OSL_width",
+          "type": "double",
+          "group": "input",
+          "doc": "width",
+          "default": 0.0004,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/OSL",
+          "name": "OSL_offset",
+          "type": "double",
+          "group": "input",
+          "doc": "offset",
+          "default": 0.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/OSL",
+          "name": "OSL_roughness_min",
+          "type": "double",
+          "group": "input",
+          "doc": "roughness_min",
+          "default": 0.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/OSL",
+          "name": "OSL_roughness_max",
+          "type": "double",
+          "group": "input",
+          "doc": "roughness_max",
+          "default": 0.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/OSL",
+          "name": "OSL_roughness_default",
+          "type": "double",
+          "group": "input",
+          "doc": "roughness_default",
+          "default": 0.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/OSL",
+          "name": "OSL_anisotropic_min",
+          "type": "double",
+          "group": "input",
+          "doc": "anisotropic_min",
+          "default": 0.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/OSL",
+          "name": "OSL_anisotropic_max",
+          "type": "double",
+          "group": "input",
+          "doc": "anisotropic_max",
+          "default": 0.07,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/OSL",
+          "name": "OSL_anisotropic_default",
+          "type": "double",
+          "group": "input",
+          "doc": "anisotropic_default",
+          "default": 0.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        }
+      ],
+      "external_files": [
+        "D:/abcg/assets/sky_map/049_hdrmaps_com_free.exr"
+      ],
+      "missing_files": [
+        "D:/abcg/assets/sky_map/049_hdrmaps_com_free.exr"
+      ]
+    },
+    {
+      "id": "mix_normals",
+      "title": "Mix Normals",
+      "description": "Melange correct de deux normal maps (pas une simple moyenne), pour superposer un detail sur une normale de base.",
+      "category": "Shading",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "mix_normals",
+      "filename": "Mix_Normals.project",
+      "object_count": 12,
+      "classes": {
+        "Context": 1,
+        "MaterialPhysicalStandard": 1,
+        "TextureMultiply": 1,
+        "TextureDivide": 1,
+        "TextureNormalMap": 1,
+        "TextureConstantColor": 2
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "ocean",
+      "title": "Ocean",
+      "description": "Surface d'ocean procedurale : sept bruits melanges pour la houle, l'ecume et la variation de rugosite.",
+      "category": "Shading",
+      "credit": "Demian Hernandez",
+      "shelf": false,
+      "directory": "ocean",
+      "filename": "Demian_Ocean_Scene.project",
+      "object_count": 102,
+      "classes": {
+        "Context": 2,
+        "CameraPerspective": 1,
+        "LightPhysicalDistant": 1,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "GeometryPolygrid": 2,
+        "GeometrySphere": 2,
+        "GeometryPointCloud": 1,
+        "SceneObjectScatterer": 1,
+        "LightPhysicalEnvironment": 1,
+        "Displacement": 1,
+        "TexturePerlinNoise": 5,
+        "MaterialPhysicalStandard": 1,
+        "TextureBumpMap": 1,
+        "TextureBlend": 7,
+        "TextureGradient": 3,
+        "TextureFractalNoise": 6,
+        "TextureMultiply": 7,
+        "TextureOcclusion": 2,
+        "TextureRescale": 1
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "osl_noise_collection",
+      "title": "OSL Noise Collection",
+      "description": "Neuf textures OSL de bruit (Perlin, Worley, Voronoi, flow, fractal) pretes a brancher, chacune avec ses parametres exposes.",
+      "category": "Shading",
+      "credit": "communaute Clarisse",
+      "shelf": true,
+      "directory": "osl_noise_collection",
+      "filename": "OSL_Noise_Collection.project",
+      "object_count": 14,
+      "classes": {
+        "Context": 2,
+        "GeometrySphere": 1,
+        "MaterialMatte": 1,
+        "TextureOslScript": 9
+      },
+      "parameters": [
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Noise_OSL",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "result",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "result",
+              "result"
+            ]
+          ]
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Noise_OSL",
+          "name": "OSL_start_frequency",
+          "type": "double",
+          "group": "input",
+          "doc": "start_frequency",
+          "default": 4.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Noise_OSL",
+          "name": "OSL_start_offset",
+          "type": "double[3]",
+          "group": "input",
+          "doc": "start_offset",
+          "default": [
+            "0.5",
+            "0.0",
+            "0.0"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Noise_OSL",
+          "name": "OSL_lacunarity",
+          "type": "double",
+          "group": "input",
+          "doc": "lacunarity",
+          "default": 1.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Noise_OSL",
+          "name": "OSL_gain",
+          "type": "double",
+          "group": "input",
+          "doc": "gain",
+          "default": 0.65,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Noise_OSL",
+          "name": "OSL_octaves",
+          "type": "long",
+          "group": "input",
+          "doc": "octaves",
+          "default": 8,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Noise_OSL",
+          "name": "OSL_attenuation",
+          "type": "double",
+          "group": "input",
+          "doc": "attenuation",
+          "default": 2.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Alligator_Noise_OSL",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "result",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "result",
+              "result"
+            ]
+          ]
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Alligator_Noise_OSL",
+          "name": "OSL_start_frequency",
+          "type": "double",
+          "group": "input",
+          "doc": "start_frequency",
+          "default": 10.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Alligator_Noise_OSL",
+          "name": "OSL_start_offset",
+          "type": "double[3]",
+          "group": "input",
+          "doc": "start_offset",
+          "default": [
+            "0.0",
+            "0.0",
+            "0.0"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Alligator_Noise_OSL",
+          "name": "OSL_lacunarity",
+          "type": "double",
+          "group": "input",
+          "doc": "lacunarity",
+          "default": 2.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Alligator_Noise_OSL",
+          "name": "OSL_gain",
+          "type": "double",
+          "group": "input",
+          "doc": "gain",
+          "default": 0.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Alligator_Noise_OSL",
+          "name": "OSL_octaves",
+          "type": "long",
+          "group": "input",
+          "doc": "octaves",
+          "default": 8,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Alligator_Noise_OSL",
+          "name": "OSL_attenuation",
+          "type": "double",
+          "group": "input",
+          "doc": "attenuation",
+          "default": 1.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Flow_Noise_OSL",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "result",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "result",
+              "result"
+            ]
+          ]
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Flow_Noise_OSL",
+          "name": "OSL_start_frequency",
+          "type": "double",
+          "group": "input",
+          "doc": "start_frequency",
+          "default": 1.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Flow_Noise_OSL",
+          "name": "OSL_start_offset",
+          "type": "double[3]",
+          "group": "input",
+          "doc": "start_offset",
+          "default": [
+            "0.0",
+            "0.0",
+            "0.0"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Flow_Noise_OSL",
+          "name": "OSL_flow",
+          "type": "double",
+          "group": "input",
+          "doc": "flow",
+          "default": 1.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Flow_Noise_OSL",
+          "name": "OSL_lacunarity",
+          "type": "double",
+          "group": "input",
+          "doc": "lacunarity",
+          "default": 2.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Flow_Noise_OSL",
+          "name": "OSL_flow_rate",
+          "type": "double",
+          "group": "input",
+          "doc": "flow_rate",
+          "default": 4.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Flow_Noise_OSL",
+          "name": "OSL_gain",
+          "type": "double",
+          "group": "input",
+          "doc": "gain",
+          "default": 1.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Flow_Noise_OSL",
+          "name": "OSL_advect",
+          "type": "double",
+          "group": "input",
+          "doc": "advect",
+          "default": 0.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Flow_Noise_OSL",
+          "name": "OSL_octaves",
+          "type": "long",
+          "group": "input",
+          "doc": "octaves",
+          "default": 8,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Simplex_Flow_Noise_OSL",
+          "name": "OSL_attenuation",
+          "type": "double",
+          "group": "input",
+          "doc": "attenuation",
+          "default": 1.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Perlin_Flow_Noise_OSL",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "result",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "result",
+              "result"
+            ]
+          ]
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Perlin_Flow_Noise_OSL",
+          "name": "OSL_start_frequency",
+          "type": "double",
+          "group": "input",
+          "doc": "start_frequency",
+          "default": 3.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Perlin_Flow_Noise_OSL",
+          "name": "OSL_start_offset",
+          "type": "double[3]",
+          "group": "input",
+          "doc": "start_offset",
+          "default": [
+            "2.5",
+            "2",
+            "0.0"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Perlin_Flow_Noise_OSL",
+          "name": "OSL_flow",
+          "type": "double",
+          "group": "input",
+          "doc": "flow",
+          "default": 0.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Perlin_Flow_Noise_OSL",
+          "name": "OSL_lacunarity",
+          "type": "double",
+          "group": "input",
+          "doc": "lacunarity",
+          "default": -1.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Perlin_Flow_Noise_OSL",
+          "name": "OSL_flow_rate",
+          "type": "double",
+          "group": "input",
+          "doc": "flow_rate",
+          "default": -0.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Perlin_Flow_Noise_OSL",
+          "name": "OSL_gain",
+          "type": "double",
+          "group": "input",
+          "doc": "gain",
+          "default": 1.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Perlin_Flow_Noise_OSL",
+          "name": "OSL_advect",
+          "type": "double",
+          "group": "input",
+          "doc": "advect",
+          "default": 1.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Perlin_Flow_Noise_OSL",
+          "name": "OSL_octaves",
+          "type": "long",
+          "group": "input",
+          "doc": "octaves",
+          "default": 8,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Perlin_Flow_Noise_OSL",
+          "name": "OSL_attenuation",
+          "type": "double",
+          "group": "input",
+          "doc": "attenuation",
+          "default": 3.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Cell_Noise_OSL",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "resultRGB",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "resultRGB",
+              "resultRGB"
+            ],
+            [
+              "resultMask",
+              "resultMask"
+            ],
+            [
+              "resultF",
+              "resultF"
+            ]
+          ]
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Cell_Noise_OSL",
+          "name": "OSL_cellfreq",
+          "type": "double",
+          "group": "input",
+          "doc": "cellfreq",
+          "default": 10.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Cell_Noise_OSL",
+          "name": "OSL_radius",
+          "type": "double",
+          "group": "input",
+          "doc": "radius",
+          "default": 0.3,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Cell_Noise_OSL",
+          "name": "OSL_blur",
+          "type": "double",
+          "group": "input",
+          "doc": "blur",
+          "default": 0.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Cell_Noise_OSL",
+          "name": "OSL_jitter",
+          "type": "double",
+          "group": "input",
+          "doc": "jitter",
+          "default": 1.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Cell_Noise_OSL",
+          "name": "OSL_patcolor",
+          "type": "rgb",
+          "group": "input",
+          "doc": "patcolor",
+          "default": [
+            "0.0",
+            "0.0",
+            "0.0"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Cell_Noise_OSL",
+          "name": "OSL_bakcolor",
+          "type": "rgb",
+          "group": "input",
+          "doc": "bakcolor",
+          "default": [
+            "1",
+            "1",
+            "1"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Cell_Noise_OSL",
+          "name": "OSL_spacename",
+          "type": "string",
+          "group": "input",
+          "doc": "spacename",
+          "default": "shader",
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Stone_OSL",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "Fac",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "Fac",
+              "Fac"
+            ]
+          ]
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Stone_OSL",
+          "name": "OSL_p",
+          "type": "double[3]",
+          "group": "input",
+          "doc": "p",
+          "default": [
+            "0.0",
+            "0.0",
+            "0.0"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Stone_OSL",
+          "name": "OSL_Scale",
+          "type": "double[3]",
+          "group": "input",
+          "doc": "Scale",
+          "default": [
+            "-23.5",
+            "-67.5",
+            "5"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Stone_OSL",
+          "name": "OSL_w",
+          "type": "double",
+          "group": "input",
+          "doc": "w",
+          "default": 0.06,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Stone_OSL",
+          "name": "OSL_s",
+          "type": "double",
+          "group": "input",
+          "doc": "s",
+          "default": 16.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Squares_OSL",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "Center",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "Edge",
+              "Edge"
+            ],
+            [
+              "Center",
+              "Center"
+            ],
+            [
+              "Fac",
+              "Fac"
+            ]
+          ]
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Squares_OSL",
+          "name": "OSL_Pos",
+          "type": "double[3]",
+          "group": "input",
+          "doc": "Pos",
+          "default": [
+            "0.0",
+            "0.0",
+            "0.0"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Squares_OSL",
+          "name": "OSL_Scale",
+          "type": "double",
+          "group": "input",
+          "doc": "Scale",
+          "default": 17.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Squares_OSL",
+          "name": "OSL_Var",
+          "type": "double",
+          "group": "input",
+          "doc": "Var",
+          "default": 0.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Sprinkles_OSL",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "Fac",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "Fac",
+              "Fac"
+            ],
+            [
+              "Random",
+              "Random"
+            ]
+          ]
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Sprinkles_OSL",
+          "name": "OSL_Pos",
+          "type": "double[3]",
+          "group": "input",
+          "doc": "Pos",
+          "default": [
+            "0.0",
+            "0.0",
+            "0.0"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Sprinkles_OSL",
+          "name": "OSL_Scale",
+          "type": "double",
+          "group": "input",
+          "doc": "Scale",
+          "default": 17.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Sprinkles_OSL",
+          "name": "OSL_Np",
+          "type": "long",
+          "group": "input",
+          "doc": "Np",
+          "default": 5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Sprinkles_OSL",
+          "name": "OSL_Seed",
+          "type": "long",
+          "group": "input",
+          "doc": "Seed",
+          "default": 45,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Sprinkles_OSL",
+          "name": "OSL_Radius",
+          "type": "double",
+          "group": "input",
+          "doc": "Radius",
+          "default": 0.2,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Sprinkles_OSL",
+          "name": "OSL_Size",
+          "type": "double",
+          "group": "input",
+          "doc": "Size",
+          "default": 4.5,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Voronoi_Noise_OSL",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "Fac",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "Fac",
+              "Fac"
+            ],
+            [
+              "Color",
+              "Color"
+            ]
+          ]
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Voronoi_Noise_OSL",
+          "name": "OSL_Vector",
+          "type": "double[3]",
+          "group": "input",
+          "doc": "Vector",
+          "default": [
+            "0.0",
+            "0.0",
+            "0.0"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Voronoi_Noise_OSL",
+          "name": "OSL_Scale",
+          "type": "double",
+          "group": "input",
+          "doc": "Scale",
+          "default": 16.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Scene_Noise_OSL/OSL/Voronoi_Noise_OSL",
+          "name": "OSL_Time",
+          "type": "double",
+          "group": "input",
+          "doc": "Time",
+          "default": 7.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        }
+      ],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "points_circle",
+      "title": "Points on Circle",
+      "description": "Nuage de points dispose en cercle, rayon et nombre de points parametrables.",
+      "category": "Scatter",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "points_circle",
+      "filename": "Points_Circle.project",
+      "object_count": 15,
+      "classes": {
+        "Context": 1,
+        "ProjectItem": 1,
+        "GeometryPointCloud": 1,
+        "TextureGradient": 1,
+        "GeometryPolysphere": 1,
+        "SceneObjectScatterer": 1,
+        "GeometryBox": 1
+      },
+      "parameters": [
+        {
+          "owner": "Point_Circle/Control",
+          "name": "Points_Number",
+          "type": "long",
+          "group": "",
+          "doc": "",
+          "default": 23,
+          "minimum": 2.0,
+          "maximum": 2147483647.0,
+          "presets": []
+        },
+        {
+          "owner": "Point_Circle/Control",
+          "name": "Radius",
+          "type": "double",
+          "group": "",
+          "doc": "",
+          "default": 11.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        }
+      ],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "procedural_grass",
+      "title": "Procedural Grass",
+      "description": "Herbe entierement procedurale : dix bruits fractals melanges pour la couleur, la longueur et la variation par touffe.",
+      "category": "Shading",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "procedural_grass",
+      "filename": "procedural_grass.project",
+      "object_count": 68,
+      "classes": {
+        "Context": 3,
+        "CameraPerspective": 1,
+        "LightPhysicalDistant": 1,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "TextureBlackBody": 1,
+        "LightPhysicalEnvironment": 1,
+        "SceneObjectCombiner": 1,
+        "Displacement": 1,
+        "TexturePerlinNoise": 5,
+        "TextureBlur": 1,
+        "GeometryPolygrid": 1,
+        "MaterialPhysicalStandard": 1,
+        "TextureBumpMap": 1,
+        "TextureFractalNoise": 10,
+        "TextureBlend": 5,
+        "TextureColorCorrection": 2,
+        "MaterialMatte": 1
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "radial_gradient",
+      "title": "Radial Gradient",
+      "description": "Degrade radial procedural construit sur un bruit cellulaire, utilisable comme masque ou comme selecteur.",
+      "category": "Shading",
+      "credit": "communaute Clarisse",
+      "shelf": true,
+      "directory": "radial_gradient",
+      "filename": "radial_gradient.project",
+      "object_count": 10,
+      "classes": {
+        "Context": 2,
+        "CameraPerspective": 1,
+        "LightPhysicalDistant": 1,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "TextureCellularNoise": 1,
+        "MaterialPhysicalDiffuse": 1,
+        "GeometryPolygrid": 1
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "rgb_displacement",
+      "title": "RGB Displacement Material",
+      "description": "Displacement pilote par les trois canaux d'une seule texture : trois hauteurs independantes dans un fichier.",
+      "category": "Shading",
+      "credit": "Demian Hernandez",
+      "shelf": false,
+      "directory": "rgb_displacement",
+      "filename": "RGB_Disp_Mat_Demian.project",
+      "object_count": 26,
+      "classes": {
+        "Context": 2,
+        "CameraPerspective": 1,
+        "LightPhysicalDistant": 1,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "MaterialMatte": 2,
+        "TextureMapFile": 2,
+        "GeometrySphere": 1,
+        "GeometryPolygrid": 1,
+        "MaterialPhysicalDiffuse": 1,
+        "Displacement": 1,
+        "TextureFractalNoise": 1,
+        "LightPhysicalEnvironment": 1,
+        "LightPhysicalPlane": 1,
+        "MaterialRaySwitch": 1,
+        "MaterialPhysicalDielectric": 1,
+        "MaterialPhysicalMultiblend": 1,
+        "MaterialPhysicalTransmission": 3
+      },
+      "parameters": [],
+      "external_files": [
+        "U:/_resources/HDR_Maps/Exterior/corsica_beach.exr"
+      ],
+      "missing_files": [
+        "U:/_resources/HDR_Maps/Exterior/corsica_beach.exr"
+      ]
+    },
+    {
+      "id": "road_decimate",
+      "title": "Road Decimate",
+      "description": "Decimation d'une bande de route par nuage de points : garde la densite la ou la courbure l'exige.",
+      "category": "Geometrie",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "road_decimate",
+      "filename": "Road_Decimate.project",
+      "object_count": 14,
+      "classes": {
+        "Context": 1,
+        "CameraPerspective": 1,
+        "LightPhysicalDistant": 1,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "GeometryPolygrid": 1,
+        "GeometryBox": 1,
+        "GeometryPointCloud": 1,
+        "SceneObjectScatterer": 1,
+        "GeometryParticleContainer": 1,
+        "TexturePointCloud": 1,
+        "TextureRescale": 1
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "scatterer_lean_out",
+      "title": "Scatterer Lean Out",
+      "description": "Scatter dont les instances s'inclinent vers l'exterieur en fonction d'une occlusion, pour eviter les interpenetrations.",
+      "category": "Scatter",
+      "credit": "communaute Clarisse",
+      "shelf": false,
+      "directory": "scatterer_lean_out",
+      "filename": "Scatterer_Lean_Out.project",
+      "object_count": 30,
+      "classes": {
+        "GeometryBox": 1,
+        "Context": 2,
+        "CameraPerspective": 1,
+        "LightPhysicalDistant": 1,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "Displacement": 1,
+        "TexturePerlinNoise": 1,
+        "GeometryPolygrid": 2,
+        "TextureOcclusion": 2,
+        "GeometryPointCloud": 1,
+        "SceneObjectScatterer": 1,
+        "TextureReorder": 1,
+        "TextureAdd": 1,
+        "TextureMultiply": 1,
+        "TextureConstantColor": 2
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "tilable_maker",
+      "title": "Tileable Maker",
+      "description": "Assemble une texture repetable a partir d'une source non repetable, par recouvrement et fondu des bords.",
+      "category": "Shading",
+      "credit": "communaute Clarisse",
+      "shelf": true,
+      "directory": "tilable_maker",
+      "filename": "Tilable_Maker.project",
+      "object_count": 41,
+      "classes": {
+        "Context": 4,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "CameraOrthographic": 1,
+        "SceneObjectCombiner": 10,
+        "MaterialNormal": 1,
+        "MaterialMatte": 1,
+        "TextureZDepth": 1,
+        "Group": 1,
+        "GeometryPolygrid": 1,
+        "GeometryBox": 4,
+        "GeometryCylinder": 1,
+        "GeometrySphere": 1,
+        "MaterialPhysicalStandard": 1,
+        "TextureFractalNoise": 1,
+        "TextureCellularNoise": 1,
+        "TextureMultiply": 2,
+        "TextureMapFile": 1
+      },
+      "parameters": [],
+      "external_files": [],
+      "missing_files": []
+    },
+    {
+      "id": "wall_maker",
+      "title": "Wall Maker",
+      "description": "Mur de briques procedural : la geometrie des briques est instanciee sur une grille, avec decalage de rang et variation aleatoire.",
+      "category": "Geometrie",
+      "credit": "Isotropix / communaute",
+      "shelf": true,
+      "directory": "wall_maker",
+      "filename": "Wall_Maker.project",
+      "object_count": 63,
+      "classes": {
+        "Context": 7,
+        "CameraPerspective": 1,
+        "LightPhysicalDistant": 1,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "MaterialMatte": 1,
+        "TextureUtility": 1,
+        "TextureInstanceColor": 1,
+        "GeometryPolyfile": 11,
+        "GeometryBox": 3,
+        "ProjectItem": 1,
+        "GeometryPointArray": 2,
+        "SceneObjectScatterer": 2,
+        "Scope": 4,
+        "TextureScope": 3,
+        "TextureInvert": 2
+      },
+      "parameters": [
+        {
+          "owner": "Assets/Bricks/Brick_Flat_obj",
+          "name": "SCT_First_Row_instance_id",
+          "type": "long",
+          "group": "",
+          "doc": "",
+          "default": 0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Assets/Bricks/Brick_Flat_obj",
+          "name": "SCT_Second_Row_instance_id",
+          "type": "long",
+          "group": "",
+          "doc": "",
+          "default": 0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Assets/Bricks/Brick_Flat_First",
+          "name": "SCT_First_Row_instance_id",
+          "type": "long",
+          "group": "",
+          "doc": "",
+          "default": 1,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Assets/Bricks/Brick_Flat_Second",
+          "name": "SCT_Second_Row_instance_id",
+          "type": "long",
+          "group": "",
+          "doc": "",
+          "default": 1,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Setup/Wall/Control",
+          "name": "Brick_Size",
+          "type": "distance[3]",
+          "group": "",
+          "doc": "",
+          "default": [
+            "2.04",
+            "0.66",
+            "1"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Setup/Wall/Control",
+          "name": "Wall_Size",
+          "type": "long[2]",
+          "group": "",
+          "doc": "",
+          "default": [
+            "58",
+            "20"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Setup/Wall/Control",
+          "name": "Joint_Size",
+          "type": "double[2]",
+          "group": "",
+          "doc": "",
+          "default": [
+            "0.0",
+            "0.0"
+          ],
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "Setup/Wall/Control",
+          "name": "Rows_Offset",
+          "type": "double",
+          "group": "",
+          "doc": "",
+          "default": 1.02,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        }
+      ],
+      "external_files": [
+        "$PDIR/geo/Bricks/Brick_Flat.obj"
+      ],
+      "missing_files": []
+    },
+    {
+      "id": "window_box",
+      "title": "Window Box",
+      "description": "Interieur factice vu au travers d'une fenetre, en une seule texture OSL : profondeur de piece, arriere-plan, rideaux, sans geometrie.",
+      "category": "Shading",
+      "credit": "jiWindowBox (Julien Ignace) - portage OSL",
+      "shelf": true,
+      "directory": "window_box",
+      "filename": "WindowBox.project",
+      "object_count": 9,
+      "classes": {
+        "Context": 1,
+        "CameraPerspective": 1,
+        "LightPhysicalDistant": 1,
+        "RendererRaytracer": 1,
+        "Image": 1,
+        "GeometryPolygrid": 1,
+        "MaterialMatte": 1,
+        "TextureOslFile": 1
+      },
+      "parameters": [
+        {
+          "owner": "scene/file",
+          "name": "OSL_output_name",
+          "type": "string",
+          "group": "output",
+          "doc": "Select shader output to fill texture RGB color.",
+          "default": "outRGB",
+          "minimum": null,
+          "maximum": null,
+          "presets": [
+            [
+              "outRGB",
+              "outRGB"
+            ]
+          ]
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_filename",
+          "type": "filename_open",
+          "group": "input",
+          "doc": "filename",
+          "default": "$PDIR/WBX_Office_Day.png",
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_textureFlip",
+          "type": "long",
+          "group": "input",
+          "doc": "textureFlip",
+          "default": 0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_textureFlop",
+          "type": "long",
+          "group": "input",
+          "doc": "textureFlop",
+          "default": 0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_roomDepth",
+          "type": "double",
+          "group": "input",
+          "doc": "roomDepth",
+          "default": 1.5,
+          "minimum": 0.100000001490116,
+          "maximum": 100.0,
+          "presets": []
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_widthOverscan",
+          "type": "double",
+          "group": "input",
+          "doc": "widthOverscan",
+          "default": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.899999976158142,
+          "presets": []
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_heightOverscan",
+          "type": "double",
+          "group": "input",
+          "doc": "heightOverscan",
+          "default": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.899999976158142,
+          "presets": []
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_enableMidground",
+          "type": "long",
+          "group": "input",
+          "doc": "enableMidground",
+          "default": 0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_midgroundDepth",
+          "type": "double",
+          "group": "input",
+          "doc": "midgroundDepth",
+          "default": 0.0500000007450581,
+          "minimum": 0.0500000007450581,
+          "maximum": 99.0,
+          "presets": []
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_midgroundOffsetX",
+          "type": "double",
+          "group": "input",
+          "doc": "midgroundOffsetX",
+          "default": 0.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_midgroundOffsetY",
+          "type": "double",
+          "group": "input",
+          "doc": "midgroundOffsetY",
+          "default": 0.0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        },
+        {
+          "owner": "scene/file",
+          "name": "OSL_enableCurtains",
+          "type": "long",
+          "group": "input",
+          "doc": "enableCurtains",
+          "default": 0,
+          "minimum": null,
+          "maximum": null,
+          "presets": []
+        }
+      ],
+      "external_files": [],
+      "missing_files": []
+    }
+  ]
+}

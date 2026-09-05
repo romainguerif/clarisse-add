@@ -1,0 +1,20 @@
+mtl_class = "MaterialPhysicalStandard"
+
+# Naming
+suffix = "_mtl"
+lowercase = True
+
+geo = ix.selection[0].get_module()
+
+print("Found shading groups: " + str(geo.get_shading_group_count()))
+if geo.get_shading_group_count():
+    target_ctx = ix.api.IOHelpers.pick_context(ix.application, "Target location for Material Contexts")
+    for i in range(geo.get_shading_group_count()):
+        shading_group = str(geo.get_shading_group(i))
+        print("Creating context for: " + str(shading_group))
+        mtl_ctx = ix.cmds.CreateContext(str(shading_group), "Global", str(target_ctx))
+        mtl_name = str(shading_group) + suffix
+        if lowercase:
+            mtl_name = mtl_name.lower()
+        mtl = ix.cmds.CreateObject(mtl_name, mtl_class, "Global", str(mtl_ctx))
+        geo.assign_material(mtl.get_module(), i)

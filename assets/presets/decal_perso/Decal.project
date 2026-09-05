@@ -1,0 +1,820 @@
+#Isotropix_Serial_Version 1.2
+
+#Isotropix_Clarisse_Version 5
+#Isotropix_Clarisse_Project_Version 0.98
+CameraPerspectiveAdvanced {
+    name "CAMPROJ"
+    #version 0.9
+    #created 1562253862
+    #modified 1727685839
+    translate 0.0 -0.177870119690817 -25.7460678882601
+    rotate 0.0 180.000000000045 0.0
+    scale 1 3.29715152837913 21.3548669604386
+    shear 0.0 0.0 0.0
+    rotation_order 4097
+    parent "project://scope"
+    scale_pivot 0.0 0.0 0.0
+    rotate_pivot 0.0 0.0 0.0
+    scale_pivot_offset 0.0 0.0 0.0
+    rotate_pivot_offset 0.0 0.0 0.0
+    translate_offset 0.0 0.0 0.0
+    rotate_offset 0.0 0.0 0.0
+    scale_offset 1 1 1
+    rotation_offset_order 4097
+    display_visible no
+    focal_length 0.0189
+    horizontal_aperture 0.00810361783663772
+    vertical_aperture 0.0089
+    film_offset 0.0 0.0
+    lens_ratio 1
+    fit_mode 0
+    enable_dof no
+}
+Scope {
+    name "scope"
+    #version 1
+    #created 1562253922
+    #modified 1727685912
+    translate -0.00509302030777854 0.305827264124347 1.05399264416241
+    rotate 0.0 175.742669157876 0.0
+    scale 0.864049208170455 0.344663430227036 0.0322430333947417
+    shape 0
+    falloff 0.0
+    falloff_exponent 2.835
+    inside_out no
+}
+MaterialPhysicalDisneyPrincipled {
+    name "addtomultiblend"
+    #version 0.91
+    #created 1562253489
+    #modified 1727685569
+    positions "mat_1" 425 1098
+    normal_input {
+        value 1
+        texture "project://bump_map"
+    }
+    base_color {
+        value 0.78 0.78 0.78
+        texture "project://chooseatexture"
+    }
+    roughness 0.871
+    metallic 0.0
+}
+TextureReorder {
+    name "reorder"
+    #version 0.9
+    #created 1727685241
+    #modified 1727685304
+    positions "mat_1" 36 1040
+    invert no
+    opacity 1
+    input {
+        value 1 1 1 1
+        texture "project://chooseatexture"
+    }
+    channel_order "aaaa"
+}
+TextureGradient {
+    name "gradient"
+    #version 0.93
+    #created 1727685554
+    #modified 1727685641
+    positions "mat_1" 11 1380
+    input {
+        value 0.0
+        texture "project://chooseatexture"
+    }
+    output {
+        value[] {
+            key 0 0.0 0.905882352941176 0.0 0.0 0.0 -0.116628250401284 0.0 0.116628250401284 0.0 yes yes no yes
+            key 0 0.34991974317817 1 0.0 0.0 0.0 -0.116628250401284 0.0 0.116628250401284 0.0 yes yes no yes
+        }
+        value[1] {
+            key 0 0.0 0.905882352941176 0.0 0.0 0.0 -0.116628250401284 0.0 0.116628250401284 0.0 yes yes no yes
+            key 0 0.34991974317817 1 0.0 0.0 0.0 -0.116628250401284 0.0 0.116628250401284 0.0 yes yes no yes
+        }
+        value[2] {
+            key 0 0.0 0.905882352941176 0.0 0.0 0.0 -0.116628250401284 0.0 0.116628250401284 0.0 yes yes no yes
+            key 0 0.34991974317817 1 0.0 0.0 0.0 -0.116628250401284 0.0 0.116628250401284 0.0 yes yes no yes
+        }
+        value[3] {
+            key 0 0.0 1 0.0 0.0 0.0 -0.116628250401284 0.0 0.116628250401284 0.0 yes yes no yes
+            key 0 0.34991974317817 1 0.0 0.0 0.0 -0.116628250401284 0.0 0.116628250401284 0.0 yes yes no yes
+        }
+        ui_settings {
+            WidgetAttributeEditor_Selection "0"
+        }
+    }
+}
+TextureBumpMap {
+    name "bump_map"
+    #version 0.9
+    #created 1727685567
+    #modified 1727685571
+    positions "mat_1" 171 1374
+    input {
+        value 1
+        texture "project://gradient"
+    }
+}
+TextureMapFile {
+    name "chooseatexture"
+    #version 0.98
+    #created 1562253557
+    #modified 1727685789
+    positions "mat_1" -177 1178
+    projection 4
+    space 1
+    axis 2
+    object_space 2
+    reference_positions ""
+    camera "project://CAMPROJ"
+    camera_occlusion no
+    uv_rotate 0.0 0.0 0.0
+    uv_scale 1 1 1
+    filename "$PDIR/TexturesCom_DecalsRusted0055_2_masked_S.png"
+    u_repeat_mode 2
+    v_repeat_mode 2
+    frame_rate 24
+    color_space_auto_detect yes
+    file_color_space "Colorspaces|sRGB"
+}
+
+#preferences {
+    categories {
+        USD {
+            purposes 0
+            purpose_render yes
+            purpose_proxy no
+            purpose_guide no
+            geometry_deduplication 0
+        }
+        playblast {
+            frame_range 0
+            start 0
+            end 50
+            step 1
+            display_size 0
+            custom_size 720 486
+            display_HUD yes
+            shading_mode -1
+            display_wireframe_overlay no
+            enable_ambient_occlusion no
+            ambient_occlusion_sample_count 1
+            ambient_occlusion_distance -1
+            refinement_count -1
+            format "image"
+            encoding 5
+            filename "$CTEMP\\blast_#####"
+        }
+        rendering {
+            motion_blur_sample_count 3
+            motion_blur_direction 0
+            motion_blur_length 0.5
+            displacement_storage_mode 0
+            default_resolution_preset "Digital Video (HD)|1080p (1920x1080)"
+            default_x_resolution 1920
+            default_y_resolution 1080
+            default_display_aspect_ratio 1
+            projection_master_eye 0
+        }
+        geometry {
+            subdivision_mode 1
+            visibility_mode 2
+        }
+        animation {
+            frames_per_second 24
+            start_frame 0.0
+            end_frame 50
+        }
+    }
+    classes {
+        Widget3dView {
+        }
+        WidgetMaterialEditor {
+            bookmark "Multibleen" 1 0.0 0.0 -74.5 -290 0.596774220466614 "build://project/scene/multiblend build://project/scene/autodesk_standard_surface build://project/scene/gradient build://project/scene/cellular_noise build://project/scene/gradient1 build://project/scene/perlin_noise build://project/scene/autodesk_standard_surface1 build://project/scene/invert "
+        }
+        WidgetBuildView {
+        }
+        WidgetVariableHotbar {
+            promoted_variables <empty>
+            display_names yes
+            max_size 0.5
+        }
+    }
+    selection {
+        selection_slots {
+            slot "Global" "build://project/scene/decals/decal"
+        }
+        slots_working_contexts {
+            slot "Global" "build://project/scene/decals/decal"
+        }
+    }
+    isolate {
+        Group {
+            name "isolate"
+            #version 0.93
+            #created 1727646172
+            #modified 1727646172
+            update_mode {
+                value 0
+                hidden yes
+            }
+            inclusion_rule {
+                value ""
+                hidden yes
+            }
+            inclusion_items {
+                value <empty>
+                hidden yes
+            }
+            exclusion_rule {
+                value ""
+                hidden yes
+            }
+            exclusion_items {
+                value <empty>
+                hidden yes
+            }
+        }
+    }
+    color_picker_custom_colors 1 0.0 0.0 0.649999976158142 0.0900000035762787 0.0900000035762787 0.439999997615814 0.119999997317791 0.119999997317791 0.300000011920929 0.109999999403954 0.109999999403954 1 1 1 1 0.850000023841858 0.0 0.660000026226044 0.569999992847443 0.0900000035762787 0.439999997615814 0.389999985694885 0.119999997317791 0.300000011920929 0.270000010728836 0.109999999403954 0.800000011920929 0.800000011920929 0.800000011920929 0.300000011920929 1 0.0 0.259999990463257 0.660000026226044 0.0900000035762787 0.219999998807907 0.439999997615814 0.119999997317791 0.170000001788139 0.300000011920929 0.109999999403954 0.639999985694885 0.639999985694885 0.639999985694885 0.0 1 0.560000002384186 0.0900000035762787 0.660000026226044 0.400000005960464 0.119999997317791 0.439999997615814 0.28999999165535 0.109999999403954 0.300000011920929 0.209999993443489 0.479999989271164 0.479999989271164 0.479999989271164 0.0 0.600000023841858 1 0.0900000035762787 0.430000007152557 0.660000026226044 0.119999997317791 0.310000002384186 0.439999997615814 0.119999997317791 0.219999998807907 0.300000011920929 0.319999992847443 0.319999992847443 0.319999992847443 0.25 0.0 1 0.239999994635582 0.0900000035762787 0.660000026226044 0.200000002980232 0.119999997317791 0.439999997615814 0.159999996423721 0.119999997317791 0.300000011920929 0.159999996423721 0.159999996423721 0.159999996423721 1 0.0 0.899999976158142 0.660000026226044 0.0900000035762787 0.600000023841858 0.439999997615814 0.119999997317791 0.400000005960464 0.300000011920929 0.119999997317791 0.280000001192093 0.0 0.0 0.0
+    foreground_color 0.0 0.0 0.0
+    background_color 1 1 1
+    current_time 0.0
+    active_tool "tools://translate_item"
+    ui {
+        window {
+            is_maximized yes
+            layout {
+                split_v {
+                    ratio 0.022
+                    views {
+                        tab {
+                            editor "WidgetTools"
+                            #version 0.9
+                            settings {
+                                viewport_widget {
+                                    selection_slot "Local"
+                                    use_global yes
+                                    local_selection {
+                                    }
+                                }
+                            }
+                            selection_locked no
+                        }
+                        selected_tab 0
+                        toolbar_minimized yes
+                    }
+                    view {
+                        editor "WidgetTools"
+                        settings {
+                            viewport_widget {
+                                selection_slot "Local"
+                                use_global yes
+                                local_selection {
+                                }
+                            }
+                        }
+                        toolbar_minimized yes
+                        selection_locked no
+                    }
+                    split_v {
+                        ratio 0.8
+                        split_h {
+                            ratio 0.946
+                            split_h {
+                                ratio 0.7
+                                split_v {
+                                    ratio 0.5
+                                    views {
+                                        tab {
+                                            editor "Widget3dView"
+                                            #version 0.9
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                refresh_mode "Fps Driven"
+                                                sampling_quality 0.1
+                                                refinement_count 0.0
+                                                shading_mode "Previz"
+                                                ambient_occlusion no
+                                                ambient_occlusion_distance -1
+                                                fit_on_select no
+                                                display_filter "build://project/scene"
+                                                exposure 0.0
+                                                gamma 1
+                                                pickmask "Cameras Lights Locators Scene_Objects "
+                                                show_overlay yes
+                                                renderer "IntegratorPathtracer"
+                                                integrator ".IntegratorPathtracer_embedded"
+                                                ambient_occlusion_distance -1
+                                                embedded_objects {
+                                                    MaterialGlView {
+                                                        name "embedded_previz_material"
+                                                        #version 0.91
+                                                        #created 1727682593
+                                                        #modified 1727684485
+                                                        private yes
+                                                        use_flat_normal no no no
+                                                        light_color 0.400000035762787 0.400000035762787 0.400000035762787
+                                                        dark_color 0.0167320277541876 0.0167320277541876 0.0167320277541876
+                                                        zoom_factor 0.535898384862104
+                                                    }
+                                                    IntegratorPathtracer {
+                                                        name "IntegratorPathtracer_embedded"
+                                                        #version 0.97
+                                                        #created 1727646174
+                                                        #modified 1727646174
+                                                        private yes
+                                                        cap_display no
+                                                        embedded_objects {
+                                                            MaterialPhysicalStandard {
+                                                                name "surface_default"
+                                                                #version 0.97
+                                                                #created 1727646174
+                                                                #modified 1727646174
+                                                                private yes
+                                                            }
+                                                            MaterialPhysicalVolume {
+                                                                name "volume_default"
+                                                                #version 0.93
+                                                                #created 1727646174
+                                                                #modified 1727682593
+                                                                private yes
+                                                                density_multiplier 100
+                                                            }
+                                                            MaterialPhysicalHair {
+                                                                name "curve_default"
+                                                                #version 0.91
+                                                                #created 1727646174
+                                                                #modified 1727646174
+                                                                private yes
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                lights 0
+                                                eye_dist 3.66278505724983
+                                                center 0.0139976324083279 0.472600639605758 0.306656255810579
+                                                rotation -8.9991472125894 -26.3960640228559 0.0
+                                                transform2d {
+                                                    pan 0.0 0.0
+                                                    zoom 1
+                                                    enable no
+                                                }
+                                            }
+                                            selection_locked no
+                                            evaluation_mode yes
+                                        }
+                                        tab {
+                                            editor "WidgetImageView"
+                                            #version 0.92
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                show_squares no
+                                                show_progress yes
+                                                min_quality "1/16 Resolution"
+                                                visual_hint -1
+                                                aov_group "rgba"
+                                                image_nodes <empty>
+                                                render_scene "build://project/scene/image.background"
+                                                zoom_and_pan 1.14285719394684 -23 3
+                                                exposure 0.0
+                                                gamma 1
+                                                auto_eval no
+                                                show_overlay yes
+                                                widget_color 0.234999999403954 0.234999999403954 0.234999999403954
+                                            }
+                                            selection_locked no
+                                            evaluation_mode no
+                                        }
+                                        selected_tab 1
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetImageView"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            show_squares no
+                                            show_progress yes
+                                            min_quality "1/16 Resolution"
+                                            visual_hint -1
+                                            aov_group "rgba"
+                                            image_nodes <empty>
+                                            render_scene "build://project/scene/image.background"
+                                            zoom_and_pan 1.14285719394684 -23 3
+                                            exposure 0.0
+                                            gamma 1
+                                            auto_eval no
+                                            show_overlay yes
+                                            widget_color 0.234999999403954 0.234999999403954 0.234999999403954
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                    views {
+                                        tab {
+                                            editor "WidgetMaterialEditor"
+                                            #version 0.9
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                GuiNodal {
+                                                    pos_x 119
+                                                    pos_y -926
+                                                    zoom_factor 777
+                                                    grid no yes 40
+                                                    magnet no
+                                                    cull_links no
+                                                    highlight_links yes
+                                                    link_node_autoinsert yes
+                                                    display_node_label 1
+                                                    smooth_transitions yes
+                                                    autozoom no
+                                                    default_node_state 0
+                                                    node_max_width 0
+                                                    node_cropping no
+                                                }
+                                                NodalBase {
+                                                }
+                                                MaterialNodal {
+                                                    is_locked no
+                                                    autofit yes
+                                                    display_dependencies yes
+                                                    selected_materials "build://project/scene/polygrid"
+                                                    display_classes yes
+                                                }
+                                            }
+                                            selection_locked no
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetMaterialEditor"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            GuiNodal {
+                                                pos_x 119
+                                                pos_y -926
+                                                zoom_factor 777
+                                                grid no yes 40
+                                                magnet no
+                                                cull_links no
+                                                highlight_links yes
+                                                link_node_autoinsert yes
+                                                display_node_label 1
+                                                smooth_transitions yes
+                                                autozoom no
+                                                default_node_state 0
+                                                node_max_width 0
+                                                node_cropping no
+                                            }
+                                            NodalBase {
+                                            }
+                                            MaterialNodal {
+                                                is_locked no
+                                                autofit yes
+                                                display_dependencies yes
+                                                selected_materials "build://project/scene/polygrid"
+                                                display_classes yes
+                                            }
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                }
+                                split_v {
+                                    ratio 0.5
+                                    views {
+                                        tab {
+                                            editor "WidgetBrowser"
+                                            #version 0.9
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                tree_columns_type <empty>
+                                                tree_columns_width <empty>
+                                                tree_sort_type -1
+                                                tree_sort_order 0
+                                                rows_expand "build://project" "build://project/scene" "build://project/scene/decals"
+                                                show_context_tree yes
+                                                view_mode 0
+                                                class_filter "Project Item"
+                                                width_context_tree 150
+                                                spreadsheet_sort_type -1
+                                                spreadsheet_sort_order 0
+                                                spreadsheet_column_type 0 4 3
+                                                spreadsheet_columns_width 151 170 150
+                                            }
+                                            selection_locked no
+                                        }
+                                        tab {
+                                            editor "WidgetHierarchyView"
+                                            #version 0.9
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                show_mode no
+                                                tree_columns_type 3
+                                                tree_columns_width 150
+                                                tree_sort_type -1
+                                                tree_sort_order 0
+                                                rows_expand "build://project/scene/prout/root" "build://project/scene/prout/Suzanne" "build://project/scene/decals/decal/scope"
+                                            }
+                                            selection_locked no
+                                            evaluation_mode yes
+                                        }
+                                        tab {
+                                            editor "WidgetExplorer"
+                                            #version 0.9
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                tree_columns_type 3
+                                                tree_columns_width 150
+                                                tree_sort_type -1
+                                                tree_sort_order 0
+                                                rows_expand "build://project" "build://project/scene" "build://project/scene/prout" "build://project/scene/decals" "build://project/scene/decals/decal" "build://project/scene/image" "build://project/scene/image.layers"
+                                                display_only_localized_button no
+                                                display_only_overridden_attrs no
+                                            }
+                                            selection_locked no
+                                            evaluation_mode yes
+                                        }
+                                        tab {
+                                            editor "WidgetSearch"
+                                            #version 0.0
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                text ""
+                                                spreadsheet_sort_type -1
+                                                spreadsheet_sort_order 0
+                                                spreadsheet_columns_width 240 150 170 115 115 270 270
+                                            }
+                                            selection_locked no
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetBrowser"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            tree_columns_type <empty>
+                                            tree_columns_width <empty>
+                                            tree_sort_type -1
+                                            tree_sort_order 0
+                                            rows_expand "build://project" "build://project/scene" "build://project/scene/decals"
+                                            show_context_tree yes
+                                            view_mode 0
+                                            class_filter "Project Item"
+                                            width_context_tree 150
+                                            spreadsheet_sort_type -1
+                                            spreadsheet_sort_order 0
+                                            spreadsheet_column_type 0 4 3
+                                            spreadsheet_columns_width 151 170 150
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                    views {
+                                        tab {
+                                            editor "WidgetImageGallery"
+                                            #version 0.9
+                                            settings {
+                                                viewport_widget {
+                                                    selection_slot "Local"
+                                                    use_global yes
+                                                    local_selection {
+                                                    }
+                                                }
+                                                force_refresh no
+                                                show_mode yes
+                                            }
+                                            selection_locked no
+                                        }
+                                        selected_tab 0
+                                        toolbar_minimized no
+                                    }
+                                    view {
+                                        editor "WidgetImageGallery"
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            force_refresh no
+                                            show_mode yes
+                                        }
+                                        toolbar_minimized no
+                                        selection_locked no
+                                    }
+                                }
+                            }
+                            views {
+                                tab {
+                                    editor "WidgetTimeline"
+                                    #version 0.9
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                    }
+                                    selection_locked no
+                                }
+                                selected_tab 0
+                                toolbar_minimized yes
+                            }
+                            view {
+                                editor "WidgetTimeline"
+                                settings {
+                                    viewport_widget {
+                                        selection_slot "Local"
+                                        use_global yes
+                                        local_selection {
+                                        }
+                                    }
+                                }
+                                toolbar_minimized yes
+                                selection_locked no
+                            }
+                        }
+                        split_h {
+                            ratio 0.5
+                            views {
+                                tab {
+                                    editor "WidgetAttributeEditor"
+                                    #version 4.5
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                        attribute_groups "Scene Object Name" yes "Image::Canvas" yes "Image::Region" no "Image::Overscan" no "Image::Quality" no "Image::Layers" yes "Image::Output" yes "Image::Output>format" no "SceneItem::Kinematics" no "SceneItem::Kinematics>advanced" no "SceneItem::Kinematics>pivot/offset" no "SceneItem::Display" no "SceneItem::Rendering>visibility" no "SceneItem::Motion Blur" no "SceneObject::Rendering" no "SceneObject::Rendering>lighting" no "SceneObject::Rendering>emission" no "GeometryBundle::Geometry>advanced" no "GeometryBundle::Geometry>subdivision Surfaces" yes "GeometryBundle::Geometry>subdivision Surfaces>advanced" yes "GeometryBundle::Geometry>subdivision Surfaces>creases" no "GeometryBundle::Geometry>curves" no "GeometryBundle::Geometry>curves>advanced" no "GeometryBundle::Geometry>displacement" no "GeometryBundle::Playback" no "GeometryBundleUsd::Geometry" yes "GeometryBundleUsd::USD>purposes" no "GeometryBundleUsd::USD>variant Sets" no "Geometry::Geometry>deformation" no "Geometry::Geometry>advanced" no "Geometry::Geometry>displacement" no "GeometryPolymesh::Geometry>subdivision Surfaces" yes "GeometryPolymesh::Geometry>subdivision Surfaces>advanced" no "GeometryPolymesh::Geometry>subdivision Surfaces>creases" no "GeometryUsdMesh::USD" yes "GeometryUsdMesh::USD>playback" no "UsdXform::USD" yes "UsdXform::USD>playback" no "Material::AOV" yes "MaterialPhysical::Material Sampling" yes "MaterialPhysical::Energy Conservation" no "MaterialPhysical::Material Sampling>path Depths" no "MaterialPhysical::Surface Geometry" no "MaterialPhysical::Transparent Shadows" no "MaterialPhysical::Caustics" no "MaterialPhysicalAutodeskStandardSurface::Base" yes "MaterialPhysicalAutodeskStandardSurface::Specular" yes "MaterialPhysicalAutodeskStandardSurface::Transmission" no "MaterialPhysicalAutodeskStandardSurface::Subsurface" no "MaterialPhysicalAutodeskStandardSurface::Coat" no "MaterialPhysicalAutodeskStandardSurface::Sheen" no "MaterialPhysicalAutodeskStandardSurface::Emission" no "MaterialPhysicalAutodeskStandardSurface::Thin Film" no "TextureOperator::Pass Through" no "Texture::Output" yes "TextureSpatial::Projection" yes "TextureSpatial::Projection>camera" yes "TextureSpatial::Projection>transformation" no "TextureSpatial::Projection>uvw Transformation" yes "TextureFractalNoise::Pattern" yes "TextureCellularNoise::Pattern" yes "Light::Lighting" yes "LightPhysical::Lighting>sampling" yes "LightPhysical::Lighting>visibility>weights>direct" no "LightPhysical::Lighting>visibility>weights>indirect" no "LightPhysical::Lighting>visibility" no "LightPhysical::Lighting>visibility>shadows" no "LightPhysical::Lighting>visibility>path Depth" no "LightPhysical::AOV" no "LightPhysicalDistant::Lighting>shape" yes "RendererRaytracer::Integrator" yes "RendererRaytracer::Sampling" yes "RendererRaytracer::Sampling>advanced Anti Aliasing" yes "RendererRaytracer::Sampling>motion Blur" no "RendererRaytracer::Tone Mapping" no "RendererRaytracer::AOV" no "IntegratorPathtracer::Sampling>path Depths" yes "IntegratorPathtracer::Sampling>transparency" no "IntegratorPathtracer::Sampling>advanced" no "TextureGradient::Input" yes "TextureGradient::Remap" yes "MaterialPhysicalMultiblend::Blending Model" yes "MaterialPhysicalMultiblend::Layer 1" yes "MaterialPhysicalMultiblend::Layer 2" yes "MaterialPhysicalMultiblend::Layer 3" no "MaterialPhysicalMultiblend::Layer 4" no "MaterialPhysicalMultiblend::Layer 5" no "MaterialPhysicalMultiblend::Layer 6" no "MaterialPhysicalDisneyPrincipled::Base" yes "MaterialPhysicalDisneyPrincipled::Anisotropy" no "MaterialPhysicalDisneyPrincipled::Clear Coat" no "MaterialPhysicalDisneyPrincipled::Reflection Advanced" no "MaterialPhysicalDisneyPrincipled::Subsurface" no "MaterialPhysicalDisneyPrincipled::Transmission" no "MaterialPhysicalDisneyPrincipled::Sheen" no "MaterialPhysicalDisneyPrincipled::Emission" no "TexturePerlinNoise::Pattern" yes "TexturePerlinNoise::Pattern>marble" yes "TexturePerlinNoise::Pattern>animation" no "TextureInvert::Input" yes "TextureInvert::Invert" yes "GeometryPolygrid::Geometry" yes "LightPhysicalEnvironment::Lighting>sampling>portals" no "GeometryVolumeBox::Volume" yes "GeometryVolumeBox::Volume>sampling" no "MaterialPhysicalVolume::Volume" yes "Layer::Blending" no "Layer::Transformation" no "Layer::Region" no "Layer::Overscan" no "Layer::Filtering" yes "Layer::Output" yes "Layer::Output>format" yes "LayerScene::Rendering" yes "LayerScene::Rendering>visibility" yes "LayerScene::Rendering>materials" yes "Layer3d::Output>deep" no "Layer3d::Rendering>clipping" no "Layer3d::AOV" yes "Layer3d::Subpixel Filters" yes "Layer3d::Uv Baking" no "File" yes "USD" yes "Local Overrides" yes "AovStore::AOV" yes "AovStore::Variance Aov" yes "TextureMapFile::Image" yes "TextureMapFile::Image>sequence" no "TextureMapFile::Image>color Management" no "TextureMapFile::Image>color Correction" no "TextureMapFile::Image>mip-mapping" no "GeometrySphere::Geometry" yes "Scope::Shape" yes "TextureBlend::Input" yes "TextureChecker::Pattern" yes "CameraPerspectiveAdvanced::Camera" yes "CameraPerspectiveAdvanced::Camera>film Back" yes "CameraPerspectiveAdvanced::Camera>depth Of Field" yes "CameraPerspective::Camera" yes "CameraPerspective::Camera>depth Of Field" no "TextureCopyAlpha::Input" yes "TextureReorder::Input" yes "TextureBumpMap::Input" yes
+                                        attributes_filter ""
+                                        expression_mode yes
+                                        separator 269
+                                    }
+                                    selection_locked no
+                                }
+                                selected_tab 0
+                                toolbar_minimized no
+                            }
+                            view {
+                                editor "WidgetAttributeEditor"
+                                settings {
+                                    viewport_widget {
+                                        selection_slot "Local"
+                                        use_global yes
+                                        local_selection {
+                                        }
+                                    }
+                                    attribute_groups "Scene Object Name" yes "Image::Canvas" yes "Image::Region" no "Image::Overscan" no "Image::Quality" no "Image::Layers" yes "Image::Output" yes "Image::Output>format" no "SceneItem::Kinematics" no "SceneItem::Kinematics>advanced" no "SceneItem::Kinematics>pivot/offset" no "SceneItem::Display" no "SceneItem::Rendering>visibility" no "SceneItem::Motion Blur" no "SceneObject::Rendering" no "SceneObject::Rendering>lighting" no "SceneObject::Rendering>emission" no "GeometryBundle::Geometry>advanced" no "GeometryBundle::Geometry>subdivision Surfaces" yes "GeometryBundle::Geometry>subdivision Surfaces>advanced" yes "GeometryBundle::Geometry>subdivision Surfaces>creases" no "GeometryBundle::Geometry>curves" no "GeometryBundle::Geometry>curves>advanced" no "GeometryBundle::Geometry>displacement" no "GeometryBundle::Playback" no "GeometryBundleUsd::Geometry" yes "GeometryBundleUsd::USD>purposes" no "GeometryBundleUsd::USD>variant Sets" no "Geometry::Geometry>deformation" no "Geometry::Geometry>advanced" no "Geometry::Geometry>displacement" no "GeometryPolymesh::Geometry>subdivision Surfaces" yes "GeometryPolymesh::Geometry>subdivision Surfaces>advanced" no "GeometryPolymesh::Geometry>subdivision Surfaces>creases" no "GeometryUsdMesh::USD" yes "GeometryUsdMesh::USD>playback" no "UsdXform::USD" yes "UsdXform::USD>playback" no "Material::AOV" yes "MaterialPhysical::Material Sampling" yes "MaterialPhysical::Energy Conservation" no "MaterialPhysical::Material Sampling>path Depths" no "MaterialPhysical::Surface Geometry" no "MaterialPhysical::Transparent Shadows" no "MaterialPhysical::Caustics" no "MaterialPhysicalAutodeskStandardSurface::Base" yes "MaterialPhysicalAutodeskStandardSurface::Specular" yes "MaterialPhysicalAutodeskStandardSurface::Transmission" no "MaterialPhysicalAutodeskStandardSurface::Subsurface" no "MaterialPhysicalAutodeskStandardSurface::Coat" no "MaterialPhysicalAutodeskStandardSurface::Sheen" no "MaterialPhysicalAutodeskStandardSurface::Emission" no "MaterialPhysicalAutodeskStandardSurface::Thin Film" no "TextureOperator::Pass Through" no "Texture::Output" yes "TextureSpatial::Projection" yes "TextureSpatial::Projection>camera" yes "TextureSpatial::Projection>transformation" no "TextureSpatial::Projection>uvw Transformation" yes "TextureFractalNoise::Pattern" yes "TextureCellularNoise::Pattern" yes "Light::Lighting" yes "LightPhysical::Lighting>sampling" yes "LightPhysical::Lighting>visibility>weights>direct" no "LightPhysical::Lighting>visibility>weights>indirect" no "LightPhysical::Lighting>visibility" no "LightPhysical::Lighting>visibility>shadows" no "LightPhysical::Lighting>visibility>path Depth" no "LightPhysical::AOV" no "LightPhysicalDistant::Lighting>shape" yes "RendererRaytracer::Integrator" yes "RendererRaytracer::Sampling" yes "RendererRaytracer::Sampling>advanced Anti Aliasing" yes "RendererRaytracer::Sampling>motion Blur" no "RendererRaytracer::Tone Mapping" no "RendererRaytracer::AOV" no "IntegratorPathtracer::Sampling>path Depths" yes "IntegratorPathtracer::Sampling>transparency" no "IntegratorPathtracer::Sampling>advanced" no "TextureGradient::Input" yes "TextureGradient::Remap" yes "MaterialPhysicalMultiblend::Blending Model" yes "MaterialPhysicalMultiblend::Layer 1" yes "MaterialPhysicalMultiblend::Layer 2" yes "MaterialPhysicalMultiblend::Layer 3" no "MaterialPhysicalMultiblend::Layer 4" no "MaterialPhysicalMultiblend::Layer 5" no "MaterialPhysicalMultiblend::Layer 6" no "MaterialPhysicalDisneyPrincipled::Base" yes "MaterialPhysicalDisneyPrincipled::Anisotropy" no "MaterialPhysicalDisneyPrincipled::Clear Coat" no "MaterialPhysicalDisneyPrincipled::Reflection Advanced" no "MaterialPhysicalDisneyPrincipled::Subsurface" no "MaterialPhysicalDisneyPrincipled::Transmission" no "MaterialPhysicalDisneyPrincipled::Sheen" no "MaterialPhysicalDisneyPrincipled::Emission" no "TexturePerlinNoise::Pattern" yes "TexturePerlinNoise::Pattern>marble" yes "TexturePerlinNoise::Pattern>animation" no "TextureInvert::Input" yes "TextureInvert::Invert" yes "GeometryPolygrid::Geometry" yes "LightPhysicalEnvironment::Lighting>sampling>portals" no "GeometryVolumeBox::Volume" yes "GeometryVolumeBox::Volume>sampling" no "MaterialPhysicalVolume::Volume" yes "Layer::Blending" no "Layer::Transformation" no "Layer::Region" no "Layer::Overscan" no "Layer::Filtering" yes "Layer::Output" yes "Layer::Output>format" yes "LayerScene::Rendering" yes "LayerScene::Rendering>visibility" yes "LayerScene::Rendering>materials" yes "Layer3d::Output>deep" no "Layer3d::Rendering>clipping" no "Layer3d::AOV" yes "Layer3d::Subpixel Filters" yes "Layer3d::Uv Baking" no "File" yes "USD" yes "Local Overrides" yes "AovStore::AOV" yes "AovStore::Variance Aov" yes "TextureMapFile::Image" yes "TextureMapFile::Image>sequence" no "TextureMapFile::Image>color Management" no "TextureMapFile::Image>color Correction" no "TextureMapFile::Image>mip-mapping" no "GeometrySphere::Geometry" yes "Scope::Shape" yes "TextureBlend::Input" yes "TextureChecker::Pattern" yes "CameraPerspectiveAdvanced::Camera" yes "CameraPerspectiveAdvanced::Camera>film Back" yes "CameraPerspectiveAdvanced::Camera>depth Of Field" yes "CameraPerspective::Camera" yes "CameraPerspective::Camera>depth Of Field" no "TextureCopyAlpha::Input" yes "TextureReorder::Input" yes "TextureBumpMap::Input" yes
+                                    attributes_filter ""
+                                    expression_mode yes
+                                    separator 269
+                                }
+                                toolbar_minimized no
+                                selection_locked no
+                            }
+                            split_h {
+                                ratio 0.5
+                                views {
+                                    tab {
+                                        editor "WidgetMaterialLinker"
+                                        #version 0.9
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                            filter ""
+                                            hierarchical_display yes
+                                        }
+                                        selection_locked no
+                                        evaluation_mode yes
+                                    }
+                                    selected_tab 0
+                                    toolbar_minimized no
+                                }
+                                view {
+                                    editor "WidgetMaterialLinker"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                        filter ""
+                                        hierarchical_display yes
+                                    }
+                                    toolbar_minimized no
+                                    selection_locked no
+                                }
+                                views {
+                                    tab {
+                                        editor "WidgetLayerEditor"
+                                        #version 0.9
+                                        settings {
+                                            viewport_widget {
+                                                selection_slot "Local"
+                                                use_global yes
+                                                local_selection {
+                                                }
+                                            }
+                                        }
+                                        selection_locked no
+                                    }
+                                    selected_tab 0
+                                    toolbar_minimized no
+                                }
+                                view {
+                                    editor "WidgetLayerEditor"
+                                    settings {
+                                        viewport_widget {
+                                            selection_slot "Local"
+                                            use_global yes
+                                            local_selection {
+                                            }
+                                        }
+                                    }
+                                    toolbar_minimized no
+                                    selection_locked no
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    units {
+        units_file "$CLARISSE_BIN_DIR/units.cfg"
+        time "frame"
+        distance "metric"
+        distance_unit "meter"
+        angle "degree"
+        area "metric"
+        area_unit "square_meter"
+        frequency "frames_per_second"
+        color "float"
+        scale "multiplier"
+    }
+}
