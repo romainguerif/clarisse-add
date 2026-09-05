@@ -521,6 +521,43 @@ build_kernel(Kernel& k, const Settings& s, const double& channel_scale,
     if (quantised > 0.0) k.total = quantised;
 }
 
+// Retrouve le canal de profondeur a partir du nom de groupe rendu par le tag.
+//
+// Le nom exact d'abord -- un AOV custom peut porter un nom simple -- puis les
+// composantes usuelles, puis n'importe quel canal du groupe. Le repli final
+// est le canal Z standard, pour les images qui en portent un sans passer par
+// les AOV.
+ImageMapChannel *
+find_depth_channel(const ImageMap& map, const CoreString& group)
+{
+    if (group.get_count() != 0) {
+        ImageMapChannel *exact = map.get_channel_by_name(group);
+        if (exact != 0) return exact;
+
+        const char *suffixes[] = {".z", ".Z", ".depth", ".r", ".R"};
+        for (int i = 0; i < 5; ++i) {
+            CoreString candidate = group;
+            candidate += suffixes[i];
+            ImageMapChannel *found = map.get_channel_by_name(candidate);
+            if (found != 0) return found;
+        }
+
+        // N'importe quelle composante du groupe : un AOV peut nommer la sienne
+        // autrement que par les suffixes attendus.
+        CoreString prefix = group;
+        prefix += ".";
+        const CoreVector<ImageMapChannel *>& all = map.get_channels();
+        for (unsigned int i = 0; i < all.get_count(); ++i) {
+            if (all[i] == 0) continue;
+            const CoreString& name = all[i]->get_name();
+            if (name.get_count() > prefix.get_count()
+                && name.sub_string(0, prefix.get_count()) == prefix)
+                return all[i];
+        }
+    }
+    return map.get_channel(ImageMap::CHANNEL_Z);
+}
+
 // Fraction du rayon maximal a appliquer pour une valeur de profondeur donnee.
 // Rend 0 dans la zone nette, 1 au-dela de la portee utile.
 //
@@ -532,9 +569,16 @@ build_kernel(Kernel& k, const Settings& s, const double& channel_scale,
 inline double
 circle_of_confusion(const Settings& s, const double& raw)
 {
-    // Une profondeur en 1/z se lit a l'envers, et le zero y designe l'infini.
+    // Zero ne veut pas dire "a distance nulle" mais "aucune geometrie
+    // touchee" : le fond d'un rendu. Le traiter comme un objet colle a la
+    // camera lui donnerait le flou maximal, ce qui est faux des que la mise
+    // au point est lointaine. On le place a l'infini, ou il doit etre.
+    //
+    // En mode inverse, c'est deja la convention : 1/z tend vers zero quand z
+    // tend vers l'infini.
     double z = raw;
     if (s.depth_mode == 1) z = (raw > 1e-9) ? (1.0 / raw) : 1e9;
+    else if (raw <= 1e-9) z = 1e9;
 
     const double delta = z - s.focus_distance;
     if (s.focus_side == 1 && delta <= 0.0) return 0.0;   // arriere seulement
@@ -633,11 +677,11 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
     ImageMap *map = ctx.source_image->get_image();
     if (map == 0) return;
 
-    ImageMapChannel *channel = map->get_channel_by_name(s.depth_aov);
-    if (channel == 0) {
-        // Repli sur le canal de profondeur standard, s'il existe.
-        channel = map->get_channel(ImageMap::CHANNEL_Z);
-    }
+    // L'attribut `tag` filtre sur `aov_groups` rend un nom de GROUPE -- par
+    // exemple "depth". Le canal, lui, porte le nom du groupe suivi de sa
+    // composante : "depth.z". Chercher le nom tel quel echoue donc toujours,
+    // et le filtre retombe en silence sur un rayon constant.
+    ImageMapChannel *channel = find_depth_channel(*map, s.depth_aov);
     if (channel == 0) {
         // Dire ce qui EST disponible : c'est la seule information utile quand
         // l'AOV demande n'est pas la, et elle evite d'aller la chercher a
