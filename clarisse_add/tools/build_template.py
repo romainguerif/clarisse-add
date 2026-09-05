@@ -109,7 +109,8 @@ def run(payload=None):
 
 
 def _build(ix, name, parent, settings):
-    report = {"created": [], "wired": [], "failed": [], "attrs": {}, "image": None}
+    report = {"created": [], "wired": [], "failed": [], "notes": [],
+              "attrs": {}, "image": None}
     made = {}
 
     ctx = scene.ensure_context(name, parent)
@@ -171,26 +172,43 @@ def _build(ix, name, parent, settings):
 
     width, height = (settings["resolution"] or "1920x1080").split("x")
 
-    # L'Image classique est toujours creee : c'est elle qui se rend d'un clic
-    # dans l'Image View, dans les deux saveurs. Le graphe Render Scene vient
-    # en plus, il ne la remplace pas -- les deux lisent le meme contexte.
-    if True:
-        image = obj("image", "Image")
-        if image is not None:
-            values(image, "resolution", width, height)
-            # Le Layer 3D n'est pas un objet a part : c'est un layer de
-            # l'image, cree par AddLayer, dont les attributs s'adressent via
-            # image.layer_3d. Idiome repris du Shrink Wrap de la collection.
-            try:
-                ix.cmds.AddLayer(str(image) + ".layers", "Layer3d")
-                report["created"].append("image.layers[0]  [Layer3d]")
-            except Exception as error:
-                report["failed"].append("AddLayer : %s" % _short(error))
+    # L'Image layeree est une construction de Clarisse iFX. Dans la hierarchie
+    # build elle existe mais **refuse les layers** : "Layer can't be added,
+    # object does not allow it". C'est normal -- en BUiLDER, ce sont les Image
+    # Node qui produisent les pixels, pas une pile de calques. On tente donc
+    # l'Image, et si le layer est refuse on la supprime plutot que de laisser
+    # un objet inerte dans la scene.
+    image = obj("image", "Image")
+    if image is not None:
+        # resolution est read_only tant que resolution_mode reste sur
+        # "Use Project Preferences" (0) ; il faut passer en User-defined (1).
+        values(image, "resolution_mode", "1")
+        values(image, "resolution", width, height)
+        layered = False
+        try:
+            ix.cmds.AddLayer(str(image) + ".layers", "Layer3d")
+            report["created"].append("image.layers[0]  [Layer3d]")
+            layered = True
+        except Exception as error:
+            report["notes"].append(
+                "Image layeree refusee par cette hierarchie (%s). "
+                "Normal en BUiLDER : la sortie est le graphe." % _short(error))
+
+        if layered:
+            # Le Layer 3D n'est pas un objet a part : ses attributs
+            # s'adressent via image.layer_3d. Idiome du Shrink Wrap.
             if camera is not None and values(image, "layer_3d.active_camera", str(camera)):
                 report["wired"].append("image <- camera")
             if renderer is not None and values(image, "layer_3d.renderer", str(renderer)):
                 report["wired"].append("image <- raytracer")
             report["image"] = image
+        else:
+            try:
+                ix.cmds.DeleteItems([str(image)])
+                report["created"] = [c for c in report["created"]
+                                     if not c.startswith("image ")]
+            except Exception:
+                report["notes"].append("Image inutile non supprimee : %s" % str(image))
 
     if settings.get("graph"):
         _render_graph(ix, name, ctx, camera, renderer, width, height,
@@ -274,7 +292,9 @@ def _render_graph(ix, name, ctx, camera, renderer, width, height,
         return
     if values(image_render, "scene", str(render_scene)):
         report["wired"].append("render <- render_scene")
-    report["image"] = image_render
+    report["graph_output"] = image_render
+    if report["image"] is None:
+        report["image"] = image_render
 
     # L'ecriture n'est pas un ImageNode mais un **Process** : la classe
     # documentee est ProcessImageNodeWrite, et son attribut `input` est un
@@ -388,6 +408,9 @@ def _report(ix, report, settings):
     if report["wired"]:
         lines.append("")
         lines.append("Branchements : " + ", ".join(report["wired"]))
+    if report.get("notes"):
+        lines.append("")
+        lines.extend("  " + item for item in report["notes"])
     if report["failed"]:
         lines.append("")
         lines.append("%d point(s) a verifier" % len(report["failed"]))
@@ -397,7 +420,11 @@ def _report(ix, report, settings):
              % (len(report["created"]), len(report["wired"]), len(report["failed"])))
 
     message = "\n".join(lines)
-    if report["image"] is not None:
+    if report.get("graph_output") is not None:
+        message += ("\n\nPour voir le rendu : survolez le node 'render' dans "
+                    "la Build View et appuyez sur 1 -- ou faites glisser sa "
+                    "sortie vers l'Image View. L'evaluation part toute seule.")
+    elif report["image"] is not None:
         message += ("\n\nL'image est selectionnee : ouvrez l'Image View, "
                     "elle se rend d'un clic.")
 
