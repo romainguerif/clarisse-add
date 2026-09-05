@@ -12,9 +12,16 @@ Trois besoins, formulés dans cet ordre :
    le node graph matériau ;
 3. le bake.
 
-Ils ne se ressemblent pas du tout en termes de risque. Le résultat de la
-vérification préalable est d'ailleurs qu'**un des trois n'est probablement pas à
-écrire du tout**.
+Ils ne se ressemblent pas du tout en termes de risque, et la vérification
+préalable a déplacé deux d'entre eux :
+
+- **le bake n'est pas à écrire** — Clarisse sait déjà rendre en espace UV, cage
+  comprise ; il est à rendre accessible ;
+- **la peinture est plus faisable qu'espéré** — la question qui décidait de sa
+  nature est tranchée, les UV sont disponibles au point d'impact d'un rayon.
+
+C'est tout l'objet d'une préparation : ces deux constats auraient coûté
+plusieurs jours s'ils étaient arrivés au milieu du code.
 
 ---
 
@@ -309,60 +316,62 @@ Trois décisions à prendre, et elles comptent plus que les paramètres :
 
 ---
 
-## 5. La question qui décide de tout
+## 5. La question qui décidait de tout — tranchée
 
 **Est-ce qu'un rayon lancé depuis l'outil rend les coordonnées UV du point
 touché, ou seulement sa position 3D ?**
 
-Tout l'outil de peinture en dépend, et rien d'autre n'en dépend. Une brosse
-convertit une position de souris en un texel : sans UV au point d'impact, cette
-conversion n'existe pas.
+Tout l'outil de peinture en dépendait, et rien d'autre. Une brosse convertit une
+position de souris en un texel : sans UV au point d'impact, cette conversion
+n'existe pas et l'outil change de nature.
 
-Les deux issues possibles, et elles ne mènent pas au même produit :
+**Réponse : oui, les UV sont disponibles.** La chaîne est celle-ci :
 
-**Si les UV sont disponibles** — on peint directement dans une texture UV. C'est
-le vrai outil de peinture, celui qui donne un fichier qu'on peut retoucher
-ailleurs, réutiliser, exporter.
+```
+   rayon
+     │
+     ▼
+   GeometryIntersection            geometry_intersection.h:20
+     │   class GeometryIntersection : public GeometryFragment
+     │   -- une intersection EST un fragment
+     ▼
+   GeometryFragment                geometry_fragment.h:143
+     │   primitive_id, sub_primitive_id, uvw, sub_uvw
+     ▼
+   GeometryObject::compute_fragment_uvw(CtxEval, GeometryFragment, index, ...)
+     │   methode VIRTUELLE, exportee par ix_geometry
+     ▼
+   UVW
+```
 
-**Si elles ne le sont pas** — on peut toujours peindre, mais dans une
-représentation en espace 3D : nuage de points, attribut de sommet, ou texture
-volumique. C'est-à-dire une version bien meilleure de ce que tu fais déjà en
-particules — brosse correcte, pression du stylet, symétrie, sauvegarde — mais
-pas une texture UV.
+Établi par les symboles exportés de `ix_geometry.def` et par l'en-tête : la
+méthode est virtuelle sur `GeometryObject`, donc chaque type de géométrie sait
+répondre, et elle prend un **index de jeu d'UV** — donc les objets à plusieurs
+dépliures sont gérés.
 
-Les deux valent le coup d'être construits. Ils n'ont simplement pas la même
-promesse, et il serait malhonnête de t'annoncer le premier avant d'avoir la
-réponse.
+Deux exports voisins confirment que le terrain est complet : **`GeometryUvMap`**
+et **`GeometryUvTile`** (construit depuis deux entiers — les coordonnées d'une
+tuile UDIM). Le support UDIM est donc présent dans le moteur, pas à réinventer.
 
-### Ce que devient l'outil dans chacune des deux issues
+**Conséquence : c'est le vrai outil de peinture qui est faisable.** On peint
+dans une texture UV, qui produit un fichier réutilisable, exportable, retouchable
+ailleurs. Pas un succédané à base de nuage de points.
 
-|  | **Avec UV** | **Sans UV** |
-|---|---|---|
-| Le tampon | une texture par tuile UDIM | un nuage de points, ou un attribut par sommet |
-| La sauvegarde | des `.exr` / `.tif` réutilisables partout | un cache propriétaire, ou un point cloud |
-| La résolution | choisie, indépendante du maillage | limitée par la densité de points ou de sommets |
-| La lecture au shading | échantillonnage aux UV, trivial | recherche du plus proche voisin, plus coûteuse |
-| Ce qu'on peut en faire | retoucher dans Photoshop, exporter, réutiliser | rester dans Clarisse |
-| Ce que ça vaut face à l'existant | un vrai outil de peinture | ton système à particules, en beaucoup mieux |
+Le repli n'a plus lieu d'être, mais il reste noté au cas où la mise en œuvre
+buterait : peindre dans une vue 2D de la dépliure, où la conversion
+souris → texel est directe.
 
-Dans le second cas, l'outil garde tout ce qui fait la différence au quotidien —
-brosse projetée sur la surface, pression du stylet, symétrie, modes de fusion,
-annulation — et perd seulement le fichier de sortie. C'est déjà un gain net sur
-le contournement actuel, mais ce n'est pas la même chose et il faut le dire.
+### Ce qui reste à établir, et qui est moins critique
 
-Une troisième voie existe si la seconde s'impose et déçoit : **peindre dans une
-vue 2D de la dépliure UV** plutôt que sur le modèle. Là, la conversion
-souris → texel est directe et la question disparaît. C'est moins agréable —
-on perd le geste sur l'objet — mais c'est un repli garanti.
-
-Ce qui reste à établir en même temps, et qui est moins critique :
-
-- Le confort interactif. Le viewport de Clarisse re-shade de façon progressive ;
-  un trait pourrait traîner derrière la souris. À mesurer tôt, parce que si
-  c'est mauvais, ça change la conception — on peindrait alors dans une vue
-  dédiée plutôt que dans le viewport 3D.
-- Comment un `Tool` custom se rend accessible : barre d'outils, menu, raccourci.
-- Si le bake natif dilate les îlots ou non.
+- **Le confort interactif.** Le viewport de Clarisse re-shade de façon
+  progressive ; un trait pourrait traîner derrière la souris. À mesurer tôt,
+  parce que si c'est mauvais, ça change la conception.
+- **Comment un `Tool` custom se rend accessible** : barre d'outils, menu,
+  raccourci. Le mécanisme existe (`cb_get_actions` rend des `GuiAction`) mais le
+  chemin exact jusqu'à l'interface n'est pas encore tracé.
+- **Si le bake natif dilate les îlots** ou s'il faut l'ajouter.
+- **La catégorie exacte** sous laquelle une texture custom apparaît dans les
+  menus.
 
 ---
 
@@ -439,9 +448,11 @@ déplafonné. C'est aussi le meilleur terrain d'apprentissage pour la classe
 la dilatation des îlots, et si elle manque c'est un `KernelFilter` de plus —
 exactement ce qu'on sait déjà faire.
 
-**3. La peinture.** Le morceau ambitieux, et le seul dont la promesse dépend
-d'une réponse qu'on n'a pas encore. À attaquer par une sonde courte sur la
-question des UV, **avant** d'écrire quoi que ce soit d'autre.
+**3. La peinture.** Le morceau ambitieux. La question qui décidait de sa nature
+est tranchée — les UV sont disponibles au point d'impact — donc c'est bien le
+vrai outil de peinture qui est visé. Restent deux inconnues de mise en œuvre, à
+lever par des sondes courtes avant d'écrire l'outil : le confort interactif du
+viewport, et le chemin par lequel un `Tool` custom atteint l'interface.
 
 Une remarque sur la méthode, tirée des trois nodes d'optique : le coût n'est
 jamais dans l'algorithme, il est dans les hypothèses fausses sur ce que le

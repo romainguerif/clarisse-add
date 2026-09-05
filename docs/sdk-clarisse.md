@@ -327,6 +327,37 @@ fournit un `TextureEvaluator` bâti sur un `GasUvTree`. Il y a donc les deux
 niveaux : le bake tout fait par le layer, et la machinerie brute si on veut
 autre chose.
 
+### Un rayon rend les UV du point touché
+
+Question qui décidait de la faisabilité d'un outil de peinture, et la réponse
+est oui. La chaîne :
+
+```
+   GeometryIntersection            geometry_intersection.h:20
+     │   class GeometryIntersection : public GeometryFragment
+     ▼
+   GeometryFragment                geometry_fragment.h:143
+     │   primitive_id, sub_primitive_id, uvw, sub_uvw
+     ▼
+   GeometryObject::compute_fragment_uvw(CtxEval, GeometryFragment, index, ...)
+     ▼
+   UVW
+```
+
+Une intersection **est** un fragment — elle en hérite. Et
+`compute_fragment_uvw` est une méthode **virtuelle** de `GeometryObject`,
+exportée par `ix_geometry`, qui prend un **index de jeu d'UV** : les objets à
+plusieurs dépliures sont donc gérés.
+
+Deux exports voisins complètent le tableau : `GeometryUvMap` et
+`GeometryUvTile` (construit depuis deux entiers — les coordonnées d'une tuile
+UDIM). **Le support UDIM est dans le moteur.**
+
+Méthode à retenir : `geometry_intersection.h` avait d'abord semblé vide à la
+recherche. Ce sont les **fichiers `.def` de `lib/`** qui ont donné la réponse —
+ils listent les symboles C++ décorés réellement exportés, donc un `grep -i uv`
+dessus révèle des méthodes qu'un en-tête reconstruit peut avoir perdues.
+
 ### La projection de textures existe déjà, mais elle se monte à la main
 
 La classe de base `TextureSpatial` porte un groupe **Projection** complet, avec
