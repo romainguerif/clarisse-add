@@ -53,9 +53,9 @@ class "ImageFilterBokeh" "KernelFilter" {
     }
 
     attribute_group "Focus" {
-        reference "depth_image" {
-            doc "Image contenant une passe de profondeur. Sans elle, le rayon est constant sur toute l'image -- un flou uniforme, pas une mise au point. Le canal Z d'un rendu ne remonte pas jusqu'a un filtre : il faut donc rendre la profondeur dans une Image a part et la brancher ici."
-            filter "Image"
+        tag "depth_aov" {
+            doc "AOV de profondeur a utiliser. Vide, le rayon est constant sur toute l'image -- un flou uniforme, pas une mise au point. La liste ne propose que les AOV reellement presents : il faut donc d'abord les activer sur le Layer 3D, groupe AOV, comme pour le denoiser OptiX."
+            filter "aov_groups"
             value ""
         }
         long "depth_mode" {

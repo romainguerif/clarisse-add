@@ -48,9 +48,9 @@
 #include <ctx_filter.h>
 #include <image_canvas.h>
 #include <image_proxy.h>
-#include <image_handle.h>
-#include <module_image.h>
-#include <module_image_quality.h>
+#include <image_map.h>
+#include <image_map_channel.h>
+#include <image_context.h>
 #include <of_object.h>
 #include <of_attr.h>
 #include <core_log.h>
@@ -197,6 +197,7 @@ struct Settings {
     bool   preserve_exposure;
     double spherical;
     double chromatic;
+    CoreString depth_aov;       // nom du canal, vide = rayon constant
     int    depth_mode;          // 0 distance reelle, 1 inverse
     double focus_distance;
     double focus_range;
@@ -236,6 +237,7 @@ read_settings(const CtxEval& eval, const CtxKernelFilter& ctx,
     s.preserve_exposure = cma.get_preserve_exposure();
     s.spherical   = cma.get_spherical_aberration();
     s.chromatic   = cma.get_chromatic_aberration();
+    s.depth_aov       = cma.get_depth_aov();
     s.depth_mode      = (int) cma.get_depth_mode();
     s.focus_distance  = cma.get_focus_distance();
     s.focus_range     = cma.get_focus_range();
@@ -607,74 +609,63 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
     kernel_radius = (unsigned int)(reach < 0.0 ? 0.0 : reach + 1.5);
     total_pass_count = 1;
 
-    // La passe de profondeur se lit ICI, et nulle part ailleurs.
+    // La passe de profondeur est un AOV de l'image filtree elle-meme.
     //
-    // pre_filter tourne une seule fois, sur le thread appelant -- exactement
-    // la ou LayerImage demande l'image d'un autre objet depuis toujours.
-    // filter(), lui, tourne sur les threads du pool, une fois par tuile : y
-    // demander l'evaluation d'une autre Image ferait se bousculer tous les
-    // workers sur son verrou m_image_lock, qui n'est pas recursif.
+    // C'est ainsi que procede le denoiser OptiX de Clarisse : il declare un
+    // `tag` filtre sur `aov_groups` et lit le canal par son nom. Le canal
+    // vient donc du meme ImageMap que les couleurs -- il est deja aligne, a la
+    // meme resolution, sans rien a rechantillonner.
+    //
+    // ImageProxy, lui, ne donne acces qu'a r, g, b, a et l : il n'alloue un
+    // tampon que pour ces cinq noms. Un AOV s'atteint par l'ImageMap du
+    // canvas, et se lit en tampon flottant.
+    //
+    // Ici, et pas dans filter : pre_filter tourne une seule fois, sur le
+    // thread appelant. filter tourne sur les threads du pool, une fois par
+    // tuile -- y refaire ce travail le referait des centaines de fois.
     BokehModule *module = (BokehModule *) object.get_module();
     if (module == 0) return;
     module->depth = DepthSnapshot();
-    if (s.radius < 0.5) return;
 
-    OfAttr *attr = object.get_attribute("depth_image");
-    if (attr == 0) return;
-    OfObject *image_object = attr->get_object();
-    if (image_object == 0) return;   // rien de branche : rayon constant
+    if (s.radius < 0.5 || s.depth_aov.get_count() == 0) return;
+    if (ctx.source_image == 0) return;
 
-    // Cast VERIFIE. Isotropix caste sans verifier dans layer_builtin.dll ;
-    // ici l'attribut pourrait un jour accepter ImageNode, dont le module
-    // n'est pas un ModuleImage.
-    ModuleImage *image = image_object->get_module<ModuleImage>();
-    if (image == 0) return;
+    ImageMap *map = ctx.source_image->get_image();
+    if (map == 0) return;
 
-    // D'abord la voie qui ne declenche RIEN : get_highest_quality_image
-    // balaie la pyramide et rend le meilleur niveau deja propre, sans verrou
-    // ni evaluation. Elle ecrase la valeur d'entree de `quality` des sa
-    // premiere instruction -- la documentation qui la presente comme une
-    // qualite minimale requise est fausse.
-    ImageHandle handle;
-    ModuleImageQuality::Level got = ModuleImageQuality::QUALITY_UNKNOWN;
-
-    if (!image->get_highest_quality_image(handle, got)) {
-        // Rien n'est calcule. Sortir si l'evaluation est deja interrompue :
-        // get_image rendrait une image incomplete, sans le dire.
-        if (object.get_application().must_stop_evaluation()) return;
-
-        ModuleImageQuality::Level want = ModuleImageQuality::QUALITY_FULL;
-        if (ModuleImageQuality::is_valid_quality((unsigned int) ctx.image_quality))
-            want = ModuleImageQuality::get_quality((unsigned int) ctx.image_quality);
-        handle = image->get_image(want, false, 0);
+    ImageMapChannel *channel = map->get_channel_by_name(s.depth_aov);
+    if (channel == 0) {
+        // Repli sur le canal de profondeur standard, s'il existe.
+        channel = map->get_channel(ImageMap::CHANNEL_Z);
+    }
+    if (channel == 0) {
+        // Dire ce qui EST disponible : c'est la seule information utile quand
+        // l'AOV demande n'est pas la, et elle evite d'aller la chercher a
+        // taton dans l'interface.
+        CoreString available;
+        const CoreVector<ImageMapChannel *>& all = map->get_channels();
+        for (unsigned int i = 0; i < all.get_count(); ++i) {
+            if (all[i] == 0) continue;
+            if (available.get_count()) available += ", ";
+            available += all[i]->get_name();
+        }
+        LOG_INFO("[Bokeh] AOV '" << s.depth_aov << "' introuvable. Disponibles : "
+                 << available << "\n");
+        return;
     }
 
-    ImageCanvas *canvas = *handle;
-    // is_empty() ne suffit pas : le constructeur par defaut d'ImageHandle
-    // alloue une Data, donc il rend faux sur un handle vide. La taille fait foi.
-    if (canvas == 0 || canvas->get_width() <= 0) return;
-
     DepthSnapshot& depth = module->depth;
-    depth.x = canvas->get_x();
-    depth.y = canvas->get_y();
-    depth.w = canvas->get_width();
-    depth.h = canvas->get_height();
+    depth.x = ctx.source_image->get_x();
+    depth.y = ctx.source_image->get_y();
+    depth.w = ctx.source_image->get_width();
+    depth.h = ctx.source_image->get_height();
     if (depth.w <= 0 || depth.h <= 0) return;
 
-    // Reference const sur la valeur de retour : la duree de vie du temporaire
-    // est etendue, et aucune copie n'est faite -- ImageProxy n'a qu'un
-    // constructeur de copie superficiel, qui provoquerait une double
-    // liberation de ses cinq tampons.
-    const ImageProxy& proxy = canvas->get_proxy(depth.x, depth.y, depth.w, depth.h);
-
-    // Une passe de profondeur est monochrome : le rouge suffit. Les tampons
-    // peuvent etre nuls -- le proxy n'alloue un canal que si la map le porte.
-    const float *values = proxy.get_red_channel();
-    if (values == 0) values = proxy.get_green_channel();
-    if (values == 0) values = proxy.get_blue_channel();
-    if (values == 0) return;
-
-    depth.data.assign(values, values + (size_t) depth.w * depth.h);
+    depth.data.resize((size_t) depth.w * depth.h);
+    ImageEvalContext eval_context(*ctx.source_image, 0);
+    channel->create_float_buffer(&eval_context, depth.x, depth.y,
+                                 (unsigned int) depth.w, (unsigned int) depth.h,
+                                 &depth.data[0]);
 
     double low = depth.data[0], high = depth.data[0];
     for (size_t i = 1; i < depth.data.size(); ++i) {
@@ -686,9 +677,8 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
     depth.far_value = high;
     depth.ready = true;
 
-    LOG_INFO("[Bokeh] profondeur " << depth.w << "x" << depth.h
-             << " en (" << depth.x << "," << depth.y << ")"
-             << "  etendue " << low << " a " << high << "\n");
+    LOG_INFO("[Bokeh] AOV '" << s.depth_aov << "' : " << depth.w << "x" << depth.h
+             << ", etendue " << low << " a " << high << "\n");
 }
 
 bool
@@ -771,13 +761,9 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     }
     if (ladder[1].total <= 0.0) return true;
 
-    // Le canvas source, pour convertir les coordonnees de la tuile vers celles
-    // de l'image de profondeur : les deux peuvent differer de resolution.
-    double depth_u = 0.0, depth_v = 0.0;
-    if (depth && ctx.source_image != 0) {
-        depth_u = 1.0 / (double) ctx.source_image->get_width();
-        depth_v = 1.0 / (double) ctx.source_image->get_height();
-    }
+    // Aucune conversion de coordonnees : l'AOV vient du meme ImageMap que les
+    // couleurs, donc a la meme resolution et dans le meme repere. ctx.x0 et
+    // ctx.y0 sont deja en coordonnees image absolues.
 
     if (!boosting) {
         // Chemin rapide. On convolue les quatre canaux avec le meme noyau
@@ -804,12 +790,7 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
                     // Le palier de rayon, choisi par la profondeur au pixel.
                     int level = steps - 1;
                     if (depth != 0) {
-                        const int abs_x = ctx.x0 + x;
-                        const int abs_y = ctx.y0 + y;
-                        const double u = (abs_x + 0.5 - ctx.source_image->get_x()) * depth_u;
-                        const double v = (abs_y + 0.5 - ctx.source_image->get_y()) * depth_v;
-                        const float z = depth->at(depth->x + (int)(u * depth->w),
-                                                  depth->y + (int)(v * depth->h));
+                        const float z = depth->at(ctx.x0 + x, ctx.y0 + y);
                         const double coc = circle_of_confusion(s, z);
                         level = (int)(coc * steps + 0.5) - 1;
                         if (level < 0) {
@@ -892,10 +873,7 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
 
             int level = steps - 1;
             if (depth != 0) {
-                const double u = (ctx.x0 + x + 0.5 - ctx.source_image->get_x()) * depth_u;
-                const double v = (ctx.y0 + y + 0.5 - ctx.source_image->get_y()) * depth_v;
-                const float z = depth->at(depth->x + (int)(u * depth->w),
-                                          depth->y + (int)(v * depth->h));
+                const float z = depth->at(ctx.x0 + x, ctx.y0 + y);
                 level = (int)(circle_of_confusion(s, z) * steps + 0.5) - 1;
             }
 
