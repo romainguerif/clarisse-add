@@ -184,9 +184,10 @@ LOOKDEV = [
 BUILD = [
     Tool(
         "build.template",
-        "Nouveau build",
-        "Monte le squelette d'un build BUiLDER deja cable : Read Project, "
-        "Edit, Merge, Render Scene, AOV Set et l'ecriture d'image.",
+        "Scene de depart",
+        "Recree le contexte de demarrage de Clarisse iFX -- camera, lumiere, "
+        "raytracer et image deja branchee -- pour partir d'une scene qui rend, "
+        "y compris en BUiLDER. Chaine d'assemblage en option.",
         "clarisse_add.tools.build_template",
         CATEGORY_BUILD,
     ),

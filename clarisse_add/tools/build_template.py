@@ -1,28 +1,30 @@
-"""Monte un squelette de build BUiLDER : le graphe de base, deja cable.
+"""Cree une scene de depart complete, prete a rendre.
 
-Un build part toujours de la meme forme -- faire entrer les assets, les editer
-sans les abimer, assembler, definir le rendu, ecrire.  Ces six nodes se posent
-a la main en dix minutes, a chaque plan, et on se trompe une fois sur trois sur
-le sens des branchements.
+Quand on ouvre Clarisse iFX, on tombe sur un contexte tout fait : une camera,
+une lumiere distante, un raytracer, et une image dont le Layer 3D est deja
+branche dessus.  On appuie sur Rendu, il se passe quelque chose.  En BUiLDER
+on part d'une page blanche, et il faut reposer ces cinq objets a la main avant
+de voir le moindre pixel.
 
-L'outil les pose d'un coup :
+Cet outil les repose d'un coup, avec les valeurs d'Isotropix -- elles sont
+lues dans ``Clarisse/config/startup_scene.project``, le fichier que Clarisse
+lui-meme charge au demarrage :
 
-    Read Project ---> Edit ---> Merge ---> Render Scene ---> Image Node Render
-                                              |                      |
-                                           AOV Set          Image Node Write
+    camera      CameraPerspective     translate 28 21 28, rotate -27.938 45 0, fov 25
+    light       LightPhysicalDistant  rotate -35 125 0
+    raytracer   RendererRaytracer
+    image       Image + Layer3d, camera et renderer deja branches
 
-Deux familles d'objets, a ne pas confondre -- c'est la source d'erreur
-principale quand on scripte BUiLDER :
+En option : un sol et une sphere, pour que le premier rendu ne soit pas vide ;
+et la chaine d'assemblage BUiLDER (Read Project, Edit, Merge) en amont.
 
-* les nodes d'assemblage de scene (Read Project, Edit, Merge, Override,
-  Isolate, Prune) sont des **contextes** portant un moteur, crees par
-  ``ix.cmds.CreateCustomContext(nom, moteur, chemin)`` ;
-* les autres (Render Scene, AOV Set, Rule Set, Switch, Extract, les Image
-  Node et les Process) sont des **objets** ordinaires, crees par
-  ``ix.cmds.CreateObject``.
-
-Les noms de moteurs viennent des modules livres avec Clarisse
-(``module/scene_assembly_*.dll``), pas d'une supposition.
+Une note sur les deux familles d'objets de BUiLDER, parce que c'est la source
+d'erreur principale quand on le scripte : les nodes d'assemblage de scene
+(Read Project, Edit, Merge, Override, Isolate, Prune) ne sont pas des objets
+mais des **contextes portant un moteur**, crees par ``CreateCustomContext``.
+Tout le reste -- camera, lumiere, renderer, image, Render Scene, AOV Set --
+sont des objets ordinaires.  Les noms de moteurs viennent des modules livres
+avec Clarisse (``module/scene_assembly_*.dll``), pas d'une supposition.
 """
 
 from ..core import log, scene, ui
@@ -30,209 +32,239 @@ from ..core.compat import get_ix
 
 #: Moteurs de contexte, releves dans module/scene_assembly_*.dll.
 ENGINE_READ_PROJECT = "SceneAssemblyReadProject"
-ENGINE_READ_ABC = "SceneAssemblyReadAbc"
 ENGINE_EDIT = "SceneAssemblyEdit"
 ENGINE_MERGE = "SceneAssemblyMerge"
-ENGINE_OVERRIDE = "SceneAssemblyOverride"
 
-#: Attribut d'entree commun aux nodes d'assemblage (confirme sur
-#: SceneAssemblyExtract dans la documentation de reference).
+#: Attribut d'entree des nodes d'assemblage, confirme sur SceneAssemblyExtract
+#: dans la documentation de reference.
 INPUT_ATTR = "input_context"
+
+#: Valeurs exactes de la scene de demarrage livree par Isotropix.
+CAMERA_TRANSLATE = ("28", "21", "28")
+CAMERA_ROTATE = ("-27.938", "45", "0")
+CAMERA_FOV = "25"
+LIGHT_ROTATE = ("-35", "125", "0")
+
+RESOLUTIONS = [
+    ("1920 x 1080", "1920x1080"),
+    ("1280 x 720", "1280x720"),
+    ("2048 x 1152", "2048x1152"),
+    ("3840 x 2160", "3840x2160"),
+    ("1024 x 1024", "1024x1024"),
+]
 
 
 def run(payload=None):
     ix = get_ix()
-
-    # On ne teste plus l'existence de build://project. C'est le vizroot
-    # *fixe* de la saveur iFX ; en BUiLDER il vaut (none) au chargement et
-    # ce contexte peut parfaitement ne pas exister -- la verification
-    # echouait donc precisement dans la saveur qu'elle exigeait.
     log.debug("Racines disponibles : %s" % ", ".join(_roots(ix)))
 
     settings = ui.Form(
-        "Nouveau build",
+        "Scene de depart",
         [
-            ui.Section("Identite"),
-            ui.Text("name", "Nom du plan", default="sh010",
-                    tooltip="Sert de prefixe a tous les nodes crees."),
-            ui.Section("Source"),
-            ui.FilePath("project", "Projet a faire entrer", default="",
-                        tooltip="Un .project existant. Laissez vide pour "
-                                "creer le Read Project sans fichier."),
-            ui.Section("Rendu"),
-            ui.Toggle("aov_set", "Ajouter un AOV Set", default=True,
-                      tooltip="A remplir ensuite avec le bouton LPE Setup."),
-            ui.Toggle("comp", "Ajouter le rendu et l'ecriture d'image",
-                      default=True),
+            ui.Section("Contexte"),
+            ui.Text("name", "Nom", default="scene"),
+            ui.Choice("resolution", "Resolution", RESOLUTIONS, default=0),
+            ui.Section("Contenu"),
+            ui.Toggle("props", "Ajouter un sol et une sphere", default=True,
+                      tooltip="De quoi voir quelque chose au premier rendu."),
+            ui.Toggle("assembly", "Ajouter la chaine BUiLDER en amont",
+                      default=False,
+                      tooltip="Read Project, Edit et Merge, a cabler ensuite "
+                              "sur vos assets. Sans effet en saveur iFX."),
             ui.Section("Diagnostic"),
-            ui.Toggle("introspect", "Journaliser les attributs de chaque node",
-                      default=True,
-                      tooltip="Ecrit dans le journal la liste reelle des "
-                              "attributs de chaque node cree. Laissez coche "
-                              "tant que l'outil n'est pas stabilise."),
+            ui.Toggle("introspect", "Journaliser les attributs des nodes",
+                      default=False),
         ],
-        note="Le contexte de destination est demande ensuite.",
-        accept_label="Construire",
+        note="Cree dans le contexte courant.",
+        accept_label="Creer",
     ).run()
     if settings is None:
         return False
 
-    target = ui.pick_context("Ou construire le build ?")
-    if target is None:
+    parent = scene.current_context()
+    if parent is None:
+        ui.message("Aucun contexte courant : impossible de savoir ou creer.",
+                   "Scene de depart")
         return False
-    if not scene.is_writable(target):
+    if not scene.is_writable(parent):
+        ui.message("Le contexte courant n'est pas modifiable :\n%s\n\n"
+                   "Selectionnez-en un autre dans l'Explorer, puis relancez."
+                   % str(parent), "Scene de depart")
         return False
 
-    name = _sanitize(settings["name"]) or "build"
+    name = _sanitize(settings["name"]) or "scene"
 
-    with scene.command_batch("ClarisseAdd - Nouveau build"):
-        report = _build(ix, name, settings, str(target))
+    with scene.command_batch("ClarisseAdd - Scene de depart"):
+        report = _build(ix, name, parent, settings)
 
-    _report(report, settings)
+    _report(ix, report, settings)
     return True
 
 
 # ---------------------------------------------------------------------------
 
 
-def _build(ix, name, settings, root):
-    """Cree le graphe et renvoie un compte-rendu de ce qui a reussi."""
-    report = {"created": [], "wired": [], "failed": [], "attrs": {}}
+def _build(ix, name, parent, settings):
+    report = {"created": [], "wired": [], "failed": [], "attrs": {}, "image": None}
     made = {}
 
-    def context(node_name, engine):
-        """Un node d'assemblage : contexte + moteur."""
-        full = "%s_%s" % (name, node_name)
+    ctx = scene.ensure_context(name, parent)
+    if ctx is None:
+        report["failed"].append("Creation du contexte '%s' impossible" % name)
+        return report
+    report["created"].append("%s  [Context]" % str(ctx))
+
+    def obj(short, class_name):
         try:
-            item = ix.cmds.CreateCustomContext(full, engine, root)
+            item = ix.cmds.CreateObject(short, class_name, "Global", str(ctx))
+        except Exception as error:
+            report["failed"].append("%s (%s) : %s" % (short, class_name, _short(error)))
+            log.exception("CreateObject %s / %s" % (short, class_name))
+            return None
+        if item is None:
+            report["failed"].append("%s : classe '%s' indisponible" % (short, class_name))
+            return None
+        report["created"].append("%s  [%s]" % (short, class_name))
+        made[short] = item
+        return item
+
+    def values(target, attribute, *vals):
+        if target is None:
+            return False
+        if target.get_attribute(attribute) is None:
+            report["failed"].append("%s : pas d'attribut '%s'"
+                                    % (target.get_name(), attribute))
+            return False
+        try:
+            ix.cmds.SetValues([str(target) + "." + attribute], [str(v) for v in vals])
+        except Exception as error:
+            report["failed"].append("%s.%s : %s"
+                                    % (target.get_name(), attribute, _short(error)))
+            return False
+        return True
+
+    # -- les cinq objets de la scene de demarrage --------------------------
+
+    camera = obj("camera", "CameraPerspective")
+    values(camera, "translate", *CAMERA_TRANSLATE)
+    values(camera, "rotate", *CAMERA_ROTATE)
+    values(camera, "field_of_view", CAMERA_FOV)
+
+    light = obj("light", "LightPhysicalDistant")
+    values(light, "rotate", *LIGHT_ROTATE)
+
+    renderer = obj("raytracer", "RendererRaytracer")
+
+    image = obj("image", "Image")
+    if image is not None:
+        width, height = (settings["resolution"] or "1920x1080").split("x")
+        values(image, "resolution", width, height)
+
+        # Le Layer 3D n'est pas un objet a part : c'est un layer de l'image,
+        # cree par AddLayer, dont les attributs s'adressent via image.layer_3d.
+        # Idiome repris du Shrink Wrap de la collection, qui tourne depuis des
+        # annees.
+        try:
+            ix.cmds.AddLayer(str(image) + ".layers", "Layer3d")
+            report["created"].append("image.layers[0]  [Layer3d]")
+        except Exception as error:
+            report["failed"].append("AddLayer : %s" % _short(error))
+
+        if camera is not None and values(image, "layer_3d.active_camera", str(camera)):
+            report["wired"].append("image <- camera")
+        if renderer is not None and values(image, "layer_3d.renderer", str(renderer)):
+            report["wired"].append("image <- raytracer")
+        report["image"] = image
+
+    # -- de quoi voir quelque chose au premier rendu -----------------------
+
+    if settings.get("props"):
+        ground = obj("ground", "GeometryPolygrid")
+        values(ground, "size", "40", "40")
+        sphere = obj("sphere", "GeometrySphere")
+        values(sphere, "translate", "0", "2", "0")
+        material = obj("surface", "MaterialPhysicalStandard")
+        if material is not None:
+            for target in (ground, sphere):
+                if target is None or target.get_attribute("materials") is None:
+                    continue
+                try:
+                    ix.cmds.SetValues([str(target) + ".materials[0]"], [str(material)])
+                    report["wired"].append("%s <- surface" % target.get_name())
+                except Exception as error:
+                    report["failed"].append("materiau sur %s : %s"
+                                            % (target.get_name(), _short(error)))
+
+    # -- la chaine d'assemblage BUiLDER, en option -------------------------
+
+    if settings.get("assembly"):
+        _assembly(ix, name, ctx, report, made)
+
+    if settings.get("introspect"):
+        for short, item in made.items():
+            report["attrs"][short] = _attributes(item)
+
+    return report
+
+
+def _assembly(ix, name, ctx, report, made):
+    """Read Project -> Edit -> Merge, en amont de la scene."""
+
+    def context(short, engine):
+        full = "%s_%s" % (name, short)
+        try:
+            item = ix.cmds.CreateCustomContext(full, engine, str(ctx))
         except Exception as error:
             report["failed"].append("%s (moteur %s) : %s"
                                     % (full, engine, _short(error)))
             log.exception("CreateCustomContext %s / %s" % (full, engine))
             return None
         if item is None:
-            report["failed"].append("%s : moteur '%s' inconnu" % (full, engine))
+            report["failed"].append("%s : moteur '%s' inconnu -- etes-vous en "
+                                    "saveur BUiLDER ?" % (full, engine))
             return None
         report["created"].append("%s  [%s]" % (full, engine))
-        made[node_name] = item
+        made[short] = item
         return item
-
-    def obj(node_name, class_name):
-        """Un node ordinaire."""
-        full = "%s_%s" % (name, node_name)
-        try:
-            item = ix.cmds.CreateObject(full, class_name, "Global", root)
-        except Exception as error:
-            report["failed"].append("%s (classe %s) : %s"
-                                    % (full, class_name, _short(error)))
-            log.exception("CreateObject %s / %s" % (full, class_name))
-            return None
-        if item is None:
-            report["failed"].append("%s : classe '%s' indisponible "
-                                    "(licence BUiLDER ?)" % (full, class_name))
-            return None
-        report["created"].append("%s  [%s]" % (full, class_name))
-        made[node_name] = item
-        return item
-
-    def wire(target, attribute, value, label):
-        """Branche un attribut, et dit clairement s'il n'existe pas."""
-        if target is None:
-            return False
-        if target.get_attribute(attribute) is None:
-            report["failed"].append("%s : pas d'attribut '%s'"
-                                    % (str(target), attribute))
-            return False
-        try:
-            ix.cmds.SetValues([str(target) + "." + attribute], [str(value)])
-        except Exception as error:
-            report["failed"].append("%s.%s : %s"
-                                    % (str(target), attribute, _short(error)))
-            return False
-        report["wired"].append(label)
-        return True
-
-    # -- la chaine d'assemblage -------------------------------------------
 
     read = context("read", ENGINE_READ_PROJECT)
-    project = (settings.get("project") or "").strip()
-    if read is not None and project:
-        # Le nom de l'attribut de fichier n'est pas documente pour ce moteur :
-        # on essaie les candidats plausibles et on signale lequel a pris.
-        for candidate in ("filename", "file", "filenames", "project_filename"):
-            if read.get_attribute(candidate) is not None:
-                wire(read, candidate, project, "read.%s" % candidate)
-                break
-        else:
-            report["failed"].append(
-                "Read Project : aucun attribut de fichier reconnu "
-                "(voir le journal pour la liste reelle)")
-
     edit = context("edit", ENGINE_EDIT)
-    if read is not None:
-        wire(edit, INPUT_ATTR, str(read), "edit <- read")
-
     merge = context("merge", ENGINE_MERGE)
-    if edit is not None and merge is not None:
-        # Le Merge accepte plusieurs entrees : son attribut est une liste.
-        for candidate in ("dependencies", INPUT_ATTR, "inputs"):
-            if merge.get_attribute(candidate) is not None:
-                try:
-                    ix.cmds.AddValues([str(merge) + "." + candidate], [str(edit)])
-                    report["wired"].append("merge <- edit (%s)" % candidate)
-                except Exception:
-                    wire(merge, candidate, str(edit), "merge <- edit")
-                break
+
+    if read is not None and edit is not None:
+        if edit.get_attribute(INPUT_ATTR) is None:
+            report["failed"].append("edit : pas d'attribut '%s'" % INPUT_ATTR)
         else:
-            report["failed"].append("Merge : aucun attribut d'entree reconnu")
+            try:
+                ix.cmds.SetValues([str(edit) + "." + INPUT_ATTR], [str(read)])
+                report["wired"].append("edit <- read")
+            except Exception as error:
+                report["failed"].append("edit.%s : %s" % (INPUT_ATTR, _short(error)))
 
-    # -- le rendu ----------------------------------------------------------
+    if edit is not None and merge is not None:
+        # Le Merge prend plusieurs entrees : son attribut est une liste, dont
+        # le nom n'est documente nulle part. On essaie les candidats, et on dit
+        # lequel a pris.
+        for candidate in ("dependencies", INPUT_ATTR, "inputs"):
+            if merge.get_attribute(candidate) is None:
+                continue
+            try:
+                ix.cmds.AddValues([str(merge) + "." + candidate], [str(edit)])
+                report["wired"].append("merge <- edit  (%s)" % candidate)
+            except Exception:
+                report["failed"].append("merge.%s : ajout refuse" % candidate)
+            break
+        else:
+            report["failed"].append("Merge : aucun attribut d'entree reconnu "
+                                    "(liste reelle dans le journal)")
+        report["attrs"]["merge"] = _attributes(merge)
 
-    render_scene = obj("render_scene", "RenderScene")
-    source = merge if merge is not None else edit
-    if source is not None and render_scene is not None:
-        for candidate in (INPUT_ATTR, "scene", "context"):
-            if render_scene.get_attribute(candidate) is not None:
-                wire(render_scene, candidate, str(source),
-                     "render_scene <- %s" % source.get_name())
-                break
 
-    if settings.get("aov_set"):
-        aov = obj("aovs", "AovSet")
-        if aov is not None and render_scene is not None:
-            for candidate in ("aov_set", "aovs", "aov_sets"):
-                if render_scene.get_attribute(candidate) is not None:
-                    wire(render_scene, candidate, str(aov), "render_scene <- aovs")
-                    break
-
-    # -- l'image -----------------------------------------------------------
-
-    if settings.get("comp"):
-        image_render = obj("render", "ImageNodeRender")
-        if image_render is not None and render_scene is not None:
-            wire(image_render, "scene", str(render_scene), "render <- render_scene")
-        write = obj("write", "ImageNodeWrite")
-        if write is not None and image_render is not None:
-            for candidate in ("input", INPUT_ATTR, "image"):
-                if write.get_attribute(candidate) is not None:
-                    wire(write, candidate, str(image_render), "write <- render")
-                    break
-
-    # -- introspection -----------------------------------------------------
-
-    if settings.get("introspect"):
-        for node_name, item in made.items():
-            report["attrs"][node_name] = _attributes(item)
-
-    return report
+# ---------------------------------------------------------------------------
 
 
 def _roots(ix):
-    """Noms des racines de hierarchie (project, build, default, ...).
-
-    Sert au diagnostic : c'est la seule facon fiable de savoir ou l'on peut
-    construire, plutot que de supposer qu'un chemin existe.
-    """
+    """Racines de hierarchie disponibles (build:/, default:/, ...)."""
     try:
         roots = ix.application.get_factory().get_roots()
     except Exception:
@@ -264,38 +296,40 @@ def _attributes(item):
     return found
 
 
-def _report(report, settings):
-    lines = ["%d node(s) cree(s)" % len(report["created"])]
+def _report(ix, report, settings):
+    if report["image"] is not None:
+        try:
+            ix.selection.deselect_all()
+            ix.selection.add(report["image"])
+        except Exception:
+            log.debug("Selection de l'image impossible")
+
+    lines = ["%d objet(s) cree(s)" % len(report["created"])]
     lines.extend("  " + item for item in report["created"])
     if report["wired"]:
         lines.append("")
-        lines.append("%d branchement(s)" % len(report["wired"]))
-        lines.extend("  " + item for item in report["wired"])
+        lines.append("Branchements : " + ", ".join(report["wired"]))
     if report["failed"]:
         lines.append("")
         lines.append("%d point(s) a verifier" % len(report["failed"]))
         lines.extend("  " + item for item in report["failed"])
 
-    message = "\n".join(lines)
-    log.info("Nouveau build : %d nodes, %d branchements, %d echecs"
+    log.info("Scene de depart : %d objets, %d branchements, %d echecs"
              % (len(report["created"]), len(report["wired"]), len(report["failed"])))
 
+    message = "\n".join(lines)
+    if report["image"] is not None:
+        message += ("\n\nL'image est selectionnee : ouvrez l'Image View et "
+                    "lancez le rendu.")
+
     if settings.get("introspect") and report["attrs"]:
-        log.debug("--- attributs reels des nodes crees ---")
-        for node_name, attrs in sorted(report["attrs"].items()):
-            log.debug("%s : %s" % (node_name, ", ".join(attrs)))
-        message += ("\n\nLes attributs reels de chaque node sont dans le "
-                    "journal :\n%s" % _log_path())
+        log.debug("--- attributs reels ---")
+        for short, attrs in sorted(report["attrs"].items()):
+            log.debug("%s : %s" % (short, ", ".join(attrs)))
+        from ..core import paths
+        message += "\n\nAttributs detailles dans %s" % paths.log_file()
 
-    if report["failed"]:
-        message += ("\n\nPosez le vizroot sur un node (touche V) pour voir "
-                    "ou en est l'assemblage.")
-    ui.message(message, "Nouveau build")
-
-
-def _log_path():
-    from ..core import paths
-    return paths.log_file()
+    ui.message(message, "Scene de depart")
 
 
 def _short(error):
@@ -306,4 +340,3 @@ def _short(error):
 def _sanitize(name):
     cleaned = "".join(c if (c.isalnum() or c == "_") else "_" for c in (name or ""))
     return cleaned.strip("_")
-
