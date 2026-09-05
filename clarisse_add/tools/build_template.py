@@ -110,7 +110,7 @@ def run(payload=None):
 
 def _build(ix, name, parent, settings):
     report = {"created": [], "wired": [], "failed": [], "notes": [],
-              "attrs": {}, "image": None}
+              "unverified": [], "attrs": {}, "image": None}
     made = {}
 
     ctx = scene.ensure_context(name, parent)
@@ -134,17 +134,21 @@ def _build(ix, name, parent, settings):
         return item
 
     def values(target, attribute, *vals):
+        """Ecrit un attribut, puis **relit** pour savoir si ca a pris.
+
+        Les commandes de Clarisse ne levent pas d'exception quand elles
+        echouent : elles ecrivent l'erreur dans la console et renvoient une
+        valeur fausse. Un try/except autour de SetValues n'attrape donc rien,
+        et se fier a son absence d'erreur revient a declarer reussis des
+        branchements qui n'ont pas eu lieu. La seule preuve, c'est la relecture.
+        """
         if target is None:
             return False
-        # Un branchement rate journalise toujours les attributs reels de la
-        # cible : c'est le seul moyen de trouver le bon nom sans relancer.
-        # Le conditionner a une case a cocher, c'est perdre l'information au
-        # moment ou l'on en a besoin.
         # `get_attribute` ne resout qu'un nom simple : sur un chemin pointe
         # comme "layer_3d.active_camera" il renvoie toujours None, alors que
-        # SetValues, lui, l'accepte. Verifier avant d'ecrire bloquait donc
-        # exactement les branchements composes.
-        if "." not in attribute and target.get_attribute(attribute) is None:
+        # SetValues, lui, l'accepte.
+        simple = "." not in attribute
+        if simple and target.get_attribute(attribute) is None:
             report["failed"].append("%s : pas d'attribut '%s'"
                                     % (target.get_name(), attribute))
             report["attrs"][target.get_name()] = _attributes(target)
@@ -154,6 +158,19 @@ def _build(ix, name, parent, settings):
         except Exception as error:
             report["failed"].append("%s.%s : %s"
                                     % (target.get_name(), attribute, _short(error)))
+            report["attrs"][target.get_name()] = _attributes(target)
+            return False
+
+        if not simple:
+            # Chemin compose : pas de relecture possible par get_attribute.
+            # On ne peut donc pas certifier, et on le dit plutot que de faire
+            # semblant.
+            report["unverified"].append("%s.%s" % (target.get_name(), attribute))
+            return True
+
+        if not _written(target, attribute, vals[0]):
+            report["failed"].append("%s.%s : ecriture refusee (valeur inchangee)"
+                                    % (target.get_name(), attribute))
             report["attrs"][target.get_name()] = _attributes(target)
             return False
         return True
@@ -186,13 +203,19 @@ def _build(ix, name, parent, settings):
         values(image, "resolution", width, height)
         layered = False
         try:
-            ix.cmds.AddLayer(str(image) + ".layers", "Layer3d")
+            layer = ix.cmds.AddLayer(str(image) + ".layers", "Layer3d")
+        except Exception:
+            layer = None
+        # AddLayer ne leve pas quand la hierarchie refuse le layer : elle
+        # journalise "Layer can't be added" et renvoie None. C'est le retour
+        # qui fait foi.
+        if layer is not None:
             report["created"].append("image.layers[0]  [Layer3d]")
             layered = True
-        except Exception as error:
+        else:
             report["notes"].append(
-                "Image layeree refusee par cette hierarchie (%s). "
-                "Normal en BUiLDER : la sortie est le graphe." % _short(error))
+                "Image layeree refusee par cette hierarchie. Normal en "
+                "BUiLDER : ce sont les Image Node qui produisent les pixels.")
 
         if layered:
             # Le Layer 3D n'est pas un objet a part : ses attributs
@@ -362,6 +385,35 @@ def _assembly(ix, name, ctx, report, made):
 # ---------------------------------------------------------------------------
 
 
+def _written(target, attribute, expected):
+    """La valeur ecrite est-elle effectivement en place ?
+
+    Comparaison indulgente : une reference relue peut etre un chemin absolu
+    la ou l'on a passe un chemin relatif, ou l'inverse. On considere l'ecriture
+    reussie si la valeur relue n'est pas vide et si l'un des deux chemins se
+    termine par l'autre.
+    """
+    attr = target.get_attribute(attribute)
+    if attr is None:
+        return False
+    try:
+        got = str(attr.get_string()).strip()
+    except Exception:
+        return True  # illisible : on ne peut pas conclure, on n'accuse pas
+    want = str(expected).strip()
+    if not want:
+        return True
+    if not got:
+        return False
+    if got == want or got.endswith(want) or want.endswith(got):
+        return True
+    # valeurs numeriques : "1" contre "1.0"
+    try:
+        return abs(float(got) - float(want)) < 1e-6
+    except ValueError:
+        return False
+
+
 def _roots(ix):
     """Racines de hierarchie disponibles (build:/, default:/, ...)."""
     try:
@@ -407,7 +459,10 @@ def _report(ix, report, settings):
     lines.extend("  " + item for item in report["created"])
     if report["wired"]:
         lines.append("")
-        lines.append("Branchements : " + ", ".join(report["wired"]))
+        lines.append("Branchements verifies : " + ", ".join(report["wired"]))
+    if report.get("unverified"):
+        lines.append("Ecrits sans verification possible : "
+                     + ", ".join(report["unverified"]))
     if report.get("notes"):
         lines.append("")
         lines.extend("  " + item for item in report["notes"])
