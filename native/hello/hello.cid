@@ -1,0 +1,9 @@
+class "AddHello" "ProjectItem" {
+    #version 0.1
+    doc "Module temoin de ClarisseAdd : sert uniquement a prouver que la chaine CID -> cmagen -> compilation -> chargement fonctionne."
+
+    string "message" {
+        value "bonjour"
+        doc "Texte sans effet. Sa seule presence prouve que le CID a ete lu."
+    }
+}
