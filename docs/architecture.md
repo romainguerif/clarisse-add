@@ -62,7 +62,7 @@ les kwargs de chaque fonction — d'où des signatures comme
 Ici, `bootstrap.launch` l'enregistre une fois dans `core.compat`, et chaque
 module fait `ix = get_ix()` dans son `run()`. Conséquence utile : les modules
 s'importent **sans Clarisse**, ce qui permet de tester le manifeste, le parser et
-le catalogue avec un `pytest` ordinaire — 186 tests, aucun n'a besoin de
+le catalogue avec un `pytest` ordinaire — 247 tests, aucun n'a besoin de
 l'application.
 
 `get_ix()` lève `ClarisseUnavailable` si personne n'a appelé `set_ix()` : l'appel
