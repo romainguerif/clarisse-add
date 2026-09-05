@@ -64,12 +64,10 @@ def run(payload=None):
             ui.Section("Contexte"),
             ui.Text("name", "Nom", default="scene"),
             ui.Choice("resolution", "Resolution", RESOLUTIONS, default=0),
-            ui.Choice("output", "Sortie",
-                      [("Render Scene + graphe  (BUiLDER)", "render_scene"),
-                       ("Image + Layer 3D  (iFX)", "image")],
-                      default=0,
-                      tooltip="En BUiLDER, c'est le Render Scene qui remplace "
-                              "le Layer 3D et forme un graphe."),
+            ui.Toggle("graph", "Ajouter le graphe Render Scene", default=True,
+                      tooltip="Render Scene, Image Node Render et le process "
+                              "d'ecriture. Demande la saveur BUiLDER. "
+                              "L'image classique est creee dans tous les cas."),
             ui.Section("Contenu"),
             ui.Toggle("props", "Ajouter un sol et une sphere", default=True,
                       tooltip="De quoi voir quelque chose au premier rendu."),
@@ -137,6 +135,10 @@ def _build(ix, name, parent, settings):
     def values(target, attribute, *vals):
         if target is None:
             return False
+        # Un branchement rate journalise toujours les attributs reels de la
+        # cible : c'est le seul moyen de trouver le bon nom sans relancer.
+        # Le conditionner a une case a cocher, c'est perdre l'information au
+        # moment ou l'on en a besoin.
         # `get_attribute` ne resout qu'un nom simple : sur un chemin pointe
         # comme "layer_3d.active_camera" il renvoie toujours None, alors que
         # SetValues, lui, l'accepte. Verifier avant d'ecrire bloquait donc
@@ -144,12 +146,14 @@ def _build(ix, name, parent, settings):
         if "." not in attribute and target.get_attribute(attribute) is None:
             report["failed"].append("%s : pas d'attribut '%s'"
                                     % (target.get_name(), attribute))
+            report["attrs"][target.get_name()] = _attributes(target)
             return False
         try:
             ix.cmds.SetValues([str(target) + "." + attribute], [str(v) for v in vals])
         except Exception as error:
             report["failed"].append("%s.%s : %s"
                                     % (target.get_name(), attribute, _short(error)))
+            report["attrs"][target.get_name()] = _attributes(target)
             return False
         return True
 
@@ -167,7 +171,10 @@ def _build(ix, name, parent, settings):
 
     width, height = (settings["resolution"] or "1920x1080").split("x")
 
-    if settings.get("output") == "image":
+    # L'Image classique est toujours creee : c'est elle qui se rend d'un clic
+    # dans l'Image View, dans les deux saveurs. Le graphe Render Scene vient
+    # en plus, il ne la remplace pas -- les deux lisent le meme contexte.
+    if True:
         image = obj("image", "Image")
         if image is not None:
             values(image, "resolution", width, height)
@@ -184,7 +191,8 @@ def _build(ix, name, parent, settings):
             if renderer is not None and values(image, "layer_3d.renderer", str(renderer)):
                 report["wired"].append("image <- raytracer")
             report["image"] = image
-    else:
+
+    if settings.get("graph"):
         _render_graph(ix, name, ctx, camera, renderer, width, height,
                       report, made, obj, values)
 
@@ -268,18 +276,14 @@ def _render_graph(ix, name, ctx, camera, renderer, width, height,
         report["wired"].append("render <- render_scene")
     report["image"] = image_render
 
-    write = obj("write", "ImageNodeWrite")
-    if write is not None:
-        for candidate in ("input", "image", "input_image"):
-            if write.get_attribute(candidate) is None:
-                continue
-            if values(write, candidate, str(image_render)):
-                report["wired"].append("write <- render  (%s)" % candidate)
-            break
-        else:
-            report["failed"].append("ImageNodeWrite : aucun attribut d'entree "
-                                    "reconnu (liste dans le journal)")
-            report["attrs"]["write"] = _attributes(write)
+    # L'ecriture n'est pas un ImageNode mais un **Process** : la classe
+    # documentee est ProcessImageNodeWrite, et son attribut `input` est un
+    # group filtre sur ImageNode. La classe "ImageNodeWrite" existe aussi et
+    # se cree sans erreur, mais elle n'est documentee nulle part et n'expose
+    # pas les memes attributs -- c'est elle qui echouait.
+    write = obj("write", "ProcessImageNodeWrite")
+    if write is not None and values(write, "input", str(image_render)):
+        report["wired"].append("write <- render")
 
 
 def _assembly(ix, name, ctx, report, made):
@@ -394,15 +398,15 @@ def _report(ix, report, settings):
 
     message = "\n".join(lines)
     if report["image"] is not None:
-        message += ("\n\nLe node de sortie est selectionne : ouvrez l'Image "
-                    "View et lancez le rendu.")
+        message += ("\n\nL'image est selectionnee : ouvrez l'Image View, "
+                    "elle se rend d'un clic.")
 
-    if settings.get("introspect") and report["attrs"]:
+    if report["attrs"]:
         log.debug("--- attributs reels ---")
         for short, attrs in sorted(report["attrs"].items()):
             log.debug("%s : %s" % (short, ", ".join(attrs)))
         from ..core import paths
-        message += "\n\nAttributs detailles dans %s" % paths.log_file()
+        message += "\n\nAttributs des nodes concernes dans %s" % paths.log_file()
 
     ui.message(message, "Scene de depart")
 
