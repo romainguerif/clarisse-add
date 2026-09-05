@@ -129,6 +129,33 @@ _STDLIB_METHODS = frozenset("""
 """.split())
 
 
+#: Racines speciales deplacees entre Clarisse 4 et 5, d'apres la page
+#: "New Special Roots" du SDK.  Un chemin reste sur l'ancienne forme ne produit
+#: pas d'erreur a l'import : il leve un LookupError au moment ou l'outil est
+#: lance, donc au clic, en pleine session.  Deux scripts de la collection
+#: portaient encore `project://default`.
+LEGACY_ROOTS = {
+    "project://default": "default:/",
+    "project://widgets": "widgets:/",
+    "project://tools": "tools:/",
+}
+
+
+def legacy_root_paths():
+    """``{ancienne racine: [emplacements]}`` encore presents dans le code."""
+    found = {}
+    for path in iter_sources():
+        with io.open(path, "r", encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+        relative = os.path.relpath(path, ROOT)
+        for number, line in enumerate(lines, start=1):
+            code = line.split("#", 1)[0]
+            for old in LEGACY_ROOTS:
+                if old in code:
+                    found.setdefault(old, []).append("%s:%d" % (relative, number))
+    return found
+
+
 def sdk_all_members(sdk):
     """Tous les noms de membres documentes, toutes classes confondues."""
     names = set()
@@ -357,6 +384,13 @@ def main(argv=None):
                 print("  INCONNU  ix.%-33s (%s)"
                       % (name, ", ".join(sorted(found["helper"][name]))))
                 problems += 1
+
+    # Racines speciales de Clarisse 4 : bloquant, la correction est mecanique.
+    legacy = legacy_root_paths()
+    for old in sorted(legacy):
+        print("  ANCIEN   %-28s -> %s  (%s)"
+              % (old, LEGACY_ROOTS[old], ", ".join(legacy[old][:3])))
+        problems += 1
 
     # Methodes appelees sur des objets : indicatif, pas bloquant sauf --strict.
     all_members = sdk_all_members(args.sdk)

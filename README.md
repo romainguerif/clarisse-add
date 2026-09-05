@@ -104,7 +104,7 @@ morts.)*
 ## Développement
 
 ```bash
-python -m pytest tests -q        # 241 tests, sans Clarisse
+python -m pytest tests -q        # 247 tests, sans Clarisse
 python tools/check_api.py        # vérifie les noms d'API contre le SDK
 python tools/build_catalog.py    # réindexe assets/presets/
 python tools/build_icons.py      # génère les icônes manquantes (Pillow)
@@ -113,9 +113,12 @@ python tools/build_icons.py      # génère les icônes manquantes (Pillow)
 Clarisse ne se pilote pas hors interface sans licence CNode : impossible donc
 d'exécuter le code de l'addon en dehors de l'application. `check_api.py` comble
 une partie du trou en confrontant chaque `ix.cmds.X` et `ix.api.Y` du code à la
-documentation Doxygen hors ligne — 183 commandes et 1054 classes. Ça ne vérifie
-pas les arguments, mais un nom inexistant est attrapé avant d'arriver dans le
-shelf.
+documentation Doxygen hors ligne — 183 commandes et 1054 classes. Il contrôle
+quatre familles (`ix.cmds`, `ix.api`, `ix.application`, et `ix.*` contre
+`clarisse_helper.py`), signale les racines héritées de Clarisse 4
+(`project://default` → `default:/`), et liste à titre indicatif les méthodes
+appelées sur un objet qu'il ne retrouve nulle part dans le SDK. Ça ne vérifie pas
+les arguments, mais un nom inexistant est attrapé avant d'arriver dans le shelf.
 
 Le bouton **Reload ClarisseAdd** recharge tout le code sans redémarrer Clarisse :
 purge de `sys.modules`, régénération des stubs, réenregistrement des boutons à

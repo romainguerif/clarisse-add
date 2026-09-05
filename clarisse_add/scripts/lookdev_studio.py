@@ -4,9 +4,14 @@
 # "ClarisseAdd" dans le corps du fichier :
 #   1. `print x` (Python 2) supprime : il n'apportait rien et inondait la
 #      console d'une ligne par fichier du dossier de contenus.
-#   2. `item_exists("project://default" + options_name)` -> il manquait le
-#      slash. Sans lui le test echouait toujours et le script recreait son
-#      objet d'options a chaque lancement.
+#   2. `project://default` -> `default:/`. Le contexte par defaut a quitte le
+#      projet en Clarisse 5 pour devenir sa propre racine (voir la page
+#      "New Special Roots" du SDK). L'ancien chemin faisait lever un
+#      LookupError des la creation de l'objet d'options. Au passage, le code
+#      d'origine concatenait sans slash (`"project://default" + nom`), donc le
+#      test d'existence echouait toujours et le script recreait son objet a
+#      chaque lancement ; la nouvelle racine se terminant par `/`, la
+#      concatenation est correcte telle quelle.
 #   3. Le dossier de contenus par defaut peut venir de la variable
 #      d'environnement CLARISSE_ADD_LOOKDEV_CONTENT.
 #   4. `prefs.is_item_exist(...)` -> `prefs.item_exists(...)`. AppPreferences a
@@ -133,14 +138,14 @@ if prefs.item_exists("lookdev_studio", lookdev_studio_path):
         envpath = stored
 
 # check if lookdev studio options object is created in the project
-options = ix.item_exists("project://default/" + options_name)
+options = ix.item_exists("default:/" + options_name)
 if options == None:
     # no options found, we must create it
     ctx = ix.item_exists("project://lookdev_studio")
     if not ctx:
         ctx = ix.create_context("project://lookdev_studio")
     #create options
-    options = ix.create_object(options_name, "ProjectItem", ix.get_item("project://default"))
+    options = ix.create_object(options_name, "ProjectItem", ix.get_item("default:/"))
     # the object is hidden as you need this script to run to make scene edits
     options.set_private(True)
     options.set_static(True)

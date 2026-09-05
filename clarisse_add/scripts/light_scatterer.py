@@ -1,3 +1,11 @@
+# --- Modifie pour ClarisseAdd -------------------------------------------
+# Base sur LightScatterer_With_Properties.py de la collection.
+# Un seul changement : `project://default` -> `default:/`. Le contexte par
+# defaut a quitte le projet en Clarisse 5 pour devenir sa propre racine (voir
+# "New Special Roots" dans le SDK) ; l'ancien chemin fait lever un LookupError
+# a la creation de l'objet d'options.
+# -----------------------------------------------------------------------
+
 ### Light Scatterer ###
 ### Select an abc point cloud and run the script ###
 
@@ -151,12 +159,12 @@ def bakeLight(lightList, myLight):
 # UI Creation and populate -----------------------------
 
 options_name = "LightScattererOptions"
-options = ix.item_exists("project://default" + options_name)
+options = ix.item_exists("default:/" + options_name)  # ClarisseAdd : project://default -> default:/ en Clarisse 5
 typeList = ['LightPhysicalSphere','LightPhysicalCylinder','LightPhysicalPlane','LightPhysicalSpot','LightPhysicalDistant']
 
 if options == None:
 
-    options = ix.create_object(options_name, "ProjectItem", ix.get_item("project://default"))
+    options = ix.create_object(options_name, "ProjectItem", ix.get_item("default:/"))
     options.set_private(True)
     options.set_static(True)
 

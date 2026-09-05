@@ -16,7 +16,6 @@ import os
 import sys
 
 from .core import log, paths
-from .core.compat import set_ix
 
 #: Contrat des modules d'outils : ils exposent ``run(payload=None)``.
 ENTRY_POINT = "run"
@@ -41,6 +40,13 @@ def ensure_paths():
 
 def launch(tool_id, ix_module, payload=None):
     """Execute l'outil ``tool_id``. Ne leve jamais : journalise et signale."""
+    # Import local, volontairement : un `from .core.compat import set_ix` en
+    # tete de fichier figerait la reference sur l'exemplaire de `compat` charge
+    # au premier clic.  Apres un rechargement, `launch` ecrirait alors `_IX`
+    # dans cette copie-la pendant que l'outil, importe a neuf, en lirait une
+    # autre -- et tous les outils tomberaient sur ClarisseUnavailable.
+    from .core.compat import set_ix
+
     set_ix(ix_module)
     ensure_paths()
 
@@ -81,6 +87,8 @@ def run_script_file(filename, ix_module, extra_globals=None):
     module en cache.  On les execute donc comme Clarisse le ferait lui-meme, ce
     qui les rend rejouables et evite d'avoir a les modifier.
     """
+    from .core.compat import set_ix  # voir launch() : resolution paresseuse
+
     set_ix(ix_module)
     ensure_paths()
 
@@ -130,9 +138,15 @@ def reload_addon():
     prefix = "clarisse_add"
     doomed = [name for name in sys.modules
               if name == prefix or name.startswith(prefix + ".")]
-    # On garde `bootstrap` lui-meme : on est en train d'y tourner, et le
-    # recharger sous nos propres pieds laisserait deux copies du module.
-    doomed = [name for name in doomed if name != prefix + ".bootstrap"]
+    # `bootstrap` est purge comme les autres, y compris pendant qu'on y tourne.
+    # Le retirer de sys.modules ne detruit pas le module : la pile d'appel en
+    # garde une reference, la fonction va donc jusqu'au bout normalement, et le
+    # prochain clic en importe un exemplaire neuf depuis le stub.
+    #
+    # L'epargner serait pire : il conserverait des references vers les modules
+    # `core` d'avant la purge, et l'addon se retrouverait avec deux exemplaires
+    # de `core.compat` -- celui ou `launch` ecrit `_IX`, et celui, vierge, que
+    # lisent les outils fraichement importes.
     for name in doomed:
         del sys.modules[name]
     return len(doomed)

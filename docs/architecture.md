@@ -105,8 +105,22 @@ Le bouton **Reload** :
    sans toucher au disque ;
 4. `bootstrap.reload_addon()` — purge `sys.modules` de tout `clarisse_add.*`.
 
-`bootstrap` s'exclut lui-même de la purge : on est en train d'y tourner, et le
-recharger sous ses propres pieds laisserait deux copies du module en mémoire.
+La purge n'épargne **rien**, `bootstrap` compris — y compris pendant qu'on y
+tourne. Le retirer de `sys.modules` ne détruit pas le module : la pile d'appel en
+garde une référence, la fonction va donc jusqu'au bout, et le prochain clic en
+importe un exemplaire neuf depuis le stub.
+
+L'épargner paraissait plus prudent, et c'était l'inverse. `bootstrap` importait
+`set_ix` en tête de fichier : survivant à la purge, il gardait une référence vers
+l'ancien `core.compat`. Au clic suivant, `launch()` écrivait `_IX` dans cette
+copie-là pendant que l'outil, importé à neuf, en lisait une autre, vierge — deux
+exemplaires du même module, l'un où l'on écrit, l'autre où l'on lit. Tous les
+outils tombaient sur `ClarisseUnavailable` après un simple Reload, **y compris le
+bouton Reload lui-même**, ce qui ne laissait que le redémarrage pour s'en sortir.
+
+Deux garde-fous depuis : la purge est totale, et `launch()` résout `set_ix` à
+chaque appel plutôt qu'à l'import. `tests/test_reload.py` rejoue la séquence
+complète — clic, Reload, clic — et échoue si l'un des deux saute.
 
 `register_runtime` renvoie `-1` si `AppShelf` n'est pas exposé sur la version
 installée — le rechargement du code fonctionne quand même, seuls les *nouveaux*
