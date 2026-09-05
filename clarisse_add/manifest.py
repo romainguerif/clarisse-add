@@ -82,6 +82,16 @@ MAIN = [
         "clarisse_add.tools.about",
         CATEGORY_MAIN,
     ),
+    Tool(
+        "main.native",
+        "Charger les modules C++",
+        "Declare les classes natives de ClarisseAdd -- le filtre Bokeh, entre "
+        "autres. Clarisse ne balaye ses modules qu'au demarrage et il n'existe "
+        "aucune variable d'environnement pour lui en indiquer d'autres : sans "
+        "ce bouton, il faudrait relancer avec -module_path.",
+        "clarisse_add.tools.load_native",
+        CATEGORY_MAIN,
+    ),
 ]
 
 # ---------------------------------------------------------------------------
