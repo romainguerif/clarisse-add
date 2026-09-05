@@ -22,6 +22,7 @@ CATEGORY_LOOKDEV = PREFIX + " Look-dev"
 CATEGORY_SCENE = PREFIX + " Scene"
 CATEGORY_BUILD = PREFIX + " Build"
 CATEGORY_PRESETS = PREFIX + " Presets"
+CATEGORY_OPTICS = PREFIX + " Optique"
 CATEGORY_KIT = PREFIX + " Survival Kit"
 
 
@@ -82,15 +83,41 @@ MAIN = [
         "clarisse_add.tools.about",
         CATEGORY_MAIN,
     ),
+]
+
+# ---------------------------------------------------------------------------
+# Optique : les modules C++ de l'addon
+# ---------------------------------------------------------------------------
+
+OPTICS = [
     Tool(
-        "main.native",
+        "optics.camera",
+        "Camera Bokeh",
+        "Cree une camera dont le diaphragme a une forme reelle. La profondeur "
+        "de champ est calculee par le moteur en echantillonnant l'ouverture : "
+        "l'occlusion est juste, aucune carte de profondeur n'est necessaire.",
+        "clarisse_add.tools.optics",
+        CATEGORY_OPTICS,
+        payload="camera",
+    ),
+    Tool(
+        "optics.filter",
+        "Filtre Bokeh",
+        "Pose le filtre Bokeh sur les layers selectionnes. Diaphragme a lames, "
+        "aberrations optiques, et aberration chromatique -- que la camera ne "
+        "peut pas faire, le moteur n'etant pas spectral.",
+        "clarisse_add.tools.optics",
+        CATEGORY_OPTICS,
+        payload="filter",
+    ),
+    Tool(
+        "optics.load",
         "Charger les modules C++",
-        "Declare les classes natives de ClarisseAdd -- le filtre Bokeh, entre "
-        "autres. Clarisse ne balaye ses modules qu'au demarrage et il n'existe "
-        "aucune variable d'environnement pour lui en indiquer d'autres : sans "
-        "ce bouton, il faudrait relancer avec -module_path.",
+        "Declare les classes natives sans relancer Clarisse. Normalement "
+        "inutile -- l'installeur pose un script de demarrage qui s'en charge -- "
+        "mais indispensable apres une recompilation.",
         "clarisse_add.tools.load_native",
-        CATEGORY_MAIN,
+        CATEGORY_OPTICS,
     ),
 ]
 
@@ -359,6 +386,7 @@ def all_tools():
     if _ALL is None:
         tools = []
         tools.extend(MAIN)
+        tools.extend(OPTICS)
         tools.extend(SCATTER)
         tools.extend(LIGHTS)
         tools.extend(LOOKDEV)

@@ -1,0 +1,169 @@
+class "CameraBokeh" "Camera" {
+    ui_name "Camera Bokeh [ClarisseAdd]"
+    #version 0.1
+    category "Camera"
+    doc "Camera perspective dont le diaphragme a une forme reelle. La profondeur de champ est calculee par le moteur en echantillonnant l'ouverture, comme une vraie optique : l'occlusion est correcte, il n'y a ni halo ni carte de profondeur a fournir. La forme de l'ouverture EST la forme du bokeh."
+
+    // Les attributs de perspective sont repris verbatim du CID de
+    // CameraPerspectiveAdvanced, extrait de la documentation de reference.
+    // Heriter directement de cette classe serait plus court, mais cmagen ne
+    // sait pas la resoudre : il deduit le nom de la bibliotheque du nom de la
+    // classe, et CameraPerspectiveAdvanced vit dans cameras.dll.
+
+    attribute_group "camera" {
+        angle "horizontal_field_of_view" {
+            animatable yes
+            numeric_range yes 0.01 179.99
+            ui_range yes 0.01 179.99
+            value 39.5977527090599
+        }
+        angle "vertical_field_of_view" {
+            animatable yes
+            numeric_range yes 0.01 179.99
+            ui_range yes 0.01 179.99
+            value 26.9914665615984
+        }
+        distance "focal_length" {
+            animatable yes
+            numeric_range yes 1e-06 3.402823e+38
+            ui_range yes 0.001 1
+            value 0.05
+        }
+    }
+    attribute_group "camera>film_back" {
+        collapsed yes
+        distance "horizontal_aperture" {
+            animatable yes
+            numeric_range yes 1e-06 3.402823e+38
+            ui_range yes 0.001 1
+            value 0.036
+        }
+        distance "vertical_aperture" {
+            animatable yes
+            numeric_range yes 1e-06 3.402823e+38
+            ui_range yes 0.001 1
+            value 0.024
+        }
+        distance[2] "film_offset" {
+            numeric_range yes -0.1 0.1
+            ui_range yes -0.01 0.01
+            value 0.0 0.0
+        }
+        double "lens_ratio" {
+            numeric_range yes 0.1 10
+            ui_range yes 0.1 10
+            value 1
+        }
+        long "fit_mode" {
+            preset "Horizontal" "0"
+            preset "Vertical" "1"
+            preset "Remap" "2"
+            preset "Fill" "3"
+            value 0
+        }
+        double[4] "overscan" {
+            hidden yes
+            numeric_range yes 0.0 10000
+            ui_range yes 0.0 10000
+            value 1 0.0 0.0 0.0
+        }
+    }
+    attribute_group "camera>depth_of_field" {
+        collapsed yes
+        bool "enable_dof" {
+            animatable yes
+            value no
+        }
+        double "f_stop" {
+            animatable yes
+            numeric_range yes 0.01 1000000
+            ui_range yes 0.01 64
+            read_only yes
+            value 5.6
+        }
+        distance "focus_distance" {
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 1000
+            read_only yes
+            value 5
+        }
+        reference "focus_object" {
+            filter "SceneItem"
+            input "motion_translate"
+            read_only yes
+            value ""
+        }
+    }
+    attribute_group "bokeh" {
+        bool "enable_bokeh" {
+            doc "Applique la forme d'ouverture ci-dessous. Decoche pour retrouver le disque uniforme de la camera standard."
+            value yes
+        }
+        long "blades" {
+            doc "Nombre de lames du diaphragme. A zero, l'ouverture est un disque parfait -- ce que donne un objectif a pleine ouverture. Entre 5 et 9, on retrouve la forme polygonale des optiques diaphragmees."
+            value 0
+            numeric_range yes 0 32
+            ui_range yes 0 12
+            slider yes
+            animatable yes
+        }
+        angle "blade_rotation" {
+            doc "Rotation du diaphragme. Sans effet quand blades vaut zero."
+            value 0.0
+            animatable yes
+        }
+        percentage "blade_curvature" {
+            doc "Courbure des lames. A zero elles sont droites et l'ouverture est un polygone exact. Vers 100% elles bombent et l'ouverture tend vers le disque ; vers -100% elles se creusent et donnent la forme etoilee des optiques anciennes."
+            value 0.0
+            numeric_range yes -1.0 1.0
+            ui_range yes -1.0 1.0
+            slider yes
+            animatable yes
+        }
+        percentage "aperture_softness" {
+            doc "Douceur du bord de l'ouverture. A zero le bord est franc, comme celui d'un diaphragme metallique bien decoupe. En montant, la transition s'etale et les boules perdent leur contour net -- ce que donnent les optiques a lames usees, ou les filtres diffuseurs."
+            value 0.0
+            numeric_range yes 0.0 1.0
+            ui_range yes 0.0 1.0
+            slider yes
+            animatable yes
+        }
+        percentage "anamorphism" {
+            doc "Ovalisation du bokeh. Les optiques anamorphiques etirent les boules de lumiere. Positif : etirement vertical. Negatif : horizontal."
+            value 0.0
+            numeric_range yes -1.0 1.0
+            ui_range yes -1.0 1.0
+            slider yes
+            animatable yes
+        }
+    }
+
+    attribute_group "bokeh>optics" {
+        collapsed yes
+        percentage "optical_vignetting" {
+            doc "Vignettage optique, dit oeil-de-chat. Vers les bords du cadre, le barillet rogne le faisceau et les boules rondes deviennent des amandes orientees tangentiellement. C'est un defaut, et c'est ce qui trahit une vraie optique."
+            value 0.0
+            numeric_range yes 0.0 1.0
+            ui_range yes 0.0 1.0
+            slider yes
+            animatable yes
+        }
+        percentage "spherical_aberration" {
+            doc "Repartition de l'energie dans la boule. A zero elle est uniforme. En positif, l'energie migre vers le bord et donne l'anneau lumineux dit bulle de savon. En negatif elle se concentre au centre, et le bokeh devient doux comme celui des optiques a portrait."
+            value 0.0
+            numeric_range yes -1.0 1.0
+            ui_range yes -1.0 1.0
+            slider yes
+            animatable yes
+        }
+        percentage "aperture_swirl" {
+            doc "Rotation progressive de l'ouverture vers les bords du cadre. C'est ce qui donne le bokeh tourbillonnant des objectifs Petzval, ou les boules semblent tourner autour du centre de l'image."
+            value 0.0
+            numeric_range yes -1.0 1.0
+            ui_range yes -1.0 1.0
+            slider yes
+            animatable yes
+        }
+    }
+}

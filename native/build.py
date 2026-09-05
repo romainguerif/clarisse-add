@@ -34,12 +34,15 @@ VCVARS = (r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
 # est tire des qu'on inclut of_app.h, que le module se serve d'evenements
 # ou non.
 #
+# ix_raytrace : RayGeneratorCameraPerspective, et son crochet
+# set_lens_sample_callback -- le point d'entree de la forme du bokeh.
+#
 # ix_image : ImageCanvas et ImageProxy. Leurs accesseurs sont ecrits inline
 # dans les en-tetes, mais la classe porte __declspec(dllimport) : MSVC va
 # alors chercher le symbole dans la DLL au lieu d'inliner le corps. Tout
 # module qui touche a des pixels en a besoin.
 LIBS = ["ix_module", "ix_of", "ix_dso", "ix_core", "ix_gui", "ix_event",
-        "ix_image"]
+        "ix_image", "ix_raytrace"]
 
 
 def includes():
@@ -83,12 +86,18 @@ def build(module):
 
     print("[1/3] cmagen  (%d cid)" % len(cids))
     for cid in cids:
+        # -search_path : cmagen deduit la bibliotheque du nom de la classe de
+        # base. Camera se resout depuis camera.dll, mais CameraPerspective vit
+        # dans cameras.dll et reste introuvable. Les CID extraits de la doc de
+        # reference (SDK/tools/extract_cid.py) comblent le trou.
         code = run([os.path.join(CLARISSE, "cmagen.exe"), cid,
-                    "-module_path", os.path.join(CLARISSE, "module")], cwd=src)
+                    "-module_path", os.path.join(CLARISSE, "module"),
+                    "-search_path", os.path.join(SDK, "cid")], cwd=src)
         if code:
             sys.exit("cmagen a echoue sur %s" % cid)
 
-    inc = " ".join('/I"%s"' % p for p in includes() + [src])
+    shared = os.path.join(HERE, "common")
+    inc = " ".join('/I"%s"' % p for p in includes() + [shared, src])
     lib = " ".join('"%s"' % os.path.join(SDK, "lib", l + ".lib") for l in LIBS)
     sources = " ".join('"%s"' % os.path.join(src, c) for c in cpps)
     dll = os.path.join(out, module + ".dll")

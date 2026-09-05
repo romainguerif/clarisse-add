@@ -1,4 +1,5 @@
 class "ImageFilterBokeh" "KernelFilter" {
+    ui_name "Bokeh [ClarisseAdd]"
     #version 0.1
     category "ImageFilter"
     doc "Flou de mise au point optique. Contrairement a Defocus Blur, le noyau reproduit un vrai diaphragme -- nombre de lames, courbure, rotation, anamorphisme -- et les hautes lumieres se rassemblent en boules nettes au lieu d'etre etalees. Les defauts d'optique qui font le realisme (vignettage optique, aberration spherique, aberration chromatique) sont exposes en parametres."
@@ -30,6 +31,14 @@ class "ImageFilterBokeh" "KernelFilter" {
             value 0.0
             numeric_range yes -1.0 1.0
             ui_range yes -1.0 1.0
+            slider yes
+            animatable yes
+        }
+        percentage "softness" {
+            doc "Douceur du bord de l'ouverture. A zero le bord est franc, comme celui d'un diaphragme metallique bien decoupe. En montant, la transition s'etale et les boules perdent leur contour net -- ce que donnent les optiques a lames usees, ou les filtres diffuseurs."
+            value 0.0
+            numeric_range yes 0.0 1.0
+            ui_range yes 0.0 1.0
             slider yes
             animatable yes
         }
