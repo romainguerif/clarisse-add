@@ -189,53 +189,23 @@ def _build(ix, name, parent, settings):
 
     width, height = (settings["resolution"] or "1920x1080").split("x")
 
-    # L'Image layeree est une construction de Clarisse iFX. Dans la hierarchie
-    # build elle existe mais **refuse les layers** : "Layer can't be added,
-    # object does not allow it". C'est normal -- en BUiLDER, ce sont les Image
-    # Node qui produisent les pixels, pas une pile de calques. On tente donc
-    # l'Image, et si le layer est refuse on la supprime plutot que de laisser
-    # un objet inerte dans la scene.
-    image = obj("image", "Image")
-    if image is not None:
-        # resolution est read_only tant que resolution_mode reste sur
-        # "Use Project Preferences" (0) ; il faut passer en User-defined (1).
-        values(image, "resolution_mode", "1")
-        values(image, "resolution", width, height)
-        layered = False
-        try:
-            layer = ix.cmds.AddLayer(str(image) + ".layers", "Layer3d")
-        except Exception:
-            layer = None
-        # AddLayer ne leve pas quand la hierarchie refuse le layer : elle
-        # journalise "Layer can't be added" et renvoie None. C'est le retour
-        # qui fait foi.
-        if layer is not None:
-            report["created"].append("image.layers[0]  [Layer3d]")
-            layered = True
-        else:
-            report["notes"].append(
-                "Image layeree refusee par cette hierarchie. Normal en "
-                "BUiLDER : ce sont les Image Node qui produisent les pixels.")
-
-        if layered:
-            # Le Layer 3D n'est pas un objet a part : ses attributs
-            # s'adressent via image.layer_3d. Idiome du Shrink Wrap.
-            if camera is not None and values(image, "layer_3d.active_camera", str(camera)):
-                report["wired"].append("image <- camera")
-            if renderer is not None and values(image, "layer_3d.renderer", str(renderer)):
-                report["wired"].append("image <- raytracer")
-            report["image"] = image
-        else:
-            try:
-                ix.cmds.DeleteItems([str(image)])
-                report["created"] = [c for c in report["created"]
-                                     if not c.startswith("image ")]
-            except Exception:
-                report["notes"].append("Image inutile non supprimee : %s" % str(image))
-
+    # Une seule sortie, choisie par ce qui fonctionne reellement.
+    #
+    # L'Image layeree est une construction de Clarisse iFX : dans la hierarchie
+    # build elle se cree mais **refuse les layers**, et elle refuse aussi d'etre
+    # supprimee -- on ne peut donc pas la creer "pour voir" et faire le menage
+    # apres. En BUiLDER, ce sont les Image Node qui produisent les pixels.
+    #
+    # On tente donc le graphe en premier, et on ne retombe sur l'image layeree
+    # que s'il n'est pas disponible, c'est-a-dire en saveur iFX.
+    graph_ok = False
     if settings.get("graph"):
-        _render_graph(ix, name, ctx, camera, renderer, width, height,
-                      report, made, obj, values)
+        graph_ok = _render_graph(ix, name, ctx, camera, renderer, width, height,
+                                 report, made, obj, values)
+
+    if not graph_ok:
+        _layered_image(ix, ctx, camera, renderer, width, height,
+                       report, obj, values)
 
     # -- de quoi voir quelque chose au premier rendu -----------------------
 
@@ -289,11 +259,10 @@ def _render_graph(ix, name, ctx, camera, renderer, width, height,
     """
     render_scene = obj("render_scene", "RenderScene")
     if render_scene is None:
-        report["failed"].append(
-            "RenderScene indisponible : cette classe demande la saveur "
-            "BUiLDER. Relancez avec le raccourci Clarisse BUiLDER, ou "
-            "choisissez la sortie Image + Layer 3D.")
-        return
+        report["notes"].append(
+            "RenderScene indisponible : saveur iFX. On bascule sur l'image "
+            "layeree, qui est la sortie native de cette saveur.")
+        return False
 
     if values(render_scene, "input", str(ctx)):
         report["wired"].append("render_scene <- %s" % ctx.get_name())
@@ -309,10 +278,10 @@ def _render_graph(ix, name, ctx, camera, renderer, width, height,
 
     image_render = obj("render", "ImageNodeRender")
     if image_render is None:
-        report["failed"].append(
+        report["notes"].append(
             "ImageNodeRender indisponible : la famille ImageNode demande la "
-            "saveur BUiLDER.")
-        return
+            "saveur BUiLDER. On bascule sur l'image layeree.")
+        return False
     if values(image_render, "scene", str(render_scene)):
         report["wired"].append("render <- render_scene")
     report["graph_output"] = image_render
@@ -327,6 +296,45 @@ def _render_graph(ix, name, ctx, camera, renderer, width, height,
     write = obj("write", "ProcessImageNodeWrite")
     if write is not None and values(write, "input", str(image_render)):
         report["wired"].append("write <- render")
+    return True
+
+
+def _layered_image(ix, ctx, camera, renderer, width, height,
+                   report, obj, values):
+    """Sortie de la saveur iFX : une Image et son Layer 3D.
+
+    N'est appelee que si le graphe n'a pas pu etre construit. On ne cree donc
+    jamais une Image que la hierarchie refusera -- ce qui evite d'avoir a la
+    supprimer ensuite, operation que Clarisse refuse egalement.
+    """
+    image = obj("image", "Image")
+    if image is None:
+        return False
+
+    # resolution est read_only tant que resolution_mode reste sur
+    # "Use Project Preferences" (0) ; il faut passer en User-defined (1).
+    values(image, "resolution_mode", "1")
+    values(image, "resolution", width, height)
+
+    try:
+        layer = ix.cmds.AddLayer(str(image) + ".layers", "Layer3d")
+    except Exception:
+        layer = None
+    # AddLayer ne leve pas quand la hierarchie refuse le layer : elle
+    # journalise et renvoie None. C'est le retour qui fait foi.
+    if layer is None:
+        report["failed"].append(
+            "L'Image n'accepte pas de Layer 3D dans cette hierarchie, et le "
+            "graphe n'est pas disponible non plus : aucune sortie creee.")
+        return False
+
+    report["created"].append("image.layers[0]  [Layer3d]")
+    if camera is not None and values(image, "layer_3d.active_camera", str(camera)):
+        report["wired"].append("image <- camera")
+    if renderer is not None and values(image, "layer_3d.renderer", str(renderer)):
+        report["wired"].append("image <- raytracer")
+    report["image"] = image
+    return True
 
 
 def _assembly(ix, name, ctx, report, made):
