@@ -100,6 +100,32 @@ class "ImageFilterBokeh" "KernelFilter" {
             preset "Arriere seulement" "1"
             preset "Avant seulement" "2"
         }
+        double "front_multiplier" {
+            doc "Multiplie le flou de ce qui est DEVANT le plan de nettete, sans toucher a l'arriere-plan. Un premier plan flou se remarque beaucoup plus qu'un arriere-plan flou, et c'est presque toujours lui qu'il faut retenir ou pousser separement."
+            value 1.0
+            numeric_range yes 0.0 10.0
+            ui_range yes 0.0 3.0
+            slider yes
+            animatable yes
+        }
+        double "back_multiplier" {
+            doc "Multiplie le flou de ce qui est DERRIERE le plan de nettete, sans toucher au premier plan. C'est le reglage de separation du sujet et du decor."
+            value 1.0
+            numeric_range yes 0.0 10.0
+            ui_range yes 0.0 3.0
+            slider yes
+            animatable yes
+        }
+    }
+
+    attribute_group "Slices" {
+        long "corrective_slices" {
+            doc "Nombre de tranches de profondeur traitees separement. C'est le reglage qui decide de la qualite des BORDS, pas de la quantite de flou.\n\nA 1, l'image est floutee en une seule passe : le rayon est pris dans la profondeur du pixel d'arrivee, ce qui est rapide mais faux des que deux profondeurs se cotoient. Un premier plan flou garde alors une silhouette dure au lieu de se dissoudre sur le decor, et un sujet net bave sur l'arriere-plan flou qui l'entoure.\n\nA 2, l'avant et l'arriere sont separes. Au-dela, la profondeur est decoupee en autant de tranches, chacune floutee seule a rayon constant puis recomposee de l'arriere vers l'avant : c'est ce qui rend les bords justes, au prix d'un temps de calcul a peu pres proportionnel. 10 est un bon compromis ; monter au-dela ne se voit que sur des degrades de profondeur tres etales."
+            value 10
+            numeric_range yes 1 64
+            ui_range yes 1 24
+            slider yes
+        }
     }
 
     attribute_group "Highlights" {

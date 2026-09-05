@@ -91,6 +91,30 @@ struct DepthSnapshot {
     }
 };
 
+// -- tranches correctives -----------------------------------------------------
+//
+// Une tranche est un intervalle de CoC signee et le rayon CONSTANT qu'on lui
+// applique. Elles sont ordonnees de l'ARRIERE vers l'AVANT, ordre dans lequel
+// elles se recomposent.
+//
+// Pourquoi decouper. Le flou en une passe prend son rayon dans la profondeur
+// du pixel d'ARRIVEE. Or ramasser autour du pixel d'arrivee et epandre depuis
+// le pixel de depart ne donnent le meme resultat que si le rayon est constant.
+// Des qu'il varie, un premier plan flou ne peut plus deborder sur un
+// arriere-plan net : les pixels de l'arriere-plan sont nets, donc recopies
+// tels quels, et ne recoivent rien. La silhouette du premier plan reste dure
+// la ou une vraie optique la dissout, et on ne voit pas au travers de son bord.
+//
+// A rayon constant, ramassage et epandage coincident de nouveau. D'ou le
+// decoupage : chaque tranche est floutee SEULE, a rayon constant, en
+// premultiplie -- couleur et couverture ensemble -- puis recomposee sur les
+// precedentes. Une tranche floue etale aussi sa couverture, donc elle voile
+// progressivement ce qui est derriere elle.
+struct Slice {
+    double lo, hi;   // bornes en CoC signee, hi exclu sauf pour la derniere
+    double coc;      // rayon representatif, en fraction du rayon maximal
+};
+
 class BokehModule : public ModuleKernelFilter {
 public:
     BokehModule() : ModuleKernelFilter(), focus_override(-1.0) {}
@@ -101,6 +125,11 @@ public:
     // camera et interroger deux transformations monde a chaque tuile serait du
     // gaspillage, et filter est multi-thread.
     double focus_override;
+
+    // Decoupage en tranches, bati une fois par evaluation sur l'image ENTIERE.
+    // Des bornes calculees par tuile donneraient des rayons differents de part
+    // et d'autre d'une frontiere de tuile, donc une couture.
+    std::vector<Slice> slices;
 };
 
 // La doc du SDK ecrit ces callbacks avec ModuleObject * ; le vrai typedef dit
@@ -211,6 +240,9 @@ struct Settings {
     double focus_range;
     double blur_falloff;
     int    focus_side;          // 0 les deux, 1 arriere, 2 avant
+    double front_multiplier;    // flou du cote proche seulement
+    double back_multiplier;     // flou du cote lointain seulement
+    int    slices;              // tranches correctives ; 1 = passe unique
     int    image_width;
     int    image_height;
 };
@@ -252,6 +284,11 @@ read_settings(const CtxEval& eval, const CtxKernelFilter& ctx,
     s.focus_range     = cma.get_focus_range();
     s.blur_falloff    = cma.get_blur_falloff();
     s.focus_side      = (int) cma.get_focus_side();
+    s.front_multiplier = cma.get_front_multiplier();
+    s.back_multiplier  = cma.get_back_multiplier();
+    s.slices          = (int) cma.get_corrective_slices();
+    if (s.slices < 1)  s.slices = 1;
+    if (s.slices > 64) s.slices = 64;
 
     // Les dimensions viennent du proxy, qui les connait : ImageProxy expose
     // get_image_width/height. Passer par source_image obligerait a tenir
@@ -629,16 +666,24 @@ find_depth_channel(const ImageMap& map, const CoreString& group)
     return map.get_channel(ImageMap::CHANNEL_Z);
 }
 
-// Fraction du rayon maximal a appliquer pour une valeur de profondeur donnee.
-// Rend 0 dans la zone nette, 1 au-dela de la portee utile.
+// Fraction SIGNEE du rayon maximal a appliquer pour une valeur de profondeur.
+// Negative devant le plan de nettete, positive derriere, nulle dans la zone
+// nette, bornee a l'unite.
 //
 // Ce n'est pas la formule optique du cercle de confusion : celle-ci demande
 // une focale, une ouverture et une taille de capteur, dont un filtre 2D ne
 // dispose pas. C'est le modele artistique, celui de tous les outils de
 // compositing -- un plan de mise au point, une profondeur de zone nette, et
 // une courbe de montee.
-inline double
-circle_of_confusion(const Settings& s, const double& raw)
+//
+// Le SIGNE n'est pas decoratif : c'est lui qui rend la fonction MONOTONE en
+// profondeur. La grandeur non signee est en V -- elle redescend a zero au
+// point de nettete puis remonte -- si bien qu'un premier plan et un
+// arriere-plan y prennent la meme valeur. Trancher la profondeur sur cette
+// grandeur melangerait les deux dans la meme tranche, exactement ce que les
+// tranches doivent separer. Signee, l'ordre des valeurs est l'ordre optique.
+double
+signed_coc(const Settings& s, const double& raw)
 {
     // Zero ne veut pas dire "a distance nulle" mais "aucune geometrie
     // touchee" : le fond d'un rendu. Le traiter comme un objet colle a la
@@ -654,19 +699,120 @@ circle_of_confusion(const Settings& s, const double& raw)
     const double focus = (s.focus_override > 0.0) ? s.focus_override
                                                   : s.focus_distance;
     const double delta = z - focus;
-    if (s.focus_side == 1 && delta <= 0.0) return 0.0;   // arriere seulement
-    if (s.focus_side == 2 && delta >= 0.0) return 0.0;   // avant seulement
+    const bool   front = (delta < 0.0);
+
+    if (s.focus_side == 1 && front)  return 0.0;   // arriere seulement
+    if (s.focus_side == 2 && !front) return 0.0;   // avant seulement
 
     double distance = fabs(delta) - s.focus_range;
-    if (distance <= 0.0) return 0.0;                     // dans la zone nette
+    if (distance <= 0.0) return 0.0;               // dans la zone nette
 
     // La montee se fait sur une seconde fois la profondeur de zone nette :
     // c'est ce qui donne une transition lisible plutot qu'un saut.
+    //
+    // Le repli quand la zone nette est nulle se prend sur la mise au point
+    // EFFECTIVE, objet vise compris : le prendre sur la distance saisie a la
+    // main donnait une portee calculee autour de 10 unites alors que le point
+    // etait fait a 40.
     const double span = (s.focus_range > 1e-6) ? s.focus_range * 2.0
-                                               : (s.focus_distance * 0.25 + 1.0);
+                                               : (focus * 0.25 + 1.0);
     double t = distance / span;
     if (t > 1.0) t = 1.0;
-    return pow(t, s.blur_falloff);
+
+    // Les multiplicateurs par cote. Regler separement l'avant et l'arriere est
+    // le geste le plus courant : un premier plan flou se remarque bien plus
+    // qu'un arriere-plan flou, et on veut souvent le retenir sans toucher au
+    // decor.
+    double coc = pow(t, s.blur_falloff) *
+                 (front ? s.front_multiplier : s.back_multiplier);
+    if (coc > 1.0) coc = 1.0;
+    if (coc < 0.0) coc = 0.0;
+
+    return front ? -coc : coc;
+}
+
+// Fraction non signee, pour la passe unique qui n'a pas besoin de l'ordre.
+inline double
+circle_of_confusion(const Settings& s, const double& raw)
+{
+    const double c = signed_coc(s, raw);
+    return c < 0.0 ? -c : c;
+}
+
+// Construit le decoupage a partir de l'etendue REELLE de la CoC signee dans
+// l'image.
+//
+// Deux exigences se rejoignent ici.
+//
+// D'abord le decoupage doit etre GLOBAL, identique pour toutes les tuiles :
+// des bornes calculees par tuile donneraient des rayons differents de part et
+// d'autre d'une frontiere de tuile, donc une couture visible. D'ou le calcul
+// dans pre_filter, qui voit l'image entiere, et pas dans filter.
+//
+// Ensuite la zone nette a sa propre tranche, de rayon exactement nul. Sans
+// elle, la tranche qui contient le zero prend le rayon de son milieu et floute
+// ce qui doit rester parfaitement net -- sur un sujet net devant un fond
+// lointain, c'est le sujet qui perdrait son piqué.
+void
+build_slices(std::vector<Slice>& slices, const double& smin, const double& smax,
+             const int& requested)
+{
+    slices.clear();
+    const double EPS = 1e-6;
+
+    const bool has_front = (smin < -EPS);
+    const bool has_back  = (smax >  EPS);
+
+    // Rien de flou : une seule tranche nette suffit.
+    if (!has_front && !has_back) {
+        Slice sharp = {-1.0, 1.0, 0.0};
+        slices.push_back(sharp);
+        return;
+    }
+
+    // Une tranche est reservee au net ; les autres se partagent les deux cotes
+    // au prorata de l'etendue que chacun couvre, pour que le pas de rayon soit
+    // le meme partout.
+    int budget = requested - 1;
+    if (budget < 1) budget = 1;
+
+    const double front_span = has_front ? -smin : 0.0;
+    const double back_span  = has_back  ?  smax : 0.0;
+    const double total_span = front_span + back_span;
+
+    int n_front = 0, n_back = 0;
+    if (has_front && has_back) {
+        n_front = (int)(budget * front_span / total_span + 0.5);
+        if (n_front < 1) n_front = 1;
+        if (n_front > budget - 1) n_front = budget - 1;
+        n_back = budget - n_front;
+    } else if (has_front) {
+        n_front = budget;
+    } else {
+        n_back = budget;
+    }
+
+    // De l'arriere vers l'avant : les CoC signees decroissantes.
+    for (int i = n_back - 1; i >= 0; --i) {
+        Slice sl;
+        sl.lo = back_span * i / n_back;
+        sl.hi = (i == n_back - 1) ? (smax + 1.0) : back_span * (i + 1) / n_back;
+        if (i == 0) sl.lo = EPS;   // le net a sa tranche, pas celle-ci
+        sl.coc = back_span * (i + 0.5) / n_back;
+        slices.push_back(sl);
+    }
+
+    Slice sharp = {-EPS, EPS, 0.0};
+    slices.push_back(sharp);
+
+    for (int i = 0; i < n_front; ++i) {
+        Slice sl;
+        sl.hi = -front_span * i / n_front;
+        sl.lo = (i == n_front - 1) ? (smin - 1.0) : -front_span * (i + 1) / n_front;
+        if (i == 0) sl.hi = -EPS;
+        sl.coc = front_span * (i + 0.5) / n_front;
+        slices.push_back(sl);
+    }
 }
 
 // -- sommes prefixees ---------------------------------------------------------
@@ -704,6 +850,214 @@ struct Prefix {
         return row[x1 + 1] - row[x0];
     }
 };
+
+// -- flou d'un plan a rayon constant ------------------------------------------
+
+// Recopie la tuile depuis le plan source, sans flou. C'est le cas de la tranche
+// nette, qui doit rester exactement telle quelle.
+void
+copy_plane(const float *plane, const int& stride, const CtxKernelFilter& ctx,
+           float *dest)
+{
+    const int width  = ctx.region.width;
+    const int height = ctx.region.height;
+    for (int y = 0; y < height; ++y) {
+        const float *row = plane + (size_t)(y + ctx.region.y) * stride + ctx.region.x;
+        float *d = dest + (size_t) y * width;
+        for (int x = 0; x < width; ++x) d[x] = row[x];
+    }
+}
+
+// Convolue un plan de la taille du proxy vers un plan de la taille de la tuile.
+// Le rayon est CONSTANT, ce qui est toute la raison d'etre des tranches :
+// ramassage et epandage ne coincident qu'a rayon constant.
+void
+blur_plane(const float *plane, const int& stride, const int& rows,
+           const CtxKernelFilter& ctx, const Kernel& k,
+           const bool& preserve_exposure, float *dest)
+{
+    const int width  = ctx.region.width;
+    const int height = ctx.region.height;
+
+    // Le vignettage optique DOIT assombrir les coins. Diviser par la somme
+    // locale des poids l'annulerait exactement et ne laisserait que la forme
+    // d'amande : on divise par la somme du noyau NON tronque.
+    const double reference = (preserve_exposure || k.total_unvignetted <= 0.0)
+                             ? k.total : k.total_unvignetted;
+    const double inverse = (reference > 0.0) ? (1.0 / reference) : 0.0;
+
+    Prefix prefix;
+    prefix.build(plane, stride, rows);
+
+    for (int y = 0; y < height; ++y) {
+        const int cy = y + ctx.region.y;
+        for (int x = 0; x < width; ++x) {
+            const int cx = x + ctx.region.x;
+            double sum = 0.0;
+
+            // Convolution, pas correlation : le noyau est retourne.
+            for (size_t i = 0; i < k.runs.size(); ++i) {
+                const Run& run = k.runs[i];
+                const int ry = cy - run.dy;
+                if (ry < 0 || ry >= rows) continue;
+                int x0 = cx - run.x1;
+                int x1 = cx - run.x0;
+                if (x1 < 0 || x0 >= stride) continue;
+                if (x0 < 0) x0 = 0;
+                if (x1 >= stride) x1 = stride - 1;
+                sum += prefix.span(ry, x0, x1);
+            }
+            sum *= k.level_weight;
+
+            for (size_t i = 0; i < k.edge.size(); ++i) {
+                const Tap& tap = k.edge[i];
+                const int ty = cy - tap.dy;
+                const int tx = cx - tap.dx;
+                if (ty < 0 || ty >= rows || tx < 0 || tx >= stride) continue;
+                sum += plane[(size_t)ty * stride + tx] * tap.weight;
+            }
+
+            dest[(size_t) y * width + x] = (float)(sum * inverse);
+        }
+    }
+}
+
+// -- la passe a tranches ------------------------------------------------------
+//
+// Chaque tranche est extraite en premultiplie -- couleur ET couverture --
+// floutee seule a rayon constant, puis reportee sur l'accumulation par un
+// simple "over". La couverture floutee est ce qui rend le bord juste : elle
+// s'etale avec la couleur, donc une tranche floue voile progressivement ce qui
+// est derriere elle au lieu de s'arreter sur sa silhouette d'origine.
+//
+// L'ordre est celui du tableau : de l'arriere vers l'avant.
+bool
+filter_sliced(const Settings& s, const CtxKernelFilter& ctx, const ImageProxy& src,
+              const DepthSnapshot& depth, const std::vector<Slice>& slices,
+              const float *const *channels, float *const *out,
+              const double& frame_x, const double& frame_y,
+              const bool& split, const double *channel_scale)
+{
+    const int stride = (int) src.get_width();
+    const int rows   = (int) src.get_height();
+    const int width  = ctx.region.width;
+    const int height = ctx.region.height;
+    if (stride <= 0 || rows <= 0 || width <= 0 || height <= 0) return true;
+
+    const size_t source_count = (size_t) stride * rows;
+    const size_t dest_count   = (size_t) width * height;
+
+    // La CoC signee de chaque pixel source, calculee une fois. Chaque tranche
+    // n'a plus qu'a comparer deux bornes au lieu de refaire la conversion de
+    // profondeur autant de fois qu'il y a de tranches.
+    std::vector<float> sc(source_count);
+    for (int py = 0; py < rows; ++py) {
+        const int ay = ctx.y0 + py - ctx.region.y;
+        for (int px = 0; px < stride; ++px) {
+            const int ax = ctx.x0 + px - ctx.region.x;
+            sc[(size_t) py * stride + px] = (float) signed_coc(s, depth.at(ax, ay));
+        }
+    }
+
+    // Reprise des hautes lumieres : un facteur par pixel source, applique a la
+    // couleur avant le flou et PAS a la couverture. Une lumiere vive s'etale
+    // donc plus fort sans devenir plus opaque -- c'est ce qui donne des boules
+    // franches. Le critere se prend sur max(r, g, b) et non sur la luminance
+    // ponderee : une lumiere bleue pure a une luma faible et passerait sous le
+    // seuil alors qu'elle est eclatante.
+    const bool boosting = (s.gain != 0.0);
+    std::vector<float> boost;
+    if (boosting) {
+        boost.assign(source_count, 1.0f);
+        const float threshold = (float) s.threshold;
+        const float gain = (float) s.gain;
+        for (size_t i = 0; i < source_count; ++i) {
+            float peak = 0.0f;
+            for (int c = 0; c < 3; ++c)
+                if (channels[c] != 0 && channels[c][i] > peak) peak = channels[c][i];
+            if (peak > threshold) boost[i] = 1.0f + gain * (peak - threshold);
+        }
+    }
+
+    std::vector<float> acc(dest_count * 4, 0.0f);
+    std::vector<float> plane(source_count);
+    std::vector<float> blurred(dest_count);
+    std::vector<float> cover(dest_count);
+
+    for (size_t si = 0; si < slices.size(); ++si) {
+        const Slice& sl = slices[si];
+
+        // Cette tranche touche-t-elle seulement la tuile elargie ? La plupart
+        // n'y sont pas, et le test coute une passe lineaire la ou le flou
+        // couterait un noyau entier par pixel.
+        bool present = false;
+        for (size_t i = 0; i < source_count; ++i) {
+            if (sc[i] >= sl.lo && sc[i] < sl.hi) { present = true; break; }
+        }
+        if (!present) continue;
+
+        Settings scaled = s;
+        scaled.radius = s.radius * sl.coc;
+
+        Kernel kern[3];
+        bool sharp = (scaled.radius < 0.5);
+        if (!sharp) {
+            for (int c = 0; c < 3; ++c) {
+                if (c != 1 && !split) continue;
+                build_kernel(kern[c], scaled, channel_scale[c],
+                             frame_x, frame_y, false);
+            }
+            if (kern[1].total <= 0.0) sharp = true;
+        }
+
+        // La couverture d'abord : c'est elle qui pilote le report, donc elle
+        // doit etre connue avant d'ecrire le moindre canal.
+        for (size_t i = 0; i < source_count; ++i) {
+            if (sc[i] < sl.lo || sc[i] >= sl.hi) { plane[i] = 0.0f; continue; }
+            plane[i] = (channels[3] != 0) ? channels[3][i] : 1.0f;
+        }
+        // La couverture se normalise TOUJOURS sur la somme reelle du noyau,
+        // jamais sur la somme non vignettee. Le vignettage assombrit la
+        // lumiere, il ne perce pas la matiere : une couverture reduite par le
+        // vignettage rendrait chaque tranche partiellement transparente, les
+        // tranches cesseraient de se couvrir et l'image se creuserait.
+        if (sharp) copy_plane(&plane[0], stride, ctx, &cover[0]);
+        else       blur_plane(&plane[0], stride, rows, ctx, kern[1],
+                              true, &cover[0]);
+
+        // Une couverture hors de [0, 1] inverserait le report : le facteur
+        // (1 - couverture) deviendrait negatif.
+        for (size_t i = 0; i < dest_count; ++i) {
+            if (cover[i] < 0.0f) cover[i] = 0.0f;
+            else if (cover[i] > 1.0f) cover[i] = 1.0f;
+        }
+
+        for (int c = 0; c < 4; ++c) {
+            if (channels[c] == 0) continue;
+
+            for (size_t i = 0; i < source_count; ++i) {
+                if (sc[i] < sl.lo || sc[i] >= sl.hi) { plane[i] = 0.0f; continue; }
+                plane[i] = (boosting && c < 3) ? channels[c][i] * boost[i]
+                                               : channels[c][i];
+            }
+            if (sharp) copy_plane(&plane[0], stride, ctx, &blurred[0]);
+            else       blur_plane(&plane[0], stride, rows, ctx,
+                                  kern[(split && c < 3) ? c : 1],
+                                  s.preserve_exposure, &blurred[0]);
+
+            float *dest = &acc[(size_t) c * dest_count];
+            for (size_t i = 0; i < dest_count; ++i)
+                dest[i] = blurred[i] + dest[i] * (1.0f - cover[i]);
+        }
+    }
+
+    for (int c = 0; c < 4; ++c) {
+        if (out[c] == 0 || channels[c] == 0) continue;
+        const float *a = &acc[(size_t) c * dest_count];
+        for (size_t i = 0; i < dest_count; ++i) out[c][i] = a[i];
+    }
+    return true;
+}
 
 } // namespace
 
@@ -746,6 +1100,13 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
 
     // La mise au point sur un objet, resolue une fois par evaluation.
     module->focus_override = focus_distance_from_object(object);
+
+    // Et dans la copie locale, sans quoi tout ce qui suit -- le decoupage en
+    // tranches en particulier -- se calculerait sur la distance saisie a la
+    // main pendant que le rendu, lui, ferait le point sur l'objet. Les bornes
+    // des tranches ne correspondraient plus aux rayons appliques.
+    s.focus_override = module->focus_override;
+
     if (module->focus_override > 0.0)
         LOG_INFO("[Bokeh] mise au point sur l'objet : "
                  << module->focus_override << " unites\n");
@@ -799,6 +1160,41 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
                                  (unsigned int) depth.w, (unsigned int) depth.h,
                                  &depth.data[0]);
 
+    // Redresser la profondeur des pixels de silhouette, en divisant par l'alpha.
+    //
+    // Un pixel de bord anticrenele porte une profondeur MOYENNEE sur ses
+    // echantillons, et les echantillons de fond y comptent pour zero. Le filtre
+    // de pixel ecrit donc `profondeur = couverture x z_geometrie`, et non
+    // z_geometrie. Sur une sphere a 12,7 unites devant un fond vide, un pixel
+    // couvert a moitie rend 6,3 : une profondeur deux fois plus proche que tout
+    // ce que contient la scene. Ces valeurs fantomes se classent parmi les plus
+    // floues, donc s'etalent au maximum et se recomposent en dernier, par-dessus
+    // tout le reste -- un liseré autour de chaque silhouette.
+    //
+    // Mesure sur le banc d'essai : la CoC signee descendait a -0,61 dans une
+    // scene ou rien n'est devant le point de nettete.
+    //
+    // La couverture, c'est l'alpha, ecrit par le meme filtre sur les memes
+    // echantillons. Diviser par lui rend donc z_geometrie EXACTEMENT, et pas
+    // approximativement. Un median 3x3 a ete essaye d'abord et ne suffit pas :
+    // sur une silhouette large de deux pixels, la mediane du voisinage est
+    // encore un melange.
+    //
+    // Un pixel a cheval sur DEUX geometries opaques garde son alpha a 1 et n'est
+    // pas touche : sa profondeur est alors une moyenne de deux valeurs reelles,
+    // donc comprise entre elles, ce qui est inoffensif.
+    ImageMapChannel *alpha_channel = map->get_channel(ImageMap::CHANNEL_A);
+    if (alpha_channel != 0) {
+        std::vector<float> alpha((size_t) depth.w * depth.h);
+        alpha_channel->create_float_buffer(&eval_context, depth.x, depth.y,
+                                           (unsigned int) depth.w,
+                                           (unsigned int) depth.h, &alpha[0]);
+        for (size_t i = 0; i < depth.data.size(); ++i) {
+            const float a = alpha[i];
+            if (a > 1e-4f && a < 0.999f) depth.data[i] /= a;
+        }
+    }
+
     double low = depth.data[0], high = depth.data[0];
     for (size_t i = 1; i < depth.data.size(); ++i) {
         const float v = depth.data[i];
@@ -811,6 +1207,28 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
 
     LOG_INFO("[Bokeh] AOV '" << s.depth_aov << "' : " << depth.w << "x" << depth.h
              << ", etendue " << low << " a " << high << "\n");
+
+    // Le decoupage en tranches, ici et pas dans filter : il doit etre le meme
+    // pour toutes les tuiles, sans quoi deux tuiles voisines appliqueraient des
+    // rayons differents a la meme profondeur et la couture se verrait.
+    //
+    // On mesure l'etendue de la CoC signee sur l'image entiere plutot que de
+    // prendre [-1, 1] par principe : une scene sans premier plan flou
+    // n'occupe que la moitie de cet intervalle, et la moitie des tranches
+    // seraient vides. A etendue mesuree, toutes servent.
+    module->slices.clear();
+    if (s.slices >= 2) {
+        double smin = 0.0, smax = 0.0;
+        for (size_t i = 0; i < depth.data.size(); ++i) {
+            const double c = signed_coc(s, depth.data[i]);
+            if (c < smin) smin = c;
+            if (c > smax) smax = c;
+        }
+        build_slices(module->slices, smin, smax, s.slices);
+        LOG_INFO("[Bokeh] " << (int) module->slices.size()
+                 << " tranche(s) correctives, CoC signee de " << smin
+                 << " a " << smax << "\n");
+    }
 }
 
 bool
@@ -885,6 +1303,17 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     // net : aucun noyau, on recopie la source.
     const BokehModule *module = (const BokehModule *) object.get_module();
     const DepthSnapshot *depth = (module && module->depth.ready) ? &module->depth : 0;
+
+    // Le chemin a tranches, quand il y en a plus d'une. Il est plus cher --
+    // grossierement proportionnel au nombre de tranches -- mais c'est le seul
+    // qui rende les bords justes la ou deux profondeurs se cotoient. La passe
+    // unique ci-dessous reste pour qui prefere la vitesse, et c'est aussi le
+    // repli quand aucune profondeur n'est branchee.
+    if (depth != 0 && module->slices.size() >= 2)
+        return filter_sliced(s, ctx, *src, *depth, module->slices,
+                             channels, out, frame_x, frame_y,
+                             split, channel_scale);
+
     const int steps = depth ? DEPTH_STEPS : 1;
 
     std::vector<Kernel> ladder((size_t) steps * 3);
