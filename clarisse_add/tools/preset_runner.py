@@ -44,8 +44,11 @@ def run(payload=None):
     if target is None:
         return False
 
-    with scene.command_batch("ClarisseAdd - %s" % entry.title):
-        merged = scene.merge_project(entry.path, target)
+    # Pas de batch d'undo autour de la fusion (voir preset_browser), et le
+    # fichier fusionne est la copie ou $PDIR est deja resolu (voir
+    # PresetEntry.prepared_path) : sans elle, les geometries du preset pointent
+    # dans le vide des que la scene courante n'est pas sauvegardee.
+    merged = scene.merge_project(entry.prepared_path(), target)
     if merged is None:
         return False
 
@@ -61,7 +64,7 @@ def run(payload=None):
 
 
 def _edit_parameters(ix, entry, target):
-    """Ouvre la fenetre de reglages generee, puis applique les valeurs."""
+    """Ouvre la fenetre de reglages generee, puis applique ce qui a change."""
     resolved = _resolve_owners(ix, entry, target)
     if not resolved:
         log.warning(
@@ -71,7 +74,7 @@ def _edit_parameters(ix, entry, target):
         )
         return
 
-    fields, bindings = _build_fields(entry, resolved)
+    fields, bindings, defaults = _build_fields(entry, resolved)
     if not fields:
         return
 
@@ -84,25 +87,54 @@ def _edit_parameters(ix, entry, target):
     if values is None:
         return
 
+    # On n'ecrit que ce que l'artiste a modifie.  Reecrire les valeurs par
+    # defaut ne changerait rien a la scene mais relancerait l'evaluation de
+    # toutes les expressions qui en dependent -- pour Wall Maker, une vingtaine
+    # de scatterers -- sans aucun benefice.
+    changed = {key: value for key, value in values.items()
+               if key in bindings and _changed(value, defaults.get(key))}
+    if not changed:
+        log.info("%s : reglages laisses par defaut" % entry.title)
+        return
+
     applied = 0
     with scene.command_batch("ClarisseAdd - %s (reglages)" % entry.title):
-        for key, (obj, attribute_name, component) in bindings.items():
-            if key not in values:
-                continue
+        for key, value in changed.items():
+            obj, attribute_name, component = bindings[key]
             if component is None:
-                if scene.set_attribute(obj, attribute_name, values[key]):
+                if scene.set_attribute(obj, attribute_name, value):
                     applied += 1
-            else:
-                # Attribut multi-composantes : on ecrit composante par
-                # composante pour ne pas ecraser celles que l'artiste n'a
-                # pas touchees dans le formulaire.
-                target_path = "%s.%s[%d]" % (str(obj), attribute_name, component)
-                try:
-                    ix.cmds.SetValues([target_path], [str(values[key])])
-                    applied += 1
-                except Exception:
-                    log.exception("Ecriture de %s" % target_path)
-    log.info("%s : %d reglages appliques" % (entry.title, applied))
+                continue
+            # Attribut multi-composantes : on ecrit composante par composante
+            # pour ne pas ecraser celles que l'artiste n'a pas touchees.
+            target_path = "%s.%s[%d]" % (str(obj), attribute_name, component)
+            try:
+                ix.cmds.SetValues([target_path], [_serialize(value)])
+                applied += 1
+            except Exception:
+                log.exception("Ecriture de %s" % target_path)
+    log.info("%s : %d reglage(s) applique(s) sur %d" % (entry.title, applied, len(values)))
+
+
+def _changed(value, default):
+    """``True`` si ``value`` differe reellement de la valeur par defaut."""
+    if default is None:
+        return True
+    if isinstance(value, bool) or isinstance(default, bool):
+        return bool(value) != bool(default)
+    if isinstance(value, (int, float)) and isinstance(default, (int, float)):
+        return abs(float(value) - float(default)) > 1e-9
+    return str(value) != str(default)
+
+
+def _serialize(value):
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, float) and value.is_integer():
+        # "58.0" sur un long[2] passe, mais "58" est ce que Clarisse ecrit
+        # lui-meme : on ne lui donne pas l'occasion d'arrondir.
+        return str(int(value))
+    return str(value)
 
 
 def _resolve_owners(ix, entry, target):
@@ -154,10 +186,12 @@ def _index_by_name(ctx):
 def _build_fields(entry, resolved):
     """Traduit les parametres declares en champs de formulaire.
 
-    Renvoie ``(champs, {cle: (objet, attribut, composante)})``.
+    Renvoie ``(champs, {cle: (objet, attribut, composante)}, {cle: defaut})``.
+    Les defauts servent a n'ecrire ensuite que ce qui a change.
     """
     fields = []
     bindings = {}
+    defaults = {}
     current_section = None
 
     for (owner, group), parameters in entry.parameter_groups:
@@ -183,6 +217,7 @@ def _build_fields(entry, resolved):
                 fields.append(ui.Choice(key_base, parameter.label, labels,
                                         default=index, tooltip=parameter.doc))
                 bindings[key_base] = (obj, parameter.name, None)
+                defaults[key_base] = labels[index][1] if labels else default
                 continue
 
             if isinstance(default, list):
@@ -190,40 +225,47 @@ def _build_fields(entry, resolved):
                 # par composante, sinon l'artiste ne peut rien regler.
                 for component, value in enumerate(default):
                     key = "%s[%d]" % (key_base, component)
+                    number = _as_float(value)
                     fields.append(ui.Number(
                         key,
                         "%s [%d]" % (parameter.label, component),
-                        default=_as_float(value),
+                        default=number,
                         minimum=parameter.minimum,
                         maximum=parameter.maximum,
                         integer=parameter.is_integer,
                         tooltip=parameter.doc,
                     ))
                     bindings[key] = (obj, parameter.name, component)
+                    defaults[key] = int(number) if parameter.is_integer else number
                 continue
 
             if parameter.is_numeric:
+                number = _as_float(default)
                 fields.append(ui.Number(
                     key_base, parameter.label,
-                    default=_as_float(default),
+                    default=number,
                     minimum=parameter.minimum,
                     maximum=parameter.maximum,
                     integer=parameter.is_integer,
                     tooltip=parameter.doc,
                 ))
-            elif parameter.type == "bool":
+                defaults[key_base] = int(number) if parameter.is_integer else number
+            elif parameter.base_type == "bool":
                 fields.append(ui.Toggle(key_base, parameter.label,
                                         default=bool(default), tooltip=parameter.doc))
-            elif parameter.type in ("filename_open", "filename_save", "filename"):
+                defaults[key_base] = bool(default)
+            elif parameter.base_type in ("filename_open", "filename_save", "filename"):
                 fields.append(ui.FilePath(key_base, parameter.label,
                                           default=default or "", tooltip=parameter.doc))
+                defaults[key_base] = default or ""
             else:
+                text = default if default is not None else ""
                 fields.append(ui.Text(key_base, parameter.label,
-                                      default=default if default is not None else "",
-                                      tooltip=parameter.doc))
+                                      default=text, tooltip=parameter.doc))
+                defaults[key_base] = text
             bindings[key_base] = (obj, parameter.name, None)
 
-    return fields, bindings
+    return fields, bindings, defaults
 
 
 def _as_float(value):

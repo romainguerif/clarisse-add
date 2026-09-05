@@ -271,6 +271,11 @@ def merge_project(filename, target_context=None):
     try:
         ix.set_current_context(str(target))
         ix.cmds.MergeProject([filename])
+        # Laisser la scene digerer la fusion avant que l'appelant ne touche aux
+        # objets crees : les chargements de geometrie sont asynchrones, et
+        # interroger des objets en cours d'evaluation est le genre de chose qui
+        # se termine en violation d'acces plutot qu'en exception Python.
+        ix.application.check_for_events()
     except Exception:
         log.exception("Echec du merge de %s" % os.path.basename(filename))
         return None
@@ -298,6 +303,7 @@ def import_project(filename, target_context=None, as_root=False):
     try:
         ix.set_current_context(str(target))
         ix.cmds.ImportProject([filename], as_root)
+        ix.application.check_for_events()
     except Exception:
         log.exception("Echec de l'import de %s" % os.path.basename(filename))
         return None

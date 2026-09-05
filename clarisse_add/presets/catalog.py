@@ -16,6 +16,10 @@ import json
 import os
 
 from ..core import paths
+from ..core.project_file import FLOAT_TYPES, INT_TYPES, base_type_of
+
+#: Variable de chemin de Clarisse designant le dossier du projet *courant*.
+PDIR_TOKEN = b"$PDIR"
 
 _CATALOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "catalog.json")
 _CACHE = None
@@ -50,12 +54,16 @@ class Parameter(object):
         return name.replace("_", " ").strip().capitalize()
 
     @property
+    def base_type(self):
+        return base_type_of(self.type)
+
+    @property
     def is_numeric(self):
-        return self.type in ("double", "float", "long", "int")
+        return self.base_type in FLOAT_TYPES or self.base_type in INT_TYPES
 
     @property
     def is_integer(self):
-        return self.type in ("long", "int")
+        return self.base_type in INT_TYPES
 
 
 class PresetEntry(object):
@@ -85,6 +93,48 @@ class PresetEntry(object):
 
     def exists(self):
         return os.path.isfile(self.path)
+
+    @property
+    def directory_path(self):
+        """Dossier absolu du preset, en slashs avant."""
+        return paths.normalize(os.path.dirname(self.path))
+
+    def uses_pdir(self):
+        """``True`` si le fichier reference ``$PDIR``."""
+        if not self.exists():
+            return False
+        with open(self.path, "rb") as handle:
+            return PDIR_TOKEN in handle.read()
+
+    def prepared_path(self):
+        """Chemin du fichier a fusionner, ``$PDIR`` deja resolu.
+
+        ``$PDIR`` designe le dossier du projet **courant** de Clarisse, pas celui
+        du fichier ou il est ecrit.  Ouvrir ``Wall_Maker.project`` directement
+        resout donc ``$PDIR/geo/Bricks/Brick_Flat.obj`` correctement ; le
+        fusionner dans une scene non sauvegardee donne ``/geo/Bricks/...``, et
+        le mur se construit avec des briques vides.  C'est exactement ce qui
+        s'est produit au premier essai.
+
+        On ecrit donc une copie du fichier avec ``$PDIR`` remplace par le dossier
+        absolu du preset, dans ``.cache/presets/`` a la racine de l'addon, et
+        c'est elle qu'on fusionne.  Le remplacement se fait en octets pour ne
+        toucher ni a l'encodage ni aux fins de ligne du fichier d'origine.
+        Toujours reecrite : quelques centaines de kilo-octets, contre le risque
+        d'un cache perime.
+        """
+        if not self.uses_pdir():
+            return self.path
+        cache_dir = os.path.join(paths.ADDON_ROOT, ".cache", "presets")
+        if not os.path.isdir(cache_dir):
+            os.makedirs(cache_dir)
+        target = os.path.join(cache_dir, "%s.project" % self.id)
+        with open(self.path, "rb") as handle:
+            data = handle.read()
+        data = data.replace(PDIR_TOKEN, self.directory_path.encode("utf-8"))
+        with open(target, "wb") as handle:
+            handle.write(data)
+        return paths.normalize(target)
 
     @property
     def parameter_groups(self):

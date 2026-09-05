@@ -255,6 +255,20 @@ class ProjectNode(object):
         )
 
 
+#: Types Clarisse a valeur flottante.  ``distance``, ``angle``, ``percentage``
+#: sont des doubles qui portent une unite d'affichage ; les traiter comme du
+#: texte, comme le faisait la premiere version, privait Wall Maker de tous ses
+#: reglages numeriques (``Brick_Size`` est un ``distance[3]``).
+FLOAT_TYPES = ("double", "float", "distance", "angle", "percentage", "scale",
+               "frequency", "time", "watt")
+INT_TYPES = ("long", "int", "memsize", "frame")
+
+
+def base_type_of(type_name):
+    """Type sans son arite : ``distance[3]`` -> ``distance``, ``long[2]`` -> ``long``."""
+    return str(type_name).split("[", 1)[0]
+
+
 class CustomAttribute(object):
     """Un attribut custom declare sur un objet du ``.project``.
 
@@ -311,26 +325,38 @@ class CustomAttribute(object):
         )
 
     @property
+    def base_type(self):
+        return base_type_of(self.type)
+
+    @property
     def is_numeric(self):
-        return self.type in ("double", "long", "float", "int")
+        return self.base_type in FLOAT_TYPES or self.base_type in INT_TYPES
+
+    @property
+    def is_integer(self):
+        return self.base_type in INT_TYPES
 
     def default(self):
-        """Valeur par defaut, convertie selon le type quand c'est possible."""
+        """Valeur par defaut, convertie selon le type quand c'est possible.
+
+        Un attribut a plusieurs composantes (``distance[3]``, ``long[2]``)
+        renvoie une liste ; un scalaire renvoie la valeur nue.
+        """
         if not self.values:
             return None
-        if self.type in ("double", "float"):
-            try:
-                return [float(v) for v in self.values] if len(self.values) > 1 else float(self.values[0])
-            except ValueError:
-                return self.values[0]
-        if self.type in ("long", "int"):
-            try:
-                return int(float(self.values[0]))
-            except ValueError:
-                return self.values[0]
-        if self.type == "bool":
+        base = self.base_type
+        if base in FLOAT_TYPES or base in INT_TYPES:
+            converted = []
+            for raw in self.values:
+                try:
+                    number = float(raw)
+                except ValueError:
+                    return self.values[0] if len(self.values) == 1 else list(self.values)
+                converted.append(int(number) if base in INT_TYPES else number)
+            return converted if len(converted) > 1 else converted[0]
+        if base == "bool":
             return str(self.values[0]).lower() in ("yes", "true", "1")
-        return self.values[0] if len(self.values) == 1 else self.values
+        return self.values[0] if len(self.values) == 1 else list(self.values)
 
     def __repr__(self):  # pragma: no cover - debug only
         return "<CustomAttribute %s %s=%r>" % (self.type, self.name, self.default())

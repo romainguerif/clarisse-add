@@ -227,8 +227,10 @@ class Browser(object):
             preset_runner.run(entry.id)
         else:
             from ..core import scene
-            with scene.command_batch("ClarisseAdd - %s" % entry.title):
-                scene.merge_project(entry.path, scene.current_context())
+            # Pas de batch d'undo autour d'une fusion : elle cree des dizaines
+            # d'objets et lance des chargements asynchrones, l'historique n'a
+            # pas a en garder la trace. Supprimer le contexte suffit a defaire.
+            scene.merge_project(entry.prepared_path(), scene.current_context())
 
 
 # ---------------------------------------------------------------------------

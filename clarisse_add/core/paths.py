@@ -148,7 +148,17 @@ def clarisse_env_file(version):
 
 
 def log_file():
-    """Fichier de log de l'addon, a cote de la configuration Clarisse."""
+    """Fichier de log de l'addon, a cote de la configuration Clarisse.
+
+    ``CLARISSE_ADD_LOG`` permet de le rediriger -- la suite de tests s'en sert
+    pour ne pas ecrire dans le vrai journal de l'utilisateur.  Une variable
+    d'environnement plutot qu'un monkeypatch, parce que les tests de
+    rechargement purgent les modules de l'addon : un attribut patche sur un
+    module disparu ne protege plus rien.
+    """
+    override = os.environ.get("CLARISSE_ADD_LOG")
+    if override:
+        return override
     root = user_config_root()
     if root and os.path.isdir(root):
         return os.path.join(root, "clarisse_add.log")

@@ -16,6 +16,9 @@ __pycache__/
 # Journal de l'addon
 clarisse_add.log
 
+# Copies de presets avec $PDIR resolu, regenerees a chaque fusion
+.cache/
+
 # Systeme
 Thumbs.db
 .DS_Store

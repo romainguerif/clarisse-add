@@ -618,9 +618,9 @@
           "group": "input",
           "doc": "start_offset",
           "default": [
-            "0.5",
-            "0.0",
-            "0.0"
+            0.5,
+            0.0,
+            0.0
           ],
           "minimum": null,
           "maximum": null,
@@ -704,9 +704,9 @@
           "group": "input",
           "doc": "start_offset",
           "default": [
-            "0.0",
-            "0.0",
-            "0.0"
+            0.0,
+            0.0,
+            0.0
           ],
           "minimum": null,
           "maximum": null,
@@ -790,9 +790,9 @@
           "group": "input",
           "doc": "start_offset",
           "default": [
-            "0.0",
-            "0.0",
-            "0.0"
+            0.0,
+            0.0,
+            0.0
           ],
           "minimum": null,
           "maximum": null,
@@ -909,9 +909,9 @@
           "group": "input",
           "doc": "start_offset",
           "default": [
-            "2.5",
-            "2",
-            "0.0"
+            2.5,
+            2.0,
+            0.0
           ],
           "minimum": null,
           "maximum": null,
@@ -1126,9 +1126,9 @@
           "group": "input",
           "doc": "p",
           "default": [
-            "0.0",
-            "0.0",
-            "0.0"
+            0.0,
+            0.0,
+            0.0
           ],
           "minimum": null,
           "maximum": null,
@@ -1141,9 +1141,9 @@
           "group": "input",
           "doc": "Scale",
           "default": [
-            "-23.5",
-            "-67.5",
-            "5"
+            -23.5,
+            -67.5,
+            5.0
           ],
           "minimum": null,
           "maximum": null,
@@ -1202,9 +1202,9 @@
           "group": "input",
           "doc": "Pos",
           "default": [
-            "0.0",
-            "0.0",
-            "0.0"
+            0.0,
+            0.0,
+            0.0
           ],
           "minimum": null,
           "maximum": null,
@@ -1259,9 +1259,9 @@
           "group": "input",
           "doc": "Pos",
           "default": [
-            "0.0",
-            "0.0",
-            "0.0"
+            0.0,
+            0.0,
+            0.0
           ],
           "minimum": null,
           "maximum": null,
@@ -1349,9 +1349,9 @@
           "group": "input",
           "doc": "Vector",
           "default": [
-            "0.0",
-            "0.0",
-            "0.0"
+            0.0,
+            0.0,
+            0.0
           ],
           "minimum": null,
           "maximum": null,
@@ -1699,9 +1699,9 @@
           "group": "",
           "doc": "",
           "default": [
-            "2.04",
-            "0.66",
-            "1"
+            2.04,
+            0.66,
+            1.0
           ],
           "minimum": null,
           "maximum": null,
@@ -1714,8 +1714,8 @@
           "group": "",
           "doc": "",
           "default": [
-            "58",
-            "20"
+            58,
+            20
           ],
           "minimum": null,
           "maximum": null,
@@ -1728,8 +1728,8 @@
           "group": "",
           "doc": "",
           "default": [
-            "0.0",
-            "0.0"
+            0.0,
+            0.0
           ],
           "minimum": null,
           "maximum": null,
