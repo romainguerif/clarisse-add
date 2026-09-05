@@ -115,6 +115,29 @@ déplace donc sa décale comme il déplace n'importe quel objet, il la voit, et 
 suit l'animation. C'est aussi ce que font les presets existants — autant garder
 le geste que tu connais déjà et supprimer seulement le câblage.
 
+Et le Scope porte déjà **exactement** les réglages qu'il faut. Relevé dans un
+preset :
+
+```
+Scope {
+    translate ...   rotate ...   scale 0.864  0.345  0.032
+    shape 0            # boite / autre forme
+    falloff 0.0        # attenuation vers le bord du volume
+    falloff_exponent 2.835
+    inside_out no
+}
+```
+
+Sa transformation définit donc le volume à elle seule : ramener la position du
+point ombré dans l'espace local du Scope donne des coordonnées bornées à
+[−1, 1], d'où l'UV se tire directement, et `|z| > 1` fait sortir du volume.
+L'épaisseur en Z du Scope **est** la portée de la décale (0,032 dans le preset :
+une dalle mince). Le `falloff` et l'`inside_out` du Scope se réutilisent tels
+quels.
+
+Conséquence : la node n'a besoin d'aucun réglage de placement propre. Elle lit
+le projecteur, et tout le reste se manipule dans le viewport.
+
 **Entrées**
 
 | Attribut | Type | Rôle |
@@ -129,15 +152,12 @@ prémultiplié, avec son alpha de couverture. S'il est branché, elle rend le
 composite. Une chaîne de dix décales, c'est dix nodes en série — **et le plafond
 de six couches du `MaterialPhysicalMultiblend` disparaît.**
 
-**Projection**
+**Projection** — volontairement maigre, puisque le Scope porte le placement
 
 | Attribut | Défaut | Rôle |
 |---|---|---|
-| `projection_type` | Parallèle | Parallèle (boîte) ou Conique (depuis une caméra) |
-| `use_projector_shape` | oui | prendre les dimensions du Scope au lieu des réglages ci-dessous |
-| `size` | 1, 1 | largeur et hauteur, en unités du projecteur |
-| `depth_range` | 0, 1 | jusqu'où la décale porte le long de l'axe |
-| `offset`, `scale`, `rotation` | | placement 2D dans la projection |
+| `projection_type` | Parallèle | Parallèle (le volume du Scope) ou Conique (depuis une caméra) |
+| `uv_offset`, `uv_scale`, `uv_rotation` | | recadrage de l'image **dans** la projection, sans toucher au Scope |
 | `tile_mode` | Aucun | Aucun (découpe) / Répéter / Miroir |
 
 **Atténuations** — c'est ce qui sépare une décale correcte d'une décale qui bave
@@ -146,7 +166,8 @@ de six couches du `MaterialPhysicalMultiblend` disparaît.**
 |---|---|---|
 | `normal_angle` | 85° | rejeter les surfaces dont la normale s'écarte trop de l'axe |
 | `normal_softness` | 0.2 | douceur de ce rejet |
-| `edge_falloff` | 0.05 | adoucir le bord de la décale elle-même |
+| `use_scope_falloff` | oui | reprendre le `falloff` et le `falloff_exponent` du Scope |
+| `edge_falloff` | 0.05 | sinon, adoucir le bord soi-même |
 | `depth_falloff` | 0 | fondu le long de l'axe de projection |
 
 Le test de normale est le point important : sans lui, la décale se plaque
@@ -223,7 +244,72 @@ suivante.
 
 ---
 
-## 4. La question qui décide de tout
+## 4. Les gestes, avant les paramètres
+
+Un tableau d'attributs ne dit pas si un outil est agréable. Ce qui suit décrit
+ce que l'artiste **fait**, pas ce qu'il règle.
+
+### Poser une décale
+
+Aujourd'hui : fusionner un preset, retrouver le Scope, le déplacer, câbler cinq
+nodes, et recommencer pour la deuxième décale — en sachant qu'à la septième le
+matériau en couches sature.
+
+Visé :
+
+1. sélectionner l'objet, cliquer **Décale** ;
+2. un `Scope` apparaît devant la caméra avec sa boîte manipulable, et la node
+   est déjà branchée sur le matériau ;
+3. déplacer le Scope, la décale suit — c'est le même geste que déplacer
+   n'importe quel objet, et ça s'anime ;
+4. choisir l'image dans la node ;
+5. pour la suivante, recliquer : la nouvelle node se **chaîne** sur la
+   précédente au lieu de consommer une couche de matériau.
+
+Le point qui décide de l'ergonomie est le 3 : on manipule un objet visible dans
+le viewport, pas un jeu de coordonnées dans un éditeur d'attributs.
+
+### Baker
+
+1. sélectionner la géométrie, cliquer **Baker UV** ;
+2. l'outil monte le Layer 3D, désigne le slot d'UV, la plage UDIM, la
+   résolution ;
+3. régler ce qu'on veut baker, et lancer ;
+4. les fichiers sortent nommés selon la convention UDIM, îlots dilatés.
+
+Rien d'interactif : c'est une opération, pas un mode. D'où le choix d'un bouton
+de shelf plutôt qu'une node avec un bouton `action` — sauf si on veut pouvoir
+rejouer le bake d'un clic, auquel cas la node se justifie. **À trancher.**
+
+### Peindre
+
+1. sélectionner l'objet, cliquer **Peinture** ;
+2. une node `TexturePaint` est créée et assignée, et l'outil s'active ;
+3. le curseur affiche un disque **projeté sur la surface** — donc déformé par
+   la perspective et par la courbure, ce qui est la seule façon de savoir où on
+   peint réellement ;
+4. peindre. La pression du stylet pilote la taille ou l'opacité, au choix ;
+5. `[` et `]` changent le rayon, comme partout ailleurs ;
+6. sauvegarder — explicitement, par un bouton, pas automatiquement.
+
+Trois décisions à prendre, et elles comptent plus que les paramètres :
+
+- **Le rayon est-il en pixels d'écran ou en unités de scène ?** En pixels
+  d'écran, la brosse garde sa taille apparente quand on zoome — c'est ce que
+  font les logiciels 2D, et c'est ce qu'on attend. En unités de scène, elle
+  garde sa taille sur l'objet. Les deux se défendent ; le plus sûr est de
+  proposer les deux, avec écran par défaut.
+- **Que se passe-t-il au bord d'un îlot d'UV ?** Un coup de brosse à cheval sur
+  une couture doit peindre les deux côtés, sinon la couture apparaît. Ça veut
+  dire écrire aussi dans les texels voisins en espace UV, pas seulement sous le
+  curseur. C'est le détail qui sépare un outil utilisable d'une démo.
+- **Quand sauvegarde-t-on ?** Une sauvegarde automatique à chaque trait rend
+  l'outil lent et remplit le disque ; aucune sauvegarde fait perdre le travail.
+  Un bouton explicite plus un avertissement à la fermeture.
+
+---
+
+## 5. La question qui décide de tout
 
 **Est-ce qu'un rayon lancé depuis l'outil rend les coordonnées UV du point
 touché, ou seulement sa position 3D ?**
@@ -248,6 +334,27 @@ Les deux valent le coup d'être construits. Ils n'ont simplement pas la même
 promesse, et il serait malhonnête de t'annoncer le premier avant d'avoir la
 réponse.
 
+### Ce que devient l'outil dans chacune des deux issues
+
+|  | **Avec UV** | **Sans UV** |
+|---|---|---|
+| Le tampon | une texture par tuile UDIM | un nuage de points, ou un attribut par sommet |
+| La sauvegarde | des `.exr` / `.tif` réutilisables partout | un cache propriétaire, ou un point cloud |
+| La résolution | choisie, indépendante du maillage | limitée par la densité de points ou de sommets |
+| La lecture au shading | échantillonnage aux UV, trivial | recherche du plus proche voisin, plus coûteuse |
+| Ce qu'on peut en faire | retoucher dans Photoshop, exporter, réutiliser | rester dans Clarisse |
+| Ce que ça vaut face à l'existant | un vrai outil de peinture | ton système à particules, en beaucoup mieux |
+
+Dans le second cas, l'outil garde tout ce qui fait la différence au quotidien —
+brosse projetée sur la surface, pression du stylet, symétrie, modes de fusion,
+annulation — et perd seulement le fichier de sortie. C'est déjà un gain net sur
+le contournement actuel, mais ce n'est pas la même chose et il faut le dire.
+
+Une troisième voie existe si la seconde s'impose et déçoit : **peindre dans une
+vue 2D de la dépliure UV** plutôt que sur le modèle. Là, la conversion
+souris → texel est directe et la question disparaît. C'est moins agréable —
+on perd le geste sur l'objet — mais c'est un repli garanti.
+
 Ce qui reste à établir en même temps, et qui est moins critique :
 
 - Le confort interactif. Le viewport de Clarisse re-shade de façon progressive ;
@@ -259,7 +366,66 @@ Ce qui reste à établir en même temps, et qui est moins critique :
 
 ---
 
-## 5. Ordre de travail proposé
+## 6. Où ça se range, sous quel nom
+
+### Les noms
+
+On garde la convention des trois nodes d'optique : **le suffixe
+`[ClarisseAdd]` dans le `ui_name`**. Ce n'était pas une coquetterie — sans lui,
+devant une liste de nodes, on ne sait plus si le flou qu'on règle est celui de
+Clarisse ou le nôtre. Le problème sera pire ici, puisque nos nodes vivront à
+côté des textures natives dans le même menu.
+
+| Classe | `ui_name` | Base | Où elle apparaît |
+|---|---|---|---|
+| `TextureDecal` | Decal [ClarisseAdd] | `Texture` | menu de création de textures, node graph matériau |
+| `TexturePaint` | Paint Layer [ClarisseAdd] | `Texture` | idem |
+| `ToolPaint` | Paint [ClarisseAdd] | `Tool` | à déterminer — voir plus bas |
+
+Les noms des classes suivent la convention de Clarisse : préfixe de famille
+puis rôle (`TextureMapFile`, `TextureGradient` → `TextureDecal`). Ça les range
+correctement dans les listes triées et ça évite les collisions.
+
+### Le `category` du CID
+
+C'est lui qui décide dans quel sous-menu la node apparaît. Les trois nodes
+d'optique déclarent `category "ImageFilter"` et `category "Camera"`, et
+apparaissent au bon endroit. Pour une texture, la valeur exacte à employer est
+**à confirmer** — la vérification en cours doit rendre la liste des chaînes
+réellement utilisées par les textures livrées.
+
+Deux options se présenteront :
+
+- **une catégorie existante** (`Texture` ou une de ses sous-catégories) : nos
+  nodes se mêlent aux natives, faciles à trouver par ordre alphabétique, et le
+  suffixe `[ClarisseAdd]` fait le reste ;
+- **une catégorie propre** : un sous-menu à nous, plus visible, mais qui oblige
+  à savoir qu'il existe.
+
+Recommandation : **catégorie existante**. Une décale se cherche là où on
+cherche une texture, pas dans un tiroir séparé.
+
+### Les boutons de shelf
+
+Le shelf compte aujourd'hui neuf catégories `ClarisseAdd*` et 48 boutons. On en
+ajoute une : **`ClarisseAdd Texturing`**.
+
+| Bouton | Ce qu'il fait |
+|---|---|
+| Décale | crée un `Scope` + un `TextureDecal` déjà câblés, et branche le tout sur le matériau sélectionné |
+| Baker UV | monte le Layer 3D de bake sur la sélection, avec des réglages sains |
+| Peinture | crée un `TexturePaint`, l'assigne, et entre dans l'outil |
+
+Le point important est le **premier** : un bouton qui crée le Scope *et* la
+node *et* les câble supprime l'essentiel de la corvée actuelle. La node seule
+laisserait encore trois branchements à faire à la main.
+
+À prévoir : `assets/icons/` n'a **aucune icône** pour la catégorie Optique, ce
+qui fait afficher les boutons en texte. À ne pas reproduire.
+
+---
+
+## 7. Ordre de travail proposé
 
 Trois chantiers de risque très inégal. L'ordre suit le rapport bénéfice sur
 risque, pas l'ordre dans lequel tu les as demandés.
