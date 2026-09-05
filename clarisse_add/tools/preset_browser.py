@@ -44,6 +44,7 @@ class Browser(object):
         self.entries = entries
         self.visible = []
         self.window = None
+        self.panel = None
         self.list_view = None
         self.detail_labels = []
         self.category_button = None
@@ -62,6 +63,7 @@ class Browser(object):
             ix.api.GuiWidget.CONSTRAINT_LEFT, ix.api.GuiWidget.CONSTRAINT_TOP,
             ix.api.GuiWidget.CONSTRAINT_RIGHT, ix.api.GuiWidget.CONSTRAINT_BOTTOM,
         )
+        self.panel = panel
 
         ix.api.GuiLabel(panel, 12, 12, 80, 22, "Categorie :")
         self.category_button = ix.api.GuiListButton(panel, 96, 12, 200, 22)
@@ -162,6 +164,9 @@ class Browser(object):
 
         if self.visible:
             self.list_view.set_selected_index(0)
+        # Meme idiome que le Light Manager apres avoir rempli une liste : sans
+        # redraw(), le widget attend le prochain evenement pour se repeindre.
+        self.list_view.redraw()
         self.update_details()
 
     def selected_entry(self):
@@ -194,6 +199,13 @@ class Browser(object):
         for index, label in enumerate(self.detail_labels):
             # GuiLabel n'a pas de set_text : son texte est son "label".
             label.set_label(rows[index] if index < len(rows) else "")
+            label.redraw()
+        # set_label() ne fait que changer la chaine : le label repeint son texte
+        # par-dessus l'ancien sans effacer derriere, et les descriptions de deux
+        # presets finissent superposees.  Repeindre le panneau parent nettoie le
+        # fond de toute la zone de details d'un coup.
+        if self.panel is not None:
+            self.panel.redraw()
 
     # -- action ------------------------------------------------------------
 
