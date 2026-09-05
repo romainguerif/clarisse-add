@@ -40,21 +40,33 @@ def check():
     print("  presets    : %s" % paths.PRESETS_DIR)
     print("  icones     : %s" % paths.ICONS_DIR)
 
+    applications = paths.installed_applications()
+    if applications:
+        for version in sorted(applications, reverse=True):
+            print("  installe   : Clarisse %s -> %s" % (version, applications[version]))
+    else:
+        print("  ! aucune installation de Clarisse trouvee sur le disque")
+
     versions = paths.installed_config_versions()
     if not versions:
         print("  ! aucun dossier de configuration Clarisse trouve dans %s"
               % paths.user_config_root())
         return 1
 
-    print("  versions   : %s" % ", ".join(versions))
+    print("  configs    : %s" % ", ".join(versions))
     for version in versions:
         config = paths.shelf_config(version)
         state = "present" if os.path.isfile(config) else "absent (sera cree)"
-        print("    %-5s %s  [%s]" % (version, config, state))
+        orphan = "" if version in applications else "  <- application absente"
+        print("    %-5s %s  [%s]%s" % (version, config, state, orphan))
         dead = _dead_shelf_entries(config)
         if dead:
             print("           %d entree(s) de shelf pointant vers un script "
                   "inexistant" % len(dead))
+
+    target = choose_version(applications, versions)
+    if target:
+        print("  cible      : %s (par defaut)" % target)
 
     tools = manifest.all_tools()
     presets = catalog.entries()
@@ -75,6 +87,24 @@ def check():
         print("  i %d outil(s) sans icone (le titre sera affiche a la place)"
               % len(missing_icons))
     return 0
+
+
+def choose_version(applications, config_versions):
+    """La version a cibler par defaut.
+
+    On privilegie une version dont **l'application** est installee : un dossier
+    de configuration seul ne prouve rien.  Sur cette machine, la config 5.5
+    existe alors que seul Clarisse 5.0 SP14 est installe -- s'aligner sur le
+    numero le plus eleve reviendrait a ecrire un shelf que rien ne lira.
+    """
+    usable = [version for version in config_versions if version in applications]
+    if usable:
+        return usable[0]
+    if applications:
+        # L'application est la, mais elle n'a pas encore de configuration :
+        # elle sera creee au premier lancement, et le shelf l'attend deja.
+        return sorted(applications, reverse=True)[0]
+    return config_versions[0] if config_versions else None
 
 
 def _dead_shelf_entries(config_path):
@@ -207,17 +237,26 @@ def main(argv=None):
     if args.check:
         return check()
 
+    applications = paths.installed_applications()
     versions = paths.installed_config_versions()
+
     if args.version:
         version = args.version
         if version not in versions:
             print("Attention : aucun dossier de configuration pour Clarisse %s. "
                   "Il sera cree." % version)
-    elif versions:
-        version = versions[0]
+        if applications and version not in applications:
+            print("Attention : Clarisse %s n'est pas installe sur cette machine "
+                  "(trouve : %s)." % (version, ", ".join(sorted(applications))))
     else:
-        print("Aucune installation de Clarisse detectee. Precisez --version.")
-        return 1
+        version = choose_version(applications, versions)
+        if version is None:
+            print("Aucune installation de Clarisse detectee. Precisez --version.")
+            return 1
+        ignored = [item for item in versions if item != version]
+        if ignored:
+            print("Cible : Clarisse %s. Ignore : %s (configuration presente, "
+                  "application absente)." % (version, ", ".join(ignored)))
 
     if args.repair_kit:
         return repair_kit(version)

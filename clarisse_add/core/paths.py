@@ -83,6 +83,54 @@ def installed_config_versions():
     return found
 
 
+#: Emplacements ou Clarisse s'installe par defaut, par plateforme.
+_APPLICATION_ROOTS = {
+    "win": ["C:/Program Files/Isotropix", "C:/Program Files (x86)/Isotropix"],
+    "darwin": ["/Applications/Isotropix", "/Applications"],
+    "linux": ["/opt/Isotropix", "/usr/local/Isotropix"],
+}
+
+# "Clarisse 5.0 SP14", "Clarisse iFX 4.0 SP11", "Clarisse 5.5"
+_APPLICATION_DIR_RE = re.compile(r"Clarisse(?:\s+iFX)?\s+(\d+\.\d+)", re.IGNORECASE)
+
+
+def _application_roots():
+    if sys.platform.startswith("win"):
+        return _APPLICATION_ROOTS["win"]
+    if sys.platform == "darwin":
+        return _APPLICATION_ROOTS["darwin"]
+    return _APPLICATION_ROOTS["linux"]
+
+
+def installed_applications():
+    """``{version: dossier}`` des applications Clarisse reellement installees.
+
+    A distinguer de :func:`installed_config_versions` : Clarisse laisse ses
+    preferences derriere lui quand on le desinstalle, et une version d'essai
+    ouverte une fois suffit a creer un dossier de configuration.  Installer le
+    shelf dans la configuration d'une version absente ecrit un fichier que rien
+    ne lira jamais.
+    """
+    found = {}
+    for root in _application_roots():
+        if not os.path.isdir(root):
+            continue
+        try:
+            entries = os.listdir(root)
+        except OSError:
+            continue
+        for name in entries:
+            match = _APPLICATION_DIR_RE.match(name)
+            if not match:
+                continue
+            directory = os.path.join(root, name)
+            if os.path.isdir(directory):
+                # Une version deja trouvee ailleurs n'est pas ecrasee : le
+                # premier emplacement de la liste fait foi.
+                found.setdefault(match.group(1), directory)
+    return found
+
+
 def shelf_config(version):
     """Chemin du ``shelf.cfg`` utilisateur pour une version donnee."""
     root = user_config_root()

@@ -73,11 +73,17 @@ fusionne dans le contexte choisi.
 
 ```bash
 python install.py --check        # diagnostic, n'écrit rien
-python install.py                # installe pour la version la plus récente
+python install.py                # installe pour la version installée
 python install.py --version 5.0  # cible une version précise
 python install.py --repair-kit   # retire du shelf les boutons morts
 python uninstall.py              # retire les catégories ClarisseAdd
 ```
+
+Sans `--version`, l'installeur cible une version dont **l'application** est
+installée, pas simplement la plus récente à avoir un dossier de configuration.
+Clarisse laisse ses préférences derrière lui quand on le désinstalle, et une
+version d'essai ouverte une seule fois suffit à créer un dossier : se caler sur
+le numéro le plus élevé revient, tôt ou tard, à écrire un shelf que rien ne lit.
 
 L'installeur :
 
@@ -98,10 +104,18 @@ morts.)*
 ## Développement
 
 ```bash
-python -m pytest tests -q        # 186 tests, sans Clarisse
+python -m pytest tests -q        # 241 tests, sans Clarisse
+python tools/check_api.py        # vérifie les noms d'API contre le SDK
 python tools/build_catalog.py    # réindexe assets/presets/
 python tools/build_icons.py      # génère les icônes manquantes (Pillow)
 ```
+
+Clarisse ne se pilote pas hors interface sans licence CNode : impossible donc
+d'exécuter le code de l'addon en dehors de l'application. `check_api.py` comble
+une partie du trou en confrontant chaque `ix.cmds.X` et `ix.api.Y` du code à la
+documentation Doxygen hors ligne — 183 commandes et 1054 classes. Ça ne vérifie
+pas les arguments, mais un nom inexistant est attrapé avant d'arriver dans le
+shelf.
 
 Le bouton **Reload ClarisseAdd** recharge tout le code sans redémarrer Clarisse :
 purge de `sys.modules`, régénération des stubs, réenregistrement des boutons à
