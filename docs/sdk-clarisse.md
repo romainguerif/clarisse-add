@@ -60,7 +60,29 @@ class "Sonde" "<ClasseDeBase>" { ui_name "x" category "y" }
 ```
 
 puis `cmagen sonde.cid -module_path <install>/module`. S'il produit un `.cma`,
-la classe se dérive. Établi ainsi pour `KernelFilter`, `Camera` et `Tool`.
+la classe se dérive.
+
+### On ne peut dériver que des classes de base ABSTRAITES
+
+Résultat de sondes systématiques, et c'est une contrainte structurelle qu'il
+vaut mieux connaître avant de concevoir.
+
+| Résolvent | Échouent |
+|---|---|
+| `KernelFilter`, `Camera`, `Tool`, `Texture`, `TextureSpatial`, `TextureOperator`, `UvSlot`, `Group`, `GroupUvBake`, `ShadingLayer`, `GeometryPolymesh` | `TextureTriplanar`, `TextureMapFile`, `TextureConstantColor`, `MaterialPhysicalStandard`, `Layer3d`, et **les 15 classes `Tool*` concrètes** |
+
+Autrement dit : **on ne dérive pas d'un nœud livré**, seulement d'une base. Pas
+question de partir de `TextureTriplanar` pour en faire une variante ; il faut
+repartir de `TextureSpatial`.
+
+La règle empirique est que les modules « base » se résolvent et les modules
+`*_builtin.dll` non — les noms sont pourtant bien présents dans les binaires.
+**La cause n'est pas établie** ; l'hypothèse d'une dépendance GL/GUI est
+réfutée, `texture.dll` important lui aussi `ix_gui.dll` tout en résolvant.
+
+Contrôles négatifs qui prouvent que la sonde teste vraiment quelque chose : une
+base inexistante rend `failed to find declaration of base class`, et l'absence
+de `-module_path` rend la même erreur.
 
 ---
 
@@ -167,6 +189,67 @@ Deux pièges de type :
 
 Les `\n` dans une chaîne `doc` passent : on peut y écrire plusieurs
 paragraphes, ce qui vaut mieux qu'un pavé.
+
+### `category` n'est pas décoratif : sans lui, la classe est invisible
+
+Le code qui peuple les menus **saute toute classe dont `category` est vide**,
+comme il saute les classes abstraites et celles verrouillées par licence.
+L'attribut frère `ui_weight` ordonne les entrées — les outils livrés vont de 100
+à 30 ; sans lui, on tombe en fin de liste.
+
+Chaînes réellement employées, relevées sur 346 pages de référence (279 classes
+en portent une, 67 non) :
+
+```
+/Texture/Utility  25    ImageFilter  20    /Material/Physical  20
+/Texture/Math     18    /Texture/Color  18    Image  19
+/Texture/Procedural 5   /Texture/Map  4     /Texture/Normal  2
+/Geometry/Particle 10   Transform  4   Create  3   Brush  3   Select  2
+```
+
+La **barre oblique initiale** compte. Les classes de base `Texture` et
+`TextureOperator` déclarent `"Texture"` sans barre : incohérence héritée, à ne
+pas imiter.
+
+Ordre conventionnel dans le CID : `abstract yes` → `#version` → `icon` →
+`category` → `doc` → `attribute_group`.
+
+### Un `Tool` s'expose sans une ligne d'enregistrement
+
+Il n'y a **aucune API** `set_current_tool`. Le mécanisme est de la réflexion
+Python au démarrage : un script énumère les classes dérivées de `Tool` dans la
+fabrique, les trie par `ui_weight`, écarte abstraites / verrouillées / sans
+catégorie, et construit le menu.
+
+Chaque sous-classe possède une **instance unique dans le contexte `tools://`**,
+et activer un outil consiste à la poser dans le slot de sélection `"tools"` :
+
+```python
+tool = ix.application.get_factory().get_object("tools://mon_outil")
+ix.application.get_selection().set_all_slots_selection("tools", tool)
+```
+
+Le panneau d'options est **généré** par `WidgetToolOptions` depuis le CID :
+`attribute_group`, `preset`, `slider`, `ui_range`, `collapsed`,
+`promote_attribute` **sont** l'interface. `cb_get_options` ne sert que pour une
+UI sur mesure.
+
+Seule chose non automatique : le **raccourci clavier**. Aucun fichier de
+configuration n'existe ; ceux des outils livrés sont un dictionnaire Python en
+dur. Pour en poser un, `cb_get_actions` rend des `GuiAction` portant leur propre
+raccourci, actifs tant que l'outil l'est.
+
+### `ToolBrush`, `ToolEraser`, `ToolSnapper` ne sont pas des outils
+
+Ce sont des **blocs de paramètres réutilisables**, dérivés de `ProjectItem`, que
+les outils de peinture livrés référencent avec `filter "ToolBrush"` +
+`hidden yes` + `promote_attribute yes`. Ils portent `brush_type`, `brush_size`,
+`brush_unit` (Screen ou World), `brush_density`, `brush_strength`,
+`brush_falloff`, une **courbe** `brush_curve` éditable, et
+`brush_pressure_mapping` (Density / Size / Density+Size / None).
+
+Écrire un outil de brosse sans les réutiliser serait réinventer un jeu de
+réglages que l'application a déjà, et s'en écarter.
 
 ---
 
@@ -321,11 +404,33 @@ tessellation et le displacement, donc la géométrie déplacée se bake aussi.
 Le groupe d'attributs `Layer3d::Uv Baking` apparaît dans l'interface — la
 fonction est donc accessible à l'artiste, pas seulement au SDK.
 
-La bibliothèque `ix_uv_bake.lib` expose en plus les classes concrètes
-`GeometryUvBake`, `GeometryBundleUvBake`, `GasUvBake`, et `texture_tools`
-fournit un `TextureEvaluator` bâti sur un `GasUvTree`. Il y a donc les deux
-niveaux : le bake tout fait par le layer, et la machinerie brute si on veut
-autre chose.
+Et ce n'est pas qu'une API : la fonctionnalité est livrée **jusqu'au bouton**.
+`python3/process_uv_bake.py` (590 lignes) gère l'UDIM, les séquences d'images
+et la dilatation des bords ; `python3/shelves/rendering/uv_baker.py` est son
+bouton dans l'onglet *Rendering* ; `ImageFilterUVEdgePadding` fait la dilatation
+(« 8-connexes dilation on connected components »). Ce qui se bake va du beauty
+complet aux AOV arbitraires, jusqu'aux propriétés matière extraites par Light
+Path Expression.
+
+`ix_uv_bake.lib` expose bien les classes concrètes `GeometryUvBake`,
+`GeometryBundleUvBake`, `GasUvBake` : la machinerie brute est liable si on veut
+piloter la structure d'accélération soi-même.
+
+**Deux mises en garde.** `texture_tools` n'est PAS un baker malgré son
+`TextureEvaluator` : c'est l'aperçu de texture de l'interface et le pavage UDIM
+de `TextureMapFile` — les tables d'imports le confirment, `ix_texture_tools` est
+consommé par `widget_texture_view.dll` quand `ix_uv_bake` l'est par
+`layer_builtin.dll`. Et il est **inutilisable** : son en-tête inclut
+`texture_evaluation_config.hh`, qui n'existe nulle part dans le SDK reconstruit.
+
+Enfin, le script de bake par lot dérive de `Process`, qui **est verrouillée par
+licence**. Le chemin `Layer3d.enable_uv_bake` est libre, mais le confort du
+script pourrait ne pas l'être en iFX. Déduction par héritage, non testée.
+
+Trois aides voisines, exportées et faciles à manquer, bakent une texture ou un
+matériau dans des couleurs de sommets ou un nuage de points :
+`ShaderHelpers::evaluate_vertices_texture`, `evaluate_support_texture`,
+`evaluate_support_material`.
 
 ### Un rayon rend les UV du point touché
 
@@ -348,6 +453,29 @@ Une intersection **est** un fragment — elle en hérite. Et
 `compute_fragment_uvw` est une méthode **virtuelle** de `GeometryObject`,
 exportée par `ix_geometry`, qui prend un **index de jeu d'UV** : les objets à
 plusieurs dépliures sont donc gérés.
+
+**Piège** : `fragment.get_u()` et `get_v()` ne sont PAS les UV de texture. La
+documentation les décrit comme « parametric coordinates of the fragment in the
+primitive » — des coordonnées barycentriques dans la primitive. Les confondre
+donnerait une texture plaquée par triangle.
+
+**Depuis le curseur.** L'aide qui va du pixel à l'intersection existe et est
+exportée :
+
+```cpp
+ShaderHelpers::raycast(GeometryIntersection&, GMathRay<>&, const CtxEval&,
+                       CtxShader&, x, y, width, height, alpha_threshold,
+                       items, exclude, filter_unpickable, raycast_light);
+```
+
+« Cast a ray for the specified pixel and return the intersection if any. » Il
+existe aussi `ShaderHelpers::multi_raycast` et, côté widget,
+`ModuleWidget::raycast(eval, output, query)` avec ses modes `SINGLE_2D`,
+`MULTIPLE_2D`, `MULTIPLE_3D`. Le contexte se fabrique par
+`ShaderHelpers::create_shader_ctx(eval, ctx, ModuleLayerScene&)`.
+
+La chaîne complète est donc : `CtxTool.image.x/y` → `ShaderHelpers::raycast` →
+`GeometryIntersection` → `compute_fragment_uvw` → UV.
 
 Deux exports voisins complètent le tableau : `GeometryUvMap` et
 `GeometryUvTile` (construit depuis deux entiers — les coordonnées d'une tuile
@@ -375,7 +503,22 @@ est une node qui le condense.
 ## 10. Les deux saveurs de licence
 
 Mesuré, pas supposé : **359 classes existent dans les deux saveurs**, 49 sont
-verrouillées par licence en iFX, 13 en BUiLDER. La différence de 36 est
+verrouillées par licence en iFX, 13 en BUiLDER. *(Une seconde mesure, faite sur
+la documentation livrée, n'en démontre que 36 en iFX. L'écart n'est pas
+expliqué : la documentation ne couvre que 346 classes alors que l'installation
+porte 134 DLL, donc des classes verrouillées sans page de référence sont
+possibles. Sans conséquence pratique — le thème est le même.)*
+
+Le verrou se déclare dans le CID par un bloc enfant, pas sur la ligne de
+classe :
+
+```
+class "AovSet" "ProjectItem" {
+    #license { flavor "advanced" }
+```
+
+`advanced` est le nom interne de BUiLDER. Le code des menus teste
+`is_under_licensed()` avant d'ajouter une entrée. La différence de 36 est
 exactement la famille d'assemblage de builds — `ImageNode*`, `Process*`,
 `RenderScene`, `AovSet`, `SceneAssembly*`, `WidgetBuildView`, `NodalItem*`.
 
