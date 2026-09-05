@@ -1,0 +1,91 @@
+class "ImageFilterBokeh" "KernelFilter" {
+    #version 0.1
+    category "ImageFilter"
+    doc "Flou de mise au point optique. Contrairement a Defocus Blur, le noyau reproduit un vrai diaphragme -- nombre de lames, courbure, rotation, anamorphisme -- et les hautes lumieres se rassemblent en boules nettes au lieu d'etre etalees. Les defauts d'optique qui font le realisme (vignettage optique, aberration spherique, aberration chromatique) sont exposes en parametres."
+
+    attribute_group "Aperture" {
+        subpixel "radius" {
+            doc "Rayon du bokeh, en pixels. C'est le rayon du cercle de confusion : la taille qu'occupe un point lumineux hors mise au point."
+            value 8.0
+            numeric_range yes 0.0 250
+            ui_range yes 0.0 50
+            slider yes
+            animatable yes
+        }
+        long "blades" {
+            doc "Nombre de lames du diaphragme. A zero, l'ouverture est un disque parfait -- ce que donne un objectif a pleine ouverture. Entre 5 et 9, on retrouve la forme polygonale des optiques diaphragmees."
+            value 0
+            numeric_range yes 0 32
+            ui_range yes 0 12
+            slider yes
+            animatable yes
+        }
+        angle "rotation" {
+            doc "Rotation du diaphragme. Sans effet quand blades vaut zero."
+            value 0.0
+            animatable yes
+        }
+        percentage "roundness" {
+            doc "Courbure des lames. A zero les lames sont droites et l'ouverture est un polygone exact. Vers 100% elles bombent et l'ouverture tend vers le disque ; vers -100% elles se creusent et donnent la forme etoilee des optiques anciennes."
+            value 0.0
+            numeric_range yes -1.0 1.0
+            ui_range yes -1.0 1.0
+            slider yes
+            animatable yes
+        }
+        percentage "anamorphism" {
+            doc "Ovalisation du bokeh. Les optiques anamorphiques compriment l'image horizontalement, ce qui etire les boules de lumiere en verticale. Valeur positive : etirement vertical. Negative : horizontal."
+            value 0.0
+            numeric_range yes -1.0 1.0
+            ui_range yes -1.0 1.0
+            slider yes
+            animatable yes
+        }
+    }
+
+    attribute_group "Highlights" {
+        double "threshold" {
+            doc "Seuil de reprise des hautes lumieres, en luminance lineaire. Au-dessus de cette valeur, l'energie est amplifiee avant le flou puis restituee apres : c'est ce qui transforme un point brillant en boule de bokeh nette au lieu de l'ecraser. Le calcul se fait en lineaire ; regler ce seuil sur une image en gamma n'a pas de sens."
+            value 1.0
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 10
+            slider yes
+            animatable yes
+        }
+        double "gain" {
+            doc "Amplification appliquee a ce qui depasse le seuil. A 1, le filtre est neutre et conserve l'energie exactement. Au-dela, les boules ressortent davantage -- c'est un choix artistique, pas de la physique."
+            value 1.0
+            numeric_range yes 0.0 100
+            ui_range yes 0.0 8
+            slider yes
+            animatable yes
+        }
+    }
+
+    attribute_group "Optics" {
+        percentage "optical_vignetting" {
+            doc "Vignettage optique, dit oeil-de-chat. Vers les bords du cadre, le barillet de l'objectif rogne le faisceau et les boules rondes deviennent des amandes orientees vers le centre. C'est un defaut, et c'est ce qui trahit une vraie optique."
+            value 0.0
+            numeric_range yes 0.0 1.0
+            ui_range yes 0.0 1.0
+            slider yes
+            animatable yes
+        }
+        percentage "spherical_aberration" {
+            doc "Repartition de l'energie dans la boule. A zero elle est uniforme. En positif, l'energie migre vers le bord et donne l'anneau lumineux dit bulle de savon. En negatif elle se concentre au centre, et le bokeh devient doux comme celui des optiques a portrait."
+            value 0.0
+            numeric_range yes -1.0 1.0
+            ui_range yes -1.0 1.0
+            slider yes
+            animatable yes
+        }
+        percentage "chromatic_aberration" {
+            doc "Frange coloree au bord des boules. L'objectif ne fait pas converger toutes les longueurs d'onde au meme endroit : le rayon du bokeh differe legerement par canal. Valeur positive : le rouge deborde. Negative : le bleu."
+            value 0.0
+            numeric_range yes -1.0 1.0
+            ui_range yes -0.5 0.5
+            slider yes
+            animatable yes
+        }
+    }
+}

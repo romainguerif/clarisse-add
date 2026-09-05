@@ -27,11 +27,19 @@ SDK = r"J:\Clarisse-SDK"
 VCVARS = (r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
           r"\VC\Auxiliary\Build\vcvarsall.bat")
 
-# Les cinq que la doc declare obligatoires, plus ix_event : les en-tetes
-# d'evenements declarent des identifiants globaux dont l'initialiseur statique
-# appelle event_debug_collisions(). Le symbole est tire des qu'on inclut
-# of_app.h, que le module se serve d'evenements ou non.
-LIBS = ["ix_module", "ix_of", "ix_dso", "ix_core", "ix_gui", "ix_event"]
+# Les cinq que la doc declare obligatoires, plus deux qu'elle oublie.
+#
+# ix_event : les en-tetes d'evenements declarent des identifiants globaux
+# dont l'initialiseur statique appelle event_debug_collisions(). Le symbole
+# est tire des qu'on inclut of_app.h, que le module se serve d'evenements
+# ou non.
+#
+# ix_image : ImageCanvas et ImageProxy. Leurs accesseurs sont ecrits inline
+# dans les en-tetes, mais la classe porte __declspec(dllimport) : MSVC va
+# alors chercher le symbole dans la DLL au lieu d'inliner le corps. Tout
+# module qui touche a des pixels en a besoin.
+LIBS = ["ix_module", "ix_of", "ix_dso", "ix_core", "ix_gui", "ix_event",
+        "ix_image"]
 
 
 def includes():
