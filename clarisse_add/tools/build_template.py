@@ -28,10 +28,6 @@ Les noms de moteurs viennent des modules livres avec Clarisse
 from ..core import log, scene, ui
 from ..core.compat import get_ix
 
-#: Racine des builds. En iFX le vizroot y est fixe ; en BUiLDER c'est la
-#: racine ou vivent les nodes d'assemblage.
-BUILD_ROOT = "build://project"
-
 #: Moteurs de contexte, releves dans module/scene_assembly_*.dll.
 ENGINE_READ_PROJECT = "SceneAssemblyReadProject"
 ENGINE_READ_ABC = "SceneAssemblyReadAbc"
@@ -47,15 +43,11 @@ INPUT_ATTR = "input_context"
 def run(payload=None):
     ix = get_ix()
 
-    if ix.item_exists(BUILD_ROOT) is None:
-        ui.message(
-            "La racine %s est introuvable.\n\n"
-            "Lancez Clarisse en saveur BUiLDER : le raccourci "
-            "\"Clarisse BUiLDER 5.0 SP14\" du menu Demarrer, ou retirez "
-            "l'argument -flavor ifx de votre raccourci." % BUILD_ROOT,
-            "Nouveau build",
-        )
-        return False
+    # On ne teste plus l'existence de build://project. C'est le vizroot
+    # *fixe* de la saveur iFX ; en BUiLDER il vaut (none) au chargement et
+    # ce contexte peut parfaitement ne pas exister -- la verification
+    # echouait donc precisement dans la saveur qu'elle exigeait.
+    log.debug("Racines disponibles : %s" % ", ".join(_roots(ix)))
 
     settings = ui.Form(
         "Nouveau build",
@@ -79,16 +71,22 @@ def run(payload=None):
                               "attributs de chaque node cree. Laissez coche "
                               "tant que l'outil n'est pas stabilise."),
         ],
-        note="Les nodes seront crees dans %s" % BUILD_ROOT,
+        note="Le contexte de destination est demande ensuite.",
         accept_label="Construire",
     ).run()
     if settings is None:
         return False
 
+    target = ui.pick_context("Ou construire le build ?")
+    if target is None:
+        return False
+    if not scene.is_writable(target):
+        return False
+
     name = _sanitize(settings["name"]) or "build"
 
     with scene.command_batch("ClarisseAdd - Nouveau build"):
-        report = _build(ix, name, settings)
+        report = _build(ix, name, settings, str(target))
 
     _report(report, settings)
     return True
@@ -97,7 +95,7 @@ def run(payload=None):
 # ---------------------------------------------------------------------------
 
 
-def _build(ix, name, settings):
+def _build(ix, name, settings, root):
     """Cree le graphe et renvoie un compte-rendu de ce qui a reussi."""
     report = {"created": [], "wired": [], "failed": [], "attrs": {}}
     made = {}
@@ -106,7 +104,7 @@ def _build(ix, name, settings):
         """Un node d'assemblage : contexte + moteur."""
         full = "%s_%s" % (name, node_name)
         try:
-            item = ix.cmds.CreateCustomContext(full, engine, BUILD_ROOT)
+            item = ix.cmds.CreateCustomContext(full, engine, root)
         except Exception as error:
             report["failed"].append("%s (moteur %s) : %s"
                                     % (full, engine, _short(error)))
@@ -123,7 +121,7 @@ def _build(ix, name, settings):
         """Un node ordinaire."""
         full = "%s_%s" % (name, node_name)
         try:
-            item = ix.cmds.CreateObject(full, class_name, "Global", BUILD_ROOT)
+            item = ix.cmds.CreateObject(full, class_name, "Global", root)
         except Exception as error:
             report["failed"].append("%s (classe %s) : %s"
                                     % (full, class_name, _short(error)))
@@ -227,6 +225,25 @@ def _build(ix, name, settings):
             report["attrs"][node_name] = _attributes(item)
 
     return report
+
+
+def _roots(ix):
+    """Noms des racines de hierarchie (project, build, default, ...).
+
+    Sert au diagnostic : c'est la seule facon fiable de savoir ou l'on peut
+    construire, plutot que de supposer qu'un chemin existe.
+    """
+    try:
+        roots = ix.application.get_factory().get_roots()
+    except Exception:
+        return ["(get_roots indisponible)"]
+    found = []
+    for index in range(len(roots)):
+        try:
+            found.append(str(roots[index]))
+        except Exception:
+            continue
+    return found or ["(aucune)"]
 
 
 def _attributes(item):
