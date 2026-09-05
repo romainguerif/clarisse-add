@@ -64,6 +64,12 @@ def run(payload=None):
             ui.Section("Contexte"),
             ui.Text("name", "Nom", default="scene"),
             ui.Choice("resolution", "Resolution", RESOLUTIONS, default=0),
+            ui.Choice("output", "Sortie",
+                      [("Render Scene + graphe  (BUiLDER)", "render_scene"),
+                       ("Image + Layer 3D  (iFX)", "image")],
+                      default=0,
+                      tooltip="En BUiLDER, c'est le Render Scene qui remplace "
+                              "le Layer 3D et forme un graphe."),
             ui.Section("Contenu"),
             ui.Toggle("props", "Ajouter un sol et une sphere", default=True,
                       tooltip="De quoi voir quelque chose au premier rendu."),
@@ -131,7 +137,11 @@ def _build(ix, name, parent, settings):
     def values(target, attribute, *vals):
         if target is None:
             return False
-        if target.get_attribute(attribute) is None:
+        # `get_attribute` ne resout qu'un nom simple : sur un chemin pointe
+        # comme "layer_3d.active_camera" il renvoie toujours None, alors que
+        # SetValues, lui, l'accepte. Verifier avant d'ecrire bloquait donc
+        # exactement les branchements composes.
+        if "." not in attribute and target.get_attribute(attribute) is None:
             report["failed"].append("%s : pas d'attribut '%s'"
                                     % (target.get_name(), attribute))
             return False
@@ -155,26 +165,28 @@ def _build(ix, name, parent, settings):
 
     renderer = obj("raytracer", "RendererRaytracer")
 
-    image = obj("image", "Image")
-    if image is not None:
-        width, height = (settings["resolution"] or "1920x1080").split("x")
-        values(image, "resolution", width, height)
+    width, height = (settings["resolution"] or "1920x1080").split("x")
 
-        # Le Layer 3D n'est pas un objet a part : c'est un layer de l'image,
-        # cree par AddLayer, dont les attributs s'adressent via image.layer_3d.
-        # Idiome repris du Shrink Wrap de la collection, qui tourne depuis des
-        # annees.
-        try:
-            ix.cmds.AddLayer(str(image) + ".layers", "Layer3d")
-            report["created"].append("image.layers[0]  [Layer3d]")
-        except Exception as error:
-            report["failed"].append("AddLayer : %s" % _short(error))
-
-        if camera is not None and values(image, "layer_3d.active_camera", str(camera)):
-            report["wired"].append("image <- camera")
-        if renderer is not None and values(image, "layer_3d.renderer", str(renderer)):
-            report["wired"].append("image <- raytracer")
-        report["image"] = image
+    if settings.get("output") == "image":
+        image = obj("image", "Image")
+        if image is not None:
+            values(image, "resolution", width, height)
+            # Le Layer 3D n'est pas un objet a part : c'est un layer de
+            # l'image, cree par AddLayer, dont les attributs s'adressent via
+            # image.layer_3d. Idiome repris du Shrink Wrap de la collection.
+            try:
+                ix.cmds.AddLayer(str(image) + ".layers", "Layer3d")
+                report["created"].append("image.layers[0]  [Layer3d]")
+            except Exception as error:
+                report["failed"].append("AddLayer : %s" % _short(error))
+            if camera is not None and values(image, "layer_3d.active_camera", str(camera)):
+                report["wired"].append("image <- camera")
+            if renderer is not None and values(image, "layer_3d.renderer", str(renderer)):
+                report["wired"].append("image <- raytracer")
+            report["image"] = image
+    else:
+        _render_graph(ix, name, ctx, camera, renderer, width, height,
+                      report, made, obj, values)
 
     # -- de quoi voir quelque chose au premier rendu -----------------------
 
@@ -205,6 +217,69 @@ def _build(ix, name, parent, settings):
             report["attrs"][short] = _attributes(item)
 
     return report
+
+
+def _render_graph(ix, name, ctx, camera, renderer, width, height,
+                  report, made, obj, values):
+    """Render Scene -> Image Node Render -> Image Node Write.
+
+    C'est la construction native de BUiLDER : le Render Scene y remplace le
+    Layer 3D de l'image layeree -- la documentation le dit mot pour mot,
+    "quite similar to the Layer 3d found in the layered image".
+
+    Trois details que la seule lecture des libelles ne donne pas, et qui
+    viennent du CID :
+
+    * ``input`` est un attribut de type *group*, filtre sur Context et
+      SceneItem : c'est par lui qu'on branche le contexte de contenu ;
+    * ``camera`` et ``renderer`` portent ``null_label "Use input"`` -- laisses
+      vides, ils se deduisent du contenu. On les precise quand meme, pour que
+      le graphe soit lisible ;
+    * ``resolution`` est ``read_only`` : elle est pilotee par
+      ``resolution_mode``, qu'il faut donc basculer en personnalise avant.
+    """
+    render_scene = obj("render_scene", "RenderScene")
+    if render_scene is None:
+        report["failed"].append(
+            "RenderScene indisponible : cette classe demande la saveur "
+            "BUiLDER. Relancez avec le raccourci Clarisse BUiLDER, ou "
+            "choisissez la sortie Image + Layer 3D.")
+        return
+
+    if values(render_scene, "input", str(ctx)):
+        report["wired"].append("render_scene <- %s" % ctx.get_name())
+    if camera is not None and values(render_scene, "camera", str(camera)):
+        report["wired"].append("render_scene <- camera")
+    if renderer is not None and values(render_scene, "renderer", str(renderer)):
+        report["wired"].append("render_scene <- raytracer")
+
+    # resolution_mode doit quitter le mode "preset" pour que resolution
+    # devienne inscriptible.
+    values(render_scene, "resolution_mode", "1")
+    values(render_scene, "resolution", width, height)
+
+    image_render = obj("render", "ImageNodeRender")
+    if image_render is None:
+        report["failed"].append(
+            "ImageNodeRender indisponible : la famille ImageNode demande la "
+            "saveur BUiLDER.")
+        return
+    if values(image_render, "scene", str(render_scene)):
+        report["wired"].append("render <- render_scene")
+    report["image"] = image_render
+
+    write = obj("write", "ImageNodeWrite")
+    if write is not None:
+        for candidate in ("input", "image", "input_image"):
+            if write.get_attribute(candidate) is None:
+                continue
+            if values(write, candidate, str(image_render)):
+                report["wired"].append("write <- render  (%s)" % candidate)
+            break
+        else:
+            report["failed"].append("ImageNodeWrite : aucun attribut d'entree "
+                                    "reconnu (liste dans le journal)")
+            report["attrs"]["write"] = _attributes(write)
 
 
 def _assembly(ix, name, ctx, report, made):
@@ -319,8 +394,8 @@ def _report(ix, report, settings):
 
     message = "\n".join(lines)
     if report["image"] is not None:
-        message += ("\n\nL'image est selectionnee : ouvrez l'Image View et "
-                    "lancez le rendu.")
+        message += ("\n\nLe node de sortie est selectionne : ouvrez l'Image "
+                    "View et lancez le rendu.")
 
     if settings.get("introspect") and report["attrs"]:
         log.debug("--- attributs reels ---")
