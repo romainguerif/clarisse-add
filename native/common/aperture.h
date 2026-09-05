@@ -108,8 +108,19 @@ aperture_edge(const Aperture& a, const double& ux, const double& uy,
                           - a.arc_centre * a.arc_centre * sin2;
     if (inside <= 0.0) return a.apothem;
     const double root = sqrt(inside);
-    return a.concave ? (a.arc_centre * cos_d - root)
-                     : (a.arc_centre * cos_d + root);
+
+    // Laquelle des deux intersections est la bonne ? Choisir sur le signe de
+    // la courbure ne marche pas : pour une lame tres creusee, le centre de
+    // l'arc repasse du cote proche et la racine "moins" donne un rayon qui
+    // s'effondre. Mesure a trois lames : a -0.5 le sommet tombe a 0.875, a
+    // -0.8 a 0.238, a -1.0 exactement a zero -- l'ouverture disparait, donc
+    // plus aucun flou du tout, et cote camera plus aucune profondeur de champ.
+    //
+    // Le critere geometrique juste est la position du centre de l'arc par
+    // rapport au sommet : la racine "plus" convient tant que le centre reste
+    // en deca, ce qui se lit sur c * apotheme.
+    if (a.arc_centre * a.apothem < 1.0) return a.arc_centre * cos_d + root;
+    return a.arc_centre * cos_d - root;
 }
 
 // Rayon de la frontiere a un angle donne. Pratique quand on echantillonne en

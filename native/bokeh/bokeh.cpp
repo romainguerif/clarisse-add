@@ -53,6 +53,7 @@
 #include <math.h>
 #include <vector>
 
+#include "aperture.h"
 #include <bokeh.cma>
 
 class BokehModule : public ModuleKernelFilter {
@@ -111,6 +112,10 @@ IX_MODULE_CLBK::destroy_module(OfObject& object, OfObjectFactory& objects, OfMod
 
 namespace {
 
+using clarisse_add::Aperture;
+using clarisse_add::aperture_init;
+using clarisse_add::aperture_edge;
+
 const double PI = 3.14159265358979323846;
 
 // Finesse de l'anneau d'aberration spherique. p grand concentre l'energie
@@ -119,7 +124,13 @@ const double SPHERICAL_POWER = 4.0;
 
 // Quantification des poids interieurs pour les sommes prefixees. Sans
 // aberration spherique l'interieur est uniforme et un seul niveau suffit.
-const int SPHERICAL_LEVELS = 16;
+//
+// A 16 niveaux, chaque marche vaut 6,25 % du pic : sur une bulle de savon
+// eclairee a 50, cela fait des anneaux concentriques de 3 unites contre un
+// fond a 0,1 -- parfaitement visibles. Le cout est lineaire en nombre de
+// segments, pas en echantillons : monter a 64 divise la marche par quatre
+// pour un surcout modeste.
+const int SPHERICAL_LEVELS = 64;
 
 // Ecart de rayon entre le rouge et le bleu, a pleine aberration chromatique.
 // A 5 % il fallait chercher la frange a la loupe ; les optiques reelles en
@@ -136,108 +147,49 @@ struct Settings {
     double threshold;
     double gain;
     double vignetting;
+    bool   preserve_exposure;
     double spherical;
     double chromatic;
     int    image_width;
     int    image_height;
 };
 
-Settings g_settings;
-
-// Inventaire des canaux : une seule fois par evaluation.
-bool g_channels_reported = false;
-
-// -- geometrie de l'ouverture -------------------------------------------------
-//
-// Formulation par demi-plans plutot que par atan2 : les normales sortantes des
-// N aretes sont precalculees, et max_k (u . n_k) donne rho * cos(delta) ou
-// delta est l'ecart angulaire a l'arete la plus proche. Aucune fonction
-// transcendante par echantillon, et le resultat est directement une distance
-// signee -- ce dont l'antialiasing a besoin.
-struct Aperture {
-    bool   circular;
-    int    blades;
-    double nx[64];
-    double ny[64];
-    double apothem;         // cos(pi/N)
-    double arc_centre;      // c, abscisse du centre de l'arc de lame
-    double arc_radius;      // R_b
-    bool   concave;
-};
-
+// Lit les reglages depuis le Cma synchronise par Clarisse. Appele aussi bien
+// par pre_filter que par chaque tuile de filter : le Cma est en lecture seule
+// et propre a l'evaluation, donc sans partage entre instances.
 void
-aperture_init(Aperture& a, const int& blades, const double& rotation,
-              const double& curvature)
+read_settings(const CtxEval& eval, const CtxKernelFilter& ctx,
+              const ImageProxy *proxy, Settings& s)
 {
-    a.circular = (blades < 3);
-    a.blades = blades > 64 ? 64 : blades;
-    a.concave = (curvature < 0.0);
-    if (a.circular) {
-        a.apothem = 1.0;
-        a.arc_centre = 0.0;
-        a.arc_radius = 1.0;
-        return;
-    }
+    const CmaImageFilterBokeh& cma = (const CmaImageFilterBokeh&) eval.get_cma();
 
-    const double half = PI / a.blades;
-    a.apothem = cos(half);
-    const double chord = sin(half);
+    // Le rayon est exprime en pixels de l'image finale, mais Clarisse peut
+    // evaluer a une fraction de sa taille. La doc des layers le dit : un flou
+    // de 5 pixels fait 5 pixels a 100 %, 2,5 a 50 %, 10 a 200 %.
+    const double scale = ctx.resolution_multiplier > 0.0
+                         ? ctx.resolution_multiplier : 1.0;
 
-    for (int k = 0; k < a.blades; ++k) {
-        const double angle = rotation + (2.0 * k + 1.0) * half;
-        a.nx[k] = cos(angle);
-        a.ny[k] = sin(angle);
-    }
+    s.radius      = cma.get_radius() * scale;
+    s.blades      = (int) cma.get_blades();
+    // Les attributs de type `angle` sont stockes en DEGRES et le .cma ne
+    // convertit rien : lus tels quels comme des radians, 5 degres demandes
+    // donnent 286 degres reels.
+    s.rotation    = cma.get_rotation() * (PI / 180.0);
+    s.curvature   = cma.get_roundness();
+    s.anamorphism = cma.get_anamorphism();
+    s.softness    = cma.get_softness();
+    s.threshold   = cma.get_threshold();
+    s.gain        = cma.get_gain();
+    s.vignetting  = cma.get_optical_vignetting();
+    s.preserve_exposure = cma.get_preserve_exposure();
+    s.spherical   = cma.get_spherical_aberration();
+    s.chromatic   = cma.get_chromatic_aberration();
 
-    // Lames bombees : chaque arete droite est remplacee par un arc de cercle
-    // passant par les deux sommets. Le bombement au milieu de l'arete vaut
-    // kappa * (1 - cos(pi/N)) ; le rayon de l'arc s'en deduit. A kappa = 1 on
-    // retrouve exactement le cercle, a kappa = 0 exactement le polygone.
-    const double bulge = fabs(curvature) * (1.0 - a.apothem);
-    if (bulge < 1e-9) {
-        a.arc_radius = 0.0;     // polygone droit : pas d'arc
-        a.arc_centre = 0.0;
-        return;
-    }
-    a.arc_radius = (bulge * bulge + chord * chord) / (2.0 * bulge);
-    const double offset = sqrt(a.arc_radius * a.arc_radius - chord * chord);
-    a.arc_centre = a.concave ? (a.apothem + offset) : (a.apothem - offset);
-}
-
-// Rayon de la frontiere dans la direction de l'echantillon, en unites de rayon
-// circonscrit. Rend 1 pour le disque.
-inline double
-aperture_edge(const Aperture& a, const double& ux, const double& uy,
-              const double& rho)
-{
-    if (a.circular) return 1.0;
-
-    double m = ux * a.nx[0] + uy * a.ny[0];
-    for (int k = 1; k < a.blades; ++k) {
-        const double d = ux * a.nx[k] + uy * a.ny[k];
-        if (d > m) m = d;
-    }
-    if (rho < 1e-9) return a.apothem;
-
-    // m = rho * cos(delta) : on tient cos et sin de l'ecart a l'arete sans
-    // jamais appeler atan2.
-    double cos_d = m / rho;
-    if (cos_d > 1.0) cos_d = 1.0;
-    if (cos_d < -1.0) cos_d = -1.0;
-
-    if (a.arc_radius <= 0.0) {
-        // Polygone droit : rho <= apotheme / cos(delta).
-        if (cos_d <= 1e-6) return 1.0;
-        return a.apothem / cos_d;
-    }
-
-    const double sin2 = 1.0 - cos_d * cos_d;
-    const double inside = a.arc_radius * a.arc_radius
-                          - a.arc_centre * a.arc_centre * sin2;
-    if (inside <= 0.0) return a.apothem;
-    const double root = sqrt(inside);
-    return a.concave ? (a.arc_centre * cos_d - root)
-                     : (a.arc_centre * cos_d + root);
+    // Les dimensions viennent du proxy, qui les connait : ImageProxy expose
+    // get_image_width/height. Passer par source_image obligerait a tenir
+    // compte de get_x/get_y, non nuls des qu'une region de rendu est active.
+    s.image_width  = proxy ? proxy->get_image_width() : 1;
+    s.image_height = proxy ? proxy->get_image_height() : 1;
 }
 
 // -- le noyau -----------------------------------------------------------------
@@ -260,6 +212,7 @@ struct Run {
 struct Kernel {
     int    reach;
     double total;           // somme de tous les poids, avant normalisation
+    double total_unvignetted;  // la meme, sans le disque de troncature
     double level_weight;    // poids d'un niveau de l'interieur
     int    levels;
     std::vector<Run> runs;  // interieur, quantifie par niveaux
@@ -273,13 +226,30 @@ struct Kernel {
 // il concerne quelques centaines de taps sur trente mille.
 inline double
 coverage(const Aperture& a, const double& cx, const double& cy,
-         const double& step, const double& feather)
+         const double& step, const double& softness)
 {
     const double rho = sqrt(cx * cx + cy * cy);
     const double edge = aperture_edge(a, cx, cy, rho);
     const double d = rho - edge;          // <0 dedans, >0 dehors
-    if (d < -feather) return 1.0;
-    if (d > feather) return 0.0;
+
+    // La douceur est un fondu de la frontiere sur une bande de largeur
+    // `softness`, en fraction du rayon. Elle doit ponderer, pas seulement
+    // elargir la zone testee : le test 8x8 porte sur une cellule d'un pixel,
+    // donc au-dela d'un demi-pixel de la frontiere les 64 sous-echantillons
+    // tombent tous du meme cote et le resultat ne change pas d'un iota.
+    // C'est ce qu'on a mesure : ecart 0,000 entre douceur 0 et douceur 1.
+    if (softness > 1e-6) {
+        if (d <= -softness) return 1.0;
+        if (d >= softness) return 0.0;
+        const double t = 0.5 - d / (2.0 * softness);
+        return t * t * (3.0 - 2.0 * t);   // smoothstep
+    }
+
+    // Bord franc : un pixel de couverture partielle suffit a supprimer le
+    // crenelage, et il se calcule par sous-echantillonnage de la cellule.
+    const double half_cell = step * 0.7072;
+    if (d < -half_cell) return 1.0;
+    if (d > half_cell) return 0.0;
 
     const int N = 8;
     int inside = 0;
@@ -310,6 +280,7 @@ build_kernel(Kernel& k, const Settings& s, const double& channel_scale,
     k.edge.clear();
     k.all.clear();
     k.total = 0.0;
+    k.total_unvignetted = 0.0;
     k.levels = 1;
     k.level_weight = 0.0;
     k.uniform_interior = (s.spherical == 0.0);
@@ -343,15 +314,14 @@ build_kernel(Kernel& k, const Settings& s, const double& channel_scale,
         shift_y = -frame_y / frame_r * offset;
     }
 
-    // Largeur du fondu de bord. Un pixel suffit a supprimer le crenelage ;
-    // au-dela, c'est le reglage de douceur qui l'elargit volontairement, pour
-    // le rendu des optiques a lames usees ou des filtres diffuseurs.
-    double feather = 1.0 / radius;
-    if (s.softness > 0.0) {
-        const double wanted = s.softness;
-        if (wanted > feather) feather = wanted;
-    }
+    // La douceur du bord, en fraction du rayon. A zero, `coverage` retombe sur
+    // un sous-echantillonnage d'un pixel, qui suffit a supprimer le crenelage.
+    const double softness = s.softness;
     const double step = 1.0 / radius;
+
+    // Largeur de la rampe du disque de troncature. Elle suit la douceur quand
+    // elle est demandee, un pixel sinon.
+    const double cut_feather = (softness > step) ? softness : step;
 
     // Poids brut par echantillon, garde pour extraire les segments ensuite.
     const int side = 2 * k.reach + 1;
@@ -364,15 +334,21 @@ build_kernel(Kernel& k, const Settings& s, const double& channel_scale,
             const double ux = dx * scale_x / radius;
             const double uy = dy * scale_y / radius;
 
-            double cover = coverage(aperture, ux, uy, step, feather);
+            double cover = coverage(aperture, ux, uy, step, softness);
             if (cover <= 0.0) continue;
+
+            // Le poids avant troncature sert de reference d'exposition : le
+            // vignettage optique DOIT assombrir les coins, c'est ce qu'il est.
+            // Normaliser par la somme locale annulerait exactement
+            // l'assombrissement et ne garderait que la forme d'amande.
+            const double cover_full = cover;
 
             if (offset > 1e-6) {
                 // Disque de troncature : intersection de deux convexes.
                 const double vx = ux - shift_x;
                 const double vy = uy - shift_y;
                 const double vr = sqrt(vx * vx + vy * vy);
-                double cut = (1.0 - vr) / feather + 0.5;
+                double cut = (1.0 - vr) / cut_feather + 0.5;
                 if (cut <= 0.0) continue;
                 if (cut > 1.0) cut = 1.0;
                 cover *= cut;
@@ -391,6 +367,18 @@ build_kernel(Kernel& k, const Settings& s, const double& channel_scale,
                 if (bias < 0.0) bias = 0.0;
                 weight *= bias;
             }
+            {
+                double full = cover_full;
+                if (s.spherical != 0.0) {
+                    const double rho2f = ux * ux + uy * uy;
+                    double bias = 1.0 + s.spherical
+                                  * (rho2f * rho2f - 2.0 / (SPHERICAL_POWER + 2.0));
+                    if (bias < 0.0) bias = 0.0;
+                    full *= bias;
+                }
+                k.total_unvignetted += full;
+            }
+
             if (weight <= 0.0) continue;
 
             const size_t index = (size_t)(dy + k.reach) * side + (dx + k.reach);
@@ -518,38 +506,18 @@ void
 IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKernelFilter& ctx,
                            unsigned int& kernel_radius, unsigned int& total_pass_count)
 {
-    const CmaImageFilterBokeh& cma = (const CmaImageFilterBokeh&) eval.get_cma();
+    // A ce stade, seul source_image est valide dans le contexte : dest_image
+    // porte un pointeur invalide et x0/y0 du bruit. On ne lit donc que ce qui
+    // sert a dimensionner le noyau.
+    Settings s;
+    read_settings(eval, ctx, 0, s);
 
-    // Le rayon est exprime en pixels de l'image finale, mais Clarisse peut
-    // evaluer a une fraction de sa taille. La doc des layers le dit : un flou
-    // de 5 pixels fait 5 pixels a 100 %, 2,5 a 50 %, 10 a 200 %, pour que le
-    // reglage soit valable quel que soit le multiplicateur. C'est au filtre de
-    // faire la mise a l'echelle.
-    const double scale = ctx.resolution_multiplier > 0.0 ? ctx.resolution_multiplier : 1.0;
-
-    g_settings.radius      = cma.get_radius() * scale;
-    g_settings.blades      = (int) cma.get_blades();
-    g_settings.rotation    = cma.get_rotation();
-    g_settings.curvature   = cma.get_roundness();
-    g_settings.anamorphism = cma.get_anamorphism();
-    g_settings.softness    = cma.get_softness();
-    g_settings.threshold   = cma.get_threshold();
-    g_settings.gain        = cma.get_gain();
-    g_settings.vignetting  = cma.get_optical_vignetting();
-    g_settings.spherical   = cma.get_spherical_aberration();
-    g_settings.chromatic   = cma.get_chromatic_aberration();
-    g_settings.image_width  = ctx.source_image ? ctx.source_image->get_width() : 1;
-    g_settings.image_height = ctx.source_image ? ctx.source_image->get_height() : 1;
-
-    // La marge demandee doit contenir la forme la plus large : l'anamorphisme
-    // l'etire sur un axe, l'aberration chromatique decale le rayon d'un canal.
-    double reach = g_settings.radius;
-    if (g_settings.anamorphism != 0.0) reach *= (1.0 + fabs(g_settings.anamorphism));
-    reach *= (1.0 + CHROMA_SPREAD * fabs(g_settings.chromatic));
+    // L'anamorphisme ne fait que COMPRIMER un axe : la portee reste le rayon.
+    // L'aberration chromatique, elle, agrandit le noyau d'un canal.
+    double reach = s.radius * (1.0 + CHROMA_SPREAD * fabs(s.chromatic));
 
     kernel_radius = (unsigned int)(reach < 0.0 ? 0.0 : reach + 1.5);
     total_pass_count = 1;
-    g_channels_reported = false;
 }
 
 bool
@@ -558,22 +526,14 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     const ImageProxy *src = ctx.image;
     if (src == 0) return true;
 
-    const Settings& s = g_settings;
-
-    // Inventaire des canaux, une fois par evaluation. C'est ce qui dira si un
-    // canal de profondeur parvient jusqu'au filtre -- condition d'un rayon
-    // variable, donc d'une vraie mise au point.
-    if (!g_channels_reported) {
-        g_channels_reported = true;
-        CoreString names;
-        for (unsigned int i = 0; i < src->get_channel_count(); ++i) {
-            if (i) names += ", ";
-            names += src->get_channel_name(i);
-        }
-        LOG_INFO("[Bokeh] " << src->get_channel_count() << " canaux : "
-                 << names << "\n");
-    }
-
+    // Les reglages sont relus ici, dans une copie locale, plutot que pris dans
+    // un global. Un global est partage par toutes les instances : deux filtres
+    // Bokeh dans la meme scene, ou la vue image et un instantane evalues en
+    // parallele, s'ecraseraient mutuellement leurs valeurs. Le symptome serait
+    // le pire qui soit -- des reglages qui ne font "pas tout a fait" ce qu'on
+    // demande, par intermittence.
+    Settings s;
+    read_settings(eval, ctx, src, s);
     if (s.radius < 0.5) return true;   // la destination porte deja la source
 
     const float *channels[4];
@@ -609,7 +569,12 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     // luminance : les poids deviennent dependants des donnees, et les sommes
     // prefixees ne s'appliquent plus. A gain 1 -- le defaut, et le comportement
     // physique -- on prend le chemin rapide.
-    const bool boosting = (s.gain != 1.0);
+    // Le neutre de la formule de reprise est gain = 0, pas 1 : le facteur
+    // vaut 1 + gain * (luminance - seuil). Le declarer neutre a 1 faisait
+    // sauter le facteur de x1 a x5 entre 1,000 et 1,001, et faisait prendre
+    // le chemin lent -- dix fois plus couteux -- pour un resultat identique
+    // au chemin rapide quand gain valait 0.
+    const bool boosting = (s.gain != 0.0);
 
     Kernel kernel_rgb[3];
     const bool split = (s.chromatic != 0.0);
@@ -632,7 +597,15 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
             if (k.total <= 0.0) continue;
 
             prefix.build(channels[c], stride, rows);
-            const double inverse = 1.0 / k.total;
+            // Le vignettage optique DOIT assombrir les coins -- c'est ce qu'il
+            // est. Diviser par la somme locale des poids annulerait exactement
+            // l'assombrissement et ne garderait que la forme d'amande : mesure
+            // a 55,9 % d'energie dans le coin, et un gain de 1,000 quand meme.
+            // On divise donc par la somme du noyau NON tronque, sauf si
+            // l'utilisateur demande de preserver l'exposition.
+            const double reference = (s.preserve_exposure || k.total_unvignetted <= 0.0)
+                                     ? k.total : k.total_unvignetted;
+            const double inverse = 1.0 / reference;
 
             for (int y = 0; y < height; ++y) {
                 const int cy = y + ctx.region.y;
@@ -640,12 +613,17 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
                     const int cx = x + ctx.region.x;
                     double sum = 0.0;
 
+                    // Convolution, pas correlation : le noyau est retourne.
+                    // Sans ce retournement la PSF affichee est K(-d), donc un
+                    // polygone impair sort tourne de 180 degres, et l'amande
+                    // du vignettage se place du cote oppose au centre du
+                    // cadre -- l'inverse de ce qu'une optique produit.
                     for (size_t i = 0; i < k.runs.size(); ++i) {
                         const Run& run = k.runs[i];
-                        const int ry = cy + run.dy;
+                        const int ry = cy - run.dy;
                         if (ry < 0 || ry >= rows) continue;
-                        int x0 = cx + run.x0;
-                        int x1 = cx + run.x1;
+                        int x0 = cx - run.x1;
+                        int x1 = cx - run.x0;
                         if (x1 < 0 || x0 >= stride) continue;
                         if (x0 < 0) x0 = 0;
                         if (x1 >= stride) x1 = stride - 1;
@@ -655,8 +633,8 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
 
                     for (size_t i = 0; i < k.edge.size(); ++i) {
                         const Tap& tap = k.edge[i];
-                        const int ty = cy + tap.dy;
-                        const int tx = cx + tap.dx;
+                        const int ty = cy - tap.dy;
+                        const int tx = cx - tap.dx;
                         if (ty < 0 || ty >= rows || tx < 0 || tx >= stride) continue;
                         sum += channels[c][(size_t)ty * stride + tx] * tap.weight;
                     }
@@ -676,6 +654,14 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     // ecrete, la moyenne simple donne deja des boules lumineuses.
     const float threshold = (float) s.threshold;
     const float gain = (float) s.gain;
+
+    // Le critere de reprise se prend sur max(r, g, b), pas sur la luminance
+    // ponderee : une lumiere bleue pure a une luma faible et passerait sous
+    // le seuil alors qu'elle est eclatante.
+    //
+    // Et les canaux peuvent etre nuls : le moteur n'en alloue un que si la
+    // map porte le nom correspondant. Sur un canvas en luminance seule, les
+    // quatre le sont. Les lire sans garde plantait.
     const float *sr = channels[0], *sg = channels[1], *sb = channels[2];
 
     for (int y = 0; y < height; ++y) {
@@ -690,13 +676,18 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
                 const Kernel& k = (split && c < 3) ? kernel_rgb[c] : kernel_rgb[1];
                 for (size_t i = 0; i < k.all.size(); ++i) {
                     const Tap& tap = k.all[i];
-                    const int ty = cy + tap.dy;
-                    const int tx = cx + tap.dx;
+                    const int ty = cy - tap.dy;
+                    const int tx = cx - tap.dx;
                     if (ty < 0 || ty >= rows || tx < 0 || tx >= stride) continue;
                     const size_t o = (size_t)ty * stride + tx;
-                    const float lum = 0.2126f * sr[o] + 0.7152f * sg[o] + 0.0722f * sb[o];
+
+                    float peak = 0.0f;
+                    if (sr != 0 && sr[o] > peak) peak = sr[o];
+                    if (sg != 0 && sg[o] > peak) peak = sg[o];
+                    if (sb != 0 && sb[o] > peak) peak = sb[o];
+
                     double w = tap.weight;
-                    if (lum > threshold) w *= 1.0 + gain * (lum - threshold);
+                    if (peak > threshold) w *= 1.0 + gain * (peak - threshold);
                     sum[c] += channels[c][o] * w;
                     norm[c] += w;
                 }

@@ -62,8 +62,8 @@ class "ImageFilterBokeh" "KernelFilter" {
             animatable yes
         }
         double "gain" {
-            doc "Amplification appliquee a ce qui depasse le seuil. A 1, le filtre est neutre et conserve l'energie exactement. Au-dela, les boules ressortent davantage -- c'est un choix artistique, pas de la physique."
-            value 1.0
+            doc "Amplification appliquee a ce qui depasse le seuil. A zero le filtre est neutre et conserve l'energie exactement -- c'est le comportement physique, et il suffit en lineaire non ecrete. Au-dela, les boules ressortent davantage : c'est un forcage artistique."
+            value 0.0
             numeric_range yes 0.0 100
             ui_range yes 0.0 8
             slider yes
@@ -72,6 +72,10 @@ class "ImageFilterBokeh" "KernelFilter" {
     }
 
     attribute_group "Optics" {
+        bool "preserve_exposure" {
+            doc "Le vignettage optique reduit reellement la lumiere qui atteint les coins : c'est ce qu'est un vignettage. Coche cette case pour n'en garder que la forme en amande sans l'assombrissement, ce qu'attendent la plupart des compositeurs -- ils gerent l'exposition separement."
+            value no
+        }
         percentage "optical_vignetting" {
             doc "Vignettage optique, dit oeil-de-chat. Vers les bords du cadre, le barillet de l'objectif rogne le faisceau et les boules rondes deviennent des amandes orientees vers le centre. C'est un defaut, et c'est ce qui trahit une vraie optique."
             value 0.0

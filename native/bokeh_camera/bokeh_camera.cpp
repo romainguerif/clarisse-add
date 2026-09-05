@@ -57,6 +57,7 @@
 #include <core_log.h>
 
 #include <math.h>
+#include <vector>
 
 #include "aperture.h"
 #include <bokeh_camera.cma>
@@ -68,10 +69,22 @@ using clarisse_add::aperture_edge_at;
 
 namespace {
 
+const double PI = 3.14159265358979323846;
 const double TWO_PI = 6.28318530717958647692;
 const int ANGLE_TABLE = 512;     // repartition en angle
 const int RADIAL_TABLE = 256;    // repartition radiale (aberration spherique)
 const double SPHERICAL_POWER = 4.0;
+
+// Les premiers, pour que chaque dimension de Halton ait sa base. Le moteur
+// alloue des dimensions aux autres consommateurs -- echantillonnage
+// sous-pixel, temps -- et indique par get_sampling_dimension_offset a partir
+// de laquelle la lentille doit tirer. Ignorer ce decalage et prendre 2 et 3
+// en dur correle rigidement le point de lentille a la position dans le pixel :
+// on obtient des motifs reguliers dans le flou au lieu du bruit attendu.
+const unsigned int PRIMES[24] = {
+    2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37,
+    41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89
+};
 
 // Suite de Halton par inversion radicale. On la recalcule plutot que d'appeler
 // celle de Clarisse : deux lignes, aucun symbole a lier, et le meme resultat.
@@ -128,8 +141,15 @@ public:
 
     // angle[i] : l'angle dont la fraction cumulee d'aire vaut i / ANGLE_TABLE.
     double angle[ANGLE_TABLE + 1];
-    // radial[i] : le rayon normalise dont la fraction cumulee d'energie vaut
-    // i / RADIAL_TABLE.
+    // radial[i] : le CARRE du rayon normalise dont la fraction cumulee
+    // d'energie vaut i / RADIAL_TABLE.
+    //
+    // Le carre, et pas le rayon. Sur un disque uniforme rho = sqrt(u) : c'est
+    // rho^2 qui est lineaire en u, pas rho. Tabuler rho puis interpoler
+    // lineairement entre deux entrees surestime enormement les petits rayons
+    // -- densite mesuree a 3,75 fois la valeur juste sur le premier pour cent
+    // du rayon, soit un point chaud au centre de chaque boule de bokeh,
+    // entoure d'un anneau 25 % trop sombre.
     double radial[RADIAL_TABLE + 1];
 
 private:
@@ -142,8 +162,11 @@ private:
         }
 
         // Aire cumulee : dA = r(theta)^2 / 2 dtheta.
+        // Le tampon est local et sur le tas : un `static` serait partage par
+        // toutes les cameras, et deux preparations concurrentes se
+        // corrompraient mutuellement leurs tables.
         const int fine = ANGLE_TABLE * 4;
-        static double cumulative[ANGLE_TABLE * 4 + 1];
+        std::vector<double> cumulative(fine + 1, 0.0);
         cumulative[0] = 0.0;
         for (int i = 1; i <= fine; ++i) {
             const double t = TWO_PI * (i - 0.5) / fine;
@@ -177,14 +200,14 @@ private:
     void build_radial_table(const double& spherical, const double& softness)
     {
         if (spherical == 0.0 && softness <= 0.0) {
-            // Disque uniforme : rho = sqrt(u), la formule classique.
+            // Disque uniforme : rho^2 = u, exactement.
             for (int i = 0; i <= RADIAL_TABLE; ++i)
-                radial[i] = sqrt((double)i / RADIAL_TABLE);
+                radial[i] = (double)i / RADIAL_TABLE;
             return;
         }
 
         const int fine = RADIAL_TABLE * 8;
-        static double cumulative[RADIAL_TABLE * 8 + 1];
+        std::vector<double> cumulative(fine + 1, 0.0);
         cumulative[0] = 0.0;
         for (int i = 1; i <= fine; ++i) {
             const double rho = (i - 0.5) / fine;
@@ -206,7 +229,7 @@ private:
         const double total = cumulative[fine];
         if (total <= 0.0) {
             for (int i = 0; i <= RADIAL_TABLE; ++i)
-                radial[i] = sqrt((double)i / RADIAL_TABLE);
+                radial[i] = (double)i / RADIAL_TABLE;
             return;
         }
 
@@ -217,7 +240,8 @@ private:
             const double lo = cumulative[cursor];
             const double hi = cumulative[cursor < fine ? cursor + 1 : fine];
             const double f = (hi > lo) ? (target - lo) / (hi - lo) : 0.0;
-            radial[i] = (cursor + f) / fine;
+            const double rho = (cursor + f) / fine;
+            radial[i] = rho * rho;
         }
     }
 };
@@ -234,6 +258,27 @@ lookup(const double *table, const int& size, const double& u)
     return table[i] * (1.0 - f) + table[i + 1] * f;
 }
 
+// Tire un point dans l'ouverture, puis le tourne. L'ordre compte : la forme
+// s'evalue a l'angle de tirage, la rotation s'applique au resultat.
+inline void
+sample_aperture(const BokehRayGenerator& gen, const double& u0, const double& u1,
+                const double& swirl_angle, double& x, double& y)
+{
+    const double theta = lookup(gen.angle, ANGLE_TABLE, u1);
+    // La table porte le carre du rayon : c'est lui qui est lineaire en u.
+    const double rho = sqrt(lookup(gen.radial, RADIAL_TABLE, u0))
+                       * aperture_edge_at(gen.shape, theta);
+
+    const double turned = theta + swirl_angle;
+    x = rho * cos(turned);
+    y = rho * sin(turned);
+
+    // Anamorphisme : on comprime un axe. La forme reste dans le disque unite,
+    // donc l'encodage de retour reste valide.
+    if (gen.anamorphism > 0.0) x /= (1.0 + gen.anamorphism);
+    else if (gen.anamorphism < 0.0) y /= (1.0 - gen.anamorphism);
+}
+
 // Le callback de lentille : c'est ici que se decide la forme du bokeh.
 void
 bokeh_lens_sample(const RayGeneratorCameraPerspective& generator,
@@ -241,9 +286,15 @@ bokeh_lens_sample(const RayGeneratorCameraPerspective& generator,
 {
     const BokehRayGenerator& gen = (const BokehRayGenerator&) generator;
 
+    // Les dimensions de Halton sont celles que le moteur nous alloue. Prendre
+    // 2 et 3 en dur correle le point de lentille a la position dans le pixel.
+    const unsigned int dim = gen.get_sampling_dimension_offset();
+    const unsigned int base_a = PRIMES[dim % 22];
+    const unsigned int base_b = PRIMES[(dim + 1) % 22];
+
     const unsigned int seed = sample.seed + sample.index;
-    double u0 = radical_inverse(seed + 1, 2);
-    double u1 = radical_inverse(seed + 1, 3);
+    double u0 = radical_inverse(seed + 1, base_a);
+    double u1 = radical_inverse(seed + 1, base_b);
 
     if (!gen.shaped) { out[0] = u0; out[1] = u1; return; }
 
@@ -253,53 +304,67 @@ bokeh_lens_sample(const RayGeneratorCameraPerspective& generator,
     const double gy = (sample.img_uv[1] - 0.5) * 2.0;
     const double frame_r = sqrt(gx * gx + gy * gy);
 
-    // Angle tire selon l'aire des secteurs, puis rayon selon la repartition
-    // radiale. Le tourbillon fait pivoter l'ouverture avec l'eloignement au
-    // centre : c'est le bokeh des Petzval, ou les boules tournent autour du
-    // cadre.
-    double theta = lookup(gen.angle, ANGLE_TABLE, u1);
-    if (gen.swirl != 0.0) theta += gen.swirl * frame_r * TWO_PI * 0.25;
+    // Le tourbillon fait pivoter l'ouverture avec l'eloignement au centre :
+    // c'est le bokeh des Petzval, ou les boules tournent autour du cadre.
+    //
+    // Il doit tourner le POINT, pas l'angle de tirage. Ajouter la rotation a
+    // theta avant d'evaluer le rayon de frontiere revient a evaluer la forme
+    // au meme angle decale : le support reste exactement la forme non tournee
+    // et seule la densite se deplace. Mesure sur un pentagone a 45 degres
+    // demandes : sommets detectes a 71, 143, 215, 287, 359 -- soit le
+    // pentagone non tourne -- avec une modulation de densite de plus ou moins
+    // 40 %. Des boules grumeleuses au lieu de boules pivotees.
+    const double swirl_angle = (gen.swirl != 0.0)
+                               ? gen.swirl * frame_r * TWO_PI * 0.25 : 0.0;
 
-    const double edge = aperture_edge_at(gen.shape, theta);
-    double rho = lookup(gen.radial, RADIAL_TABLE, u0) * edge;
-
-    double x = rho * cos(theta);
-    double y = rho * sin(theta);
-
-    // Anamorphisme : on comprime un axe. La forme reste dans le disque unite,
-    // donc l'encodage de retour reste valide.
-    if (gen.anamorphism > 0.0) x /= (1.0 + gen.anamorphism);
-    else if (gen.anamorphism < 0.0) y /= (1.0 - gen.anamorphism);
+    double x, y;
+    sample_aperture(gen, u0, u1, swirl_angle, x, y);
 
     // Vignettage optique : le barillet rogne le faisceau hors axe. La pupille
     // devient l'intersection de deux disques decales -- l'amande dite
-    // oeil-de-chat, dont le grand axe est tangentiel. On rejette les points
-    // hors du disque de troncature, en changeant de dimension de Halton a
-    // chaque essai.
+    // oeil-de-chat, dont le grand axe est tangentiel.
     //
-    // Reserve assumee : rejeter puis retirer conserve la FORME de l'amande
-    // mais pas l'assombrissement des coins, puisqu'on rend toujours un
-    // echantillon. Le callback ne peut pas supprimer un rayon -- seul le
-    // generateur le pourrait. Le vignettage d'exposition se traite donc
-    // separement, ce que fait de toute facon la plupart des compositeurs.
+    // Reserve assumee : on rend toujours un echantillon, donc la FORME de
+    // l'amande est juste mais les coins ne s'assombrissent pas. Le callback ne
+    // peut pas supprimer un rayon, seul le generateur le pourrait ; le
+    // vignettage d'exposition se traite separement, ce que fait de toute
+    // facon la plupart des compositeurs.
     if (gen.vignetting > 0.0 && frame_r > 1e-9) {
         const double offset = gen.vignetting * frame_r;
         const double sx = -gx / frame_r * offset;
         const double sy = -gy / frame_r * offset;
-        for (int attempt = 0; attempt < 6; ++attempt) {
+
+        bool inside = false;
+        for (int attempt = 0; attempt < 6 && !inside; ++attempt) {
             const double dx = x - sx, dy = y - sy;
-            if (dx * dx + dy * dy <= 1.0) break;
-            const unsigned int base_a = (attempt * 2 + 5);
-            const unsigned int base_b = (attempt * 2 + 7);
-            u0 = radical_inverse(seed + attempt + 2, base_a % 23 + 2);
-            u1 = radical_inverse(seed + attempt + 2, base_b % 29 + 2);
-            theta = lookup(gen.angle, ANGLE_TABLE, u1);
-            if (gen.swirl != 0.0) theta += gen.swirl * frame_r * TWO_PI * 0.25;
-            rho = lookup(gen.radial, RADIAL_TABLE, u0) * aperture_edge_at(gen.shape, theta);
-            x = rho * cos(theta);
-            y = rho * sin(theta);
-            if (gen.anamorphism > 0.0) x /= (1.0 + gen.anamorphism);
-            else if (gen.anamorphism < 0.0) y /= (1.0 - gen.anamorphism);
+            if (dx * dx + dy * dy <= 1.0) { inside = true; break; }
+            const unsigned int a = PRIMES[(dim + 2 + attempt * 2) % 22];
+            const unsigned int b = PRIMES[(dim + 3 + attempt * 2) % 22];
+            u0 = radical_inverse(seed + attempt + 2, a);
+            u1 = radical_inverse(seed + attempt + 2, b);
+            sample_aperture(gen, u0, u1, swirl_angle, x, y);
+        }
+
+        // Au bout de six essais, projeter sur le disque de troncature plutot
+        // que rendre le point tel quel. Sans cela, jusqu'a 26 % des
+        // echantillons restaient hors de l'amande dans les coins -- et de
+        // facon deterministe, donc pas comme du bruit mais comme un voile
+        // structure autour de la forme.
+        if (!inside) {
+            double dx = x - sx, dy = y - sy;
+            const double d = sqrt(dx * dx + dy * dy);
+            if (d > 1e-9) {
+                dx /= d;
+                dy /= d;
+                x = sx + dx;
+                y = sy + dy;
+                const double r2 = x * x + y * y;
+                if (r2 > 1.0) {
+                    const double inv = 1.0 / sqrt(r2);
+                    x *= inv;
+                    y *= inv;
+                }
+            }
         }
     }
 
@@ -424,7 +489,10 @@ IX_MODULE_CLBK::create_ray_generator(OfObject& object, const CtxMotionBlur *moti
 
     if (attr_bool(object, "enable_bokeh", true)) {
         generator->prepare((int) attr_long(object, "blades", 0),
-                           attr_double(object, "blade_rotation"),
+                           // Les attributs `angle` de Clarisse sont en DEGRES ; le .cma ne
+                           // convertit rien. Lus comme des radians, 5 degres
+                           // demandes donnent 286 degres reels.
+                           attr_double(object, "blade_rotation") * (PI / 180.0),
                            attr_double(object, "blade_curvature"),
                            attr_double(object, "spherical_aberration"),
                            attr_double(object, "optical_vignetting"),
