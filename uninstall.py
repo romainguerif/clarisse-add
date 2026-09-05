@@ -20,7 +20,7 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
 from clarisse_add import manifest  # noqa: E402
-from clarisse_add.core import paths, shelf  # noqa: E402
+from clarisse_add.core import paths, shelf, startup  # noqa: E402
 
 
 def main(argv=None):
@@ -44,6 +44,19 @@ def main(argv=None):
         total += removed
         state = "%d categorie(s) retiree(s)" % removed if removed else "rien a retirer"
         print("%-5s %s  [%s]" % (version, config, state))
+
+        # Le crochet de demarrage vit ailleurs que le shelf : il faut le
+        # retirer explicitement, sinon Clarisse continuerait d'executer un
+        # script d'un addon desinstalle.
+        env_file = paths.clarisse_env_file(version)
+        config_dir = os.path.dirname(env_file)
+        changed, saved = startup.disable(env_file,
+                                         startup.hook_script(config_dir))
+        startup.remove_hook(config_dir)
+        if changed:
+            print("      script de demarrage retire de clarisse.env")
+            if saved:
+                print("      sauvegarde : %s" % os.path.basename(saved))
 
     if args.purge_entries and os.path.isdir(paths.ENTRY_DIR):
         removed = shelf.prune_entry_scripts([])

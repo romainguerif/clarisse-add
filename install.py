@@ -29,7 +29,7 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
 from clarisse_add import __version__, manifest  # noqa: E402
-from clarisse_add.core import paths, shelf  # noqa: E402
+from clarisse_add.core import paths, shelf, startup  # noqa: E402
 from clarisse_add.presets import catalog  # noqa: E402
 
 
@@ -212,10 +212,45 @@ def install(version, slot):
         print("  %d categorie(s) ClarisseAdd remplacee(s)" % report["replaced"])
     print("  %d bouton(s) dans %d categorie(s), slot %d"
           % (report["items"], report["categories"], slot))
+    # Chargement automatique des modules C++.
+    #
+    # Clarisse ne balaye ses modules qu'au demarrage, et aucune variable
+    # d'environnement ne permet de lui en indiquer d'autres. On passe donc par
+    # CLARISSE_STARTUP_SCRIPT, qui est reconnue, et dont le script appelle
+    # scan_modules. Sans ca, il faudrait cliquer un bouton a chaque session.
+    env_file = paths.clarisse_env_file(version)
+    hook = startup.write_hook(os.path.dirname(env_file))
+    changed, saved = startup.enable(env_file, hook)
+    print("")
+    print("Demarrage : %s" % env_file)
+    print("  lanceur : %s" % os.path.basename(hook))
+    if changed:
+        print("  script de demarrage ajoute")
+        if saved:
+            print("  sauvegarde : %s" % os.path.basename(saved))
+    else:
+        print("  deja en place")
+    libraries = _native_libraries()
+    if libraries:
+        print("  %d module(s) C++ seront charges : %s"
+              % (len(libraries), ", ".join(libraries)))
+    else:
+        print("  aucun module C++ compile pour l'instant "
+              "(voir native/README.md)")
+
     print("")
     print("Termine. Lancez Clarisse : les onglets '%s...' sont dans le shelf."
           % manifest.PREFIX)
     return 0
+
+
+def _native_libraries():
+    """Les bibliotheques presentes dans native/build, sans importer Clarisse."""
+    folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          "native", "build")
+    if not os.path.isdir(folder):
+        return []
+    return sorted(name for name in os.listdir(folder) if name.endswith(".dll"))
 
 
 def main(argv=None):
