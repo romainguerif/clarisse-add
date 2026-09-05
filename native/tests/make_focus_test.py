@@ -14,8 +14,10 @@ REPORT = r"J:\_WINDOWSTEMP\claude\focus.log"
 
 # La camera est a z = 14 ; les spheres a 0, -8, -16, -24. Leurs distances
 # valent donc 14, 22, 30 et 38.
+# "none" : aucun filtre. None : filtre sans profondeur. Un entier : viser la
+# sphere de cet index, sans jamais saisir de distance -- c'est tout l'interet.
 VARIANTS = [("00_aucun_filtre", "none"), ("01_flou_uniforme", None),
-            ("02_net_devant", 14.0), ("03_net_derriere", 38.0)]
+            ("02_vise_sphere_0", 0), ("03_vise_sphere_3", 3)]
 
 lines = []
 
@@ -101,8 +103,10 @@ for name, focus in VARIANTS:
     setv(obj, "blades", 6)
     if focus is not None:
         setv(obj, "depth_aov", "depth")
-        setv(obj, "focus_distance", focus)
         setv(obj, "focus_range", 3.0)
+        setv(obj, "focus_object", "project:/ball_%d" % focus)
+        say("  %s vise ball_%d -> focus_object='%s'"
+            % (name, focus, obj.get_attribute("focus_object").get_string()))
 
     ix.application.save_project(os.path.join(OUT, name + ".project"))
     say("%s\t%s" % (name, str(image)))

@@ -58,14 +58,19 @@ class "ImageFilterBokeh" "KernelFilter" {
             filter "aov_groups"
             value ""
         }
+        reference "focus_object" {
+            doc "Objet sur lequel faire le point, comme sur une camera. Renseigne, il rend Focus Distance inutile : la profondeur est relevee a chaque image entre la camera du layer et cet objet, donc la mise au point suit l'animation des deux. C'est de loin le plus pratique -- une distance en unites de scene ne se devine pas, et elle change des que quelque chose bouge. Il faut quand meme un AOV de profondeur ci-dessus : sans lui, le filtre ne sait pas ou se trouve le reste de la scene et floute tout uniformement."
+            filter "SceneItem"
+            value ""
+        }
         long "depth_mode" {
-            doc "Comment lire les valeurs de l'image de profondeur. Distance reelle : la valeur est une distance en unites de la scene. Inverse : la valeur est 1/z, comme le donnent certains moteurs et la plupart des tampons de profondeur temps reel."
+            doc "Comment lire les valeurs de l'AOV. Distance reelle : la valeur est une profondeur en unites de scene, ce que rend l'AOV depth de Clarisse. Inverse : la valeur est 1/z, comme le donnent certains moteurs et la plupart des tampons de profondeur temps reel."
             value 0
             preset "Distance reelle" "0"
             preset "Inverse (1/z)" "1"
         }
         distance "focus_distance" {
-            doc "Distance de mise au point. Ce qui se trouve a cette distance reste net ; le flou croit de part et d'autre."
+            doc "Distance de mise au point, en unites de scene, mesuree le long de l'axe de la camera. Ce qui se trouve a cette profondeur reste net ; le flou croit de part et d'autre. Ignore des qu'un objet est renseigne ci-dessus."
             value 10.0
             numeric_range yes 0.0 1000000
             ui_range yes 0.0 200

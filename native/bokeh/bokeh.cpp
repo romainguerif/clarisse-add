@@ -53,6 +53,7 @@
 #include <image_context.h>
 #include <of_object.h>
 #include <of_attr.h>
+#include <module_scene_item.h>
 #include <core_log.h>
 
 #include <math.h>
@@ -92,8 +93,14 @@ struct DepthSnapshot {
 
 class BokehModule : public ModuleKernelFilter {
 public:
-    BokehModule() : ModuleKernelFilter() {}
+    BokehModule() : ModuleKernelFilter(), focus_override(-1.0) {}
     DepthSnapshot depth;
+
+    // Distance calculee depuis l'objet vise, ou -1 si aucun n'est renseigne.
+    // Elle est resolue une fois dans pre_filter : remonter au layer, y lire la
+    // camera et interroger deux transformations monde a chaque tuile serait du
+    // gaspillage, et filter est multi-thread.
+    double focus_override;
 };
 
 // La doc du SDK ecrit ces callbacks avec ModuleObject * ; le vrai typedef dit
@@ -200,6 +207,7 @@ struct Settings {
     CoreString depth_aov;       // nom du canal, vide = rayon constant
     int    depth_mode;          // 0 distance reelle, 1 inverse
     double focus_distance;
+    double focus_override;      // depuis l'objet vise, ou -1
     double focus_range;
     double blur_falloff;
     int    focus_side;          // 0 les deux, 1 arriere, 2 avant
@@ -240,6 +248,7 @@ read_settings(const CtxEval& eval, const CtxKernelFilter& ctx,
     s.depth_aov       = cma.get_depth_aov();
     s.depth_mode      = (int) cma.get_depth_mode();
     s.focus_distance  = cma.get_focus_distance();
+    s.focus_override  = -1.0;   // renseigne par l'appelant, pas par le Cma
     s.focus_range     = cma.get_focus_range();
     s.blur_falloff    = cma.get_blur_falloff();
     s.focus_side      = (int) cma.get_focus_side();
@@ -521,6 +530,68 @@ build_kernel(Kernel& k, const Settings& s, const double& channel_scale,
     if (quantised > 0.0) k.total = quantised;
 }
 
+// Repere monde d'un objet de scene : sa position, et l'axe qu'il regarde.
+//
+// Une camera Clarisse vise son -Z local ; on rend donc l'oppose du troisieme
+// axe pour obtenir une direction de visee franche. extract_frame decompose la
+// matrice, les axes rendus sont donc orthonormes meme si l'objet porte une
+// echelle ou un cisaillement.
+bool
+world_frame(OfObject *item, GMathVec3d& position, GMathVec3d& forward)
+{
+    if (item == 0) return false;
+    ModuleSceneItem *module = item->get_module<ModuleSceneItem>();
+    if (module == 0) return false;
+    const GMathMatrix4x4d& matrix = module->get_global_matrix();
+    matrix.extract_translation(position);
+    GMathVec3d ax, ay, az;
+    matrix.extract_frame(ax, ay, az);
+    forward = -az;
+    return true;
+}
+
+// Profondeur de l'objet vise, dans l'unite meme de l'AOV.
+//
+// Le filtre est embarque dans un layer ; get_parent() rend ce layer, dont
+// l'attribut active_camera designe la camera. Sans elle on ne peut rien
+// calculer -- une mise au point n'a de sens que depuis un point de vue.
+//
+// Le point important est l'unite. L'AOV `depth.Z` de Clarisse porte la
+// profondeur PROJETEE sur l'axe de visee, pas la distance au point de vue :
+// mesure sur une sphere posee a 14 unites devant la camera mais decalee de 5
+// sur le cote, l'AOV rend 12.7 la ou la distance vaut 13.6. Comparer une
+// distance euclidienne a cette profondeur ferait donc deriver la mise au point
+// des que l'objet quitte le centre du cadre -- et d'autant plus que le champ
+// est large. On projette.
+//
+// C'est aussi le calcul juste optiquement : une lentille mince fait le point
+// sur un PLAN parallele au capteur, pas sur une sphere centree sur l'oeil.
+//
+// Rend -1 quand la chaine ne se resout pas, ou quand l'objet est derriere la
+// camera : on retombe alors sur la distance saisie a la main.
+double
+focus_distance_from_object(OfObject& filter_object)
+{
+    OfAttr *target_attr = filter_object.get_attribute("focus_object");
+    if (target_attr == 0) return -1.0;
+    OfObject *target = target_attr->get_object();
+    if (target == 0) return -1.0;
+
+    OfObject *layer = filter_object.get_parent();
+    if (layer == 0) return -1.0;
+    OfAttr *camera_attr = layer->get_attribute("active_camera");
+    if (camera_attr == 0) return -1.0;
+    OfObject *camera = camera_attr->get_object();
+    if (camera == 0) return -1.0;
+
+    GMathVec3d eye, gaze, aim, unused;
+    if (!world_frame(camera, eye, gaze)) return -1.0;
+    if (!world_frame(target, aim, unused)) return -1.0;
+
+    const double depth = (aim - eye).dot(gaze);
+    return (depth > 0.0) ? depth : -1.0;
+}
+
 // Retrouve le canal de profondeur a partir du nom de groupe rendu par le tag.
 //
 // Le nom exact d'abord -- un AOV custom peut porter un nom simple -- puis les
@@ -580,7 +651,9 @@ circle_of_confusion(const Settings& s, const double& raw)
     if (s.depth_mode == 1) z = (raw > 1e-9) ? (1.0 / raw) : 1e9;
     else if (raw <= 1e-9) z = 1e9;
 
-    const double delta = z - s.focus_distance;
+    const double focus = (s.focus_override > 0.0) ? s.focus_override
+                                                  : s.focus_distance;
+    const double delta = z - focus;
     if (s.focus_side == 1 && delta <= 0.0) return 0.0;   // arriere seulement
     if (s.focus_side == 2 && delta >= 0.0) return 0.0;   // avant seulement
 
@@ -671,6 +744,21 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
     if (module == 0) return;
     module->depth = DepthSnapshot();
 
+    // La mise au point sur un objet, resolue une fois par evaluation.
+    module->focus_override = focus_distance_from_object(object);
+    if (module->focus_override > 0.0)
+        LOG_INFO("[Bokeh] mise au point sur l'objet : "
+                 << module->focus_override << " unites\n");
+
+    // Viser un objet sans avoir branche d'AOV ne produit RIEN de visible : le
+    // filtre ignore alors la profondeur et floute tout uniformement. L'echec
+    // est silencieux et se cherche longtemps, alors on le dit.
+    if (module->focus_override > 0.0 && s.depth_aov.get_count() == 0)
+        LOG_WARNING("[Bokeh] un objet de mise au point est vise, mais aucun AOV "
+                    "de profondeur n'est choisi : le flou restera uniforme. "
+                    "Activez l'AOV depth sur le Layer 3D, puis choisissez-le "
+                    "dans Focus > Depth AOV.\n");
+
     if (s.radius < 0.5 || s.depth_aov.get_count() == 0) return;
     if (ctx.source_image == 0) return;
 
@@ -739,6 +827,12 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     // demande, par intermittence.
     Settings s;
     read_settings(eval, ctx, src, s);
+
+    // La distance calculee depuis l'objet vise a ete resolue dans pre_filter :
+    // remonter au layer et interroger deux transformations monde a chaque
+    // tuile serait du gaspillage.
+    const BokehModule *owner = (const BokehModule *) object.get_module();
+    if (owner != 0) s.focus_override = owner->focus_override;
     if (s.radius < 0.5) return true;   // la destination porte deja la source
 
     const float *channels[4];
