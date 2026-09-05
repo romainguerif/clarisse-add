@@ -192,7 +192,8 @@ class Browser(object):
                 rows.append("Fichier .project introuvable sur le disque.")
 
         for index, label in enumerate(self.detail_labels):
-            label.set_text(rows[index] if index < len(rows) else "")
+            # GuiLabel n'a pas de set_text : son texte est son "label".
+            label.set_label(rows[index] if index < len(rows) else "")
 
     # -- action ------------------------------------------------------------
 

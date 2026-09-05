@@ -330,25 +330,52 @@ def _set_selected_category(text, category):
 # ---------------------------------------------------------------------------
 
 
+def _existing_titles(shelf, slot, category):
+    """Titres deja presents dans une categorie du shelf vivant."""
+    titles = set()
+    try:
+        items = shelf.get_items(slot, category)
+        count = items.get_count() if items is not None else 0
+    except Exception:
+        return titles
+    for index in range(count):
+        try:
+            titles.add(str(items[index].get_title()))
+        except Exception:
+            continue
+    return titles
+
+
 def register_runtime(ix, tools, slot=DEFAULT_SLOT):
-    """Ajoute les boutons dans la session en cours, sans ecrire sur disque.
+    """Ajoute au shelf vivant les boutons qui n'y sont pas encore.
 
-    ``AppShelf::add_item`` est expose par les bindings Python ; les elements
-    ajoutes ici vivent le temps de la session.  C'est ce qui permet au bouton
-    "Reload" de faire reapparaitre un outil qu'on vient d'ajouter au manifeste,
-    sans redemarrer Clarisse ni reinstaller le shelf.
+    ``AppShelf::add_item`` est expose par les bindings Python.  Attention : les
+    elements qu'il cree ne sont **pas** volatils -- Clarisse les traite comme
+    des boutons utilisateur et les ecrit dans ``shelf.cfg`` a la fermeture.  La
+    premiere version de cette fonction reajoutait les 43 boutons a chaque
+    Reload : au redemarrage suivant, le fichier en contenait 86.
 
-    Renvoie le nombre de boutons ajoutes, ou ``-1`` si l'API n'est pas
+    On ne cree donc que ce qui manque, en comparant les titres par categorie.
+    Ce qui reste utile : un outil ajoute au manifeste en cours de session
+    apparait sans reinstallation, et sans doublon.
+
+    Renvoie ``(ajoutes, deja_presents)``, ou ``(-1, 0)`` si l'API n'est pas
     disponible sur cette version.
     """
     try:
         shelf = ix.application.get_shelf()
     except Exception:
         log.debug("AppShelf indisponible : enregistrement a chaud ignore")
-        return -1
+        return -1, 0
 
-    added = 0
+    added = skipped = 0
+    known = {}
     for tool in tools:
+        if tool.category not in known:
+            known[tool.category] = _existing_titles(shelf, slot, tool.category)
+        if tool.title in known[tool.category]:
+            skipped += 1
+            continue
         try:
             ok = shelf.add_item(
                 slot,
@@ -363,4 +390,5 @@ def register_runtime(ix, tools, slot=DEFAULT_SLOT):
             continue
         if ok:
             added += 1
-    return added
+            known[tool.category].add(tool.title)
+    return added, skipped

@@ -120,12 +120,11 @@ def _resolve_owners(ix, entry, target):
         if parameter.owner and parameter.owner not in owners:
             owners.append(parameter.owner)
 
-    base = str(target).rstrip("/")
     resolved = {}
     fallback_index = None
 
     for owner in owners:
-        obj = ix.item_exists(base + "/" + owner)
+        obj = ix.item_exists(scene.child_path(target, owner))
         if obj is not None:
             resolved[owner] = obj
             continue

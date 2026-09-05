@@ -12,7 +12,7 @@ Trois mécanismes permettent d'y greffer du code :
 |---|---|---|
 | Shelf utilisateur | `%APPDATA%/Isotropix/Clarisse/<v>/shelf.cfg` | persistant, mais un seul fichier partagé avec l'artiste |
 | Shelf de remplacement | `IX_SHELF_CONFIG_FILE` | remplace le shelf natif — inutilisable |
-| Enregistrement à chaud | `ix.application.get_shelf().add_item()` | volatile, disparaît à la fermeture |
+| Enregistrement à chaud | `ix.application.get_shelf().add_item()` | immédiat — mais **persisté** dans `shelf.cfg` à la fermeture |
 
 ClarisseAdd utilise le **premier** pour l'installation, et le **troisième** pour
 le rechargement en cours de session.
@@ -62,7 +62,7 @@ les kwargs de chaque fonction — d'où des signatures comme
 Ici, `bootstrap.launch` l'enregistre une fois dans `core.compat`, et chaque
 module fait `ix = get_ix()` dans son `run()`. Conséquence utile : les modules
 s'importent **sans Clarisse**, ce qui permet de tester le manifeste, le parser et
-le catalogue avec un `pytest` ordinaire — 247 tests, aucun n'a besoin de
+le catalogue avec un `pytest` ordinaire — 262 tests, aucun n'a besoin de
 l'application.
 
 `get_ix()` lève `ClarisseUnavailable` si personne n'a appelé `set_ix()` : l'appel
@@ -101,8 +101,11 @@ Le bouton **Reload** :
 
 1. `catalog.reload()` + `manifest.invalidate()` — relit le catalogue ;
 2. `shelf.write_entry_scripts()` — régénère les stubs des outils ajoutés ;
-3. `shelf.register_runtime()` — réenregistre les boutons via `AppShelf.add_item()`,
-   sans toucher au disque ;
+3. `shelf.register_runtime()` — ajoute via `AppShelf.add_item()` les boutons
+   **absents** du shelf vivant. Uniquement ceux-là : les éléments créés par
+   `add_item` ne sont pas volatils, Clarisse les écrit dans `shelf.cfg` en
+   quittant. La première version réajoutait les 43 boutons à chaque Reload, et
+   le fichier en comptait 86 au redémarrage suivant ;
 4. `bootstrap.reload_addon()` — purge `sys.modules` de tout `clarisse_add.*`.
 
 La purge n'épargne **rien**, `bootstrap` compris — y compris pendant qu'on y

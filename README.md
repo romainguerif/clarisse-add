@@ -104,7 +104,7 @@ morts.)*
 ## Développement
 
 ```bash
-python -m pytest tests -q        # 247 tests, sans Clarisse
+python -m pytest tests -q        # 262 tests, sans Clarisse
 python tools/check_api.py        # vérifie les noms d'API contre le SDK
 python tools/build_catalog.py    # réindexe assets/presets/
 python tools/build_icons.py      # génère les icônes manquantes (Pillow)

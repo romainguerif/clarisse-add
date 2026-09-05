@@ -12,6 +12,7 @@ from . import log
 from .compat import get_ix
 
 __all__ = [
+    "child_path",
     "current_context",
     "context_from_selection",
     "ensure_context",
@@ -68,6 +69,21 @@ def context_from_selection(fallback_to_current=True):
     return None
 
 
+def child_path(ctx, name):
+    """Chemin d'un enfant de ``ctx`` nomme ``name``.
+
+    Les racines de Clarisse s'ecrivent ``project:/`` ou ``project://`` selon
+    qui les a produites ; un enfant s'ecrit toujours ``project://nom``.  Un
+    simple ``str(ctx) + "/" + name`` donne ``project:///nom`` sur l'une, et un
+    ``rstrip("/")`` naif donne ``project:/nom`` sur l'autre.  Ni l'un ni l'autre
+    n'est le chemin que Clarisse attend.
+    """
+    base = str(ctx).rstrip("/")
+    if base.endswith(":"):
+        return base + "//" + name
+    return base + "/" + name
+
+
 def is_writable(ctx, quiet=False):
     """``True`` si on peut ecrire dans ce contexte."""
     ix = get_ix()
@@ -95,7 +111,7 @@ def ensure_context(name, parent=None, unique=True):
     if unique:
         name = unique_name(name, parent)
     else:
-        existing = ix.item_exists(str(parent) + "/" + name)
+        existing = ix.item_exists(child_path(parent, name))
         if existing:
             return existing
     return ix.cmds.CreateContext(name, "Global", str(parent))
@@ -104,11 +120,10 @@ def ensure_context(name, parent=None, unique=True):
 def unique_name(base, ctx):
     """``base`` s'il est libre dans ``ctx``, sinon ``base1``, ``base2``, ..."""
     ix = get_ix()
-    prefix = str(ctx).rstrip("/") + "/"
-    if not ix.item_exists(prefix + base):
+    if not ix.item_exists(child_path(ctx, base)):
         return base
     index = 1
-    while ix.item_exists(prefix + base + str(index)):
+    while ix.item_exists(child_path(ctx, base + str(index))):
         index += 1
     return base + str(index)
 
@@ -204,8 +219,20 @@ def set_attribute(obj, name, value):
         return False
     target = str(obj) + "." + name
     values = value if isinstance(value, (list, tuple)) else [value]
-    ix.cmds.SetValues([target], [str(item) for item in values])
+    ix.cmds.SetValues([target], [_serialize(item) for item in values])
     return True
+
+
+def _serialize(value):
+    """Valeur au format attendu par ``SetValues``.
+
+    ``str(True)`` donne ``"True"``, que Clarisse ne reconnait pas comme un
+    booleen : ses fichiers ecrivent ``yes``/``no`` et ses commandes acceptent
+    ``1``/``0``.  On passe par ce dernier, qui vaut aussi pour un ``long``.
+    """
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    return str(value)
 
 
 def get_attribute(obj, name, default=None):

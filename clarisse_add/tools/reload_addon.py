@@ -24,7 +24,7 @@ def run(payload=None):
 
     written = shelf.write_entry_scripts(tools)
     pruned = shelf.prune_entry_scripts(tools)
-    registered = shelf.register_runtime(ix, tools)
+    registered, already = shelf.register_runtime(ix, tools)
     forgotten = bootstrap.reload_addon()
 
     lines = [
@@ -37,8 +37,11 @@ def run(payload=None):
             "Enregistrement a chaud indisponible sur cette version : "
             "relancez install.py pour voir les nouveaux boutons."
         )
+    elif registered:
+        lines.append("%d nouveau(x) bouton(s) ajoute(s) au shelf, %d deja presents"
+                     % (registered, already))
     else:
-        lines.append("%d boutons reenregistres dans le shelf" % registered)
+        lines.append("Shelf inchange : les %d boutons sont deja presents" % already)
 
     message = "\n".join(lines)
     log.info(message.replace("\n", " | "))
