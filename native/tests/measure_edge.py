@@ -51,21 +51,21 @@ def run(command):
     return out.decode("ascii", "replace")
 
 
-def dump(path, crop=None):
-    """Rend un canal (ou une bande) sous forme de liste de flottants lineaires.
+def dump(path):
+    """Rend un canal entier sous forme de liste de flottants lineaires.
 
     Le champ entre parentheses de `txt:` est la valeur multipliee par le
     quantum annonce dans l'entete -- 65535 ici. C'est un entier, donc sans
     ambiguite de formatage, et il conserve les valeurs HDR au-dela de 1.0 :
-    38.0 ressort en 2490330. Le champ `gray(N%)` du meme ligne dit la meme
+    38.0 ressort en 2490330. Le champ `gray(N%)` de la meme ligne dit la meme
     chose avec moins de chiffres.
+
+    Un canal entier plutot qu'une bande decoupee : un `txt:` sur 960x540 coute
+    une seconde, et une seule lecture par canal evite d'avoir a relancer magick
+    pour chaque ligne qu'on veut regarder.
     """
-    command = [MAGICK, path]
-    if crop is not None:
-        command += ["-crop", crop, "+repage"]
-    command += ["-depth", "32", "-define", "quantum:format=floating-point",
-                "txt:-"]
-    text = run(command)
+    text = run([MAGICK, path, "-depth", "32",
+                "-define", "quantum:format=floating-point", "txt:-"])
 
     lines = text.splitlines()
     header = lines[0]
@@ -102,25 +102,26 @@ def channels_of(exr, work):
                   key=lambda p: int(re.search(r"ch_(\d+)", p).group(1)))
 
 
-def pick_depth_channel(paths, expected_bg):
+def pick_depth_channel(planes):
     """Lequel des canaux est depth.Z.
 
-    L'ordre observe est R, G, B, A, depth.Z, mais on ne le suppose pas : le
-    canal de profondeur est celui dont le maximum ressemble a la profondeur du
-    fond annoncee par le manifeste. Les canaux de couleur, eux, valent
-    quelques unites au plus.
+    L'ordre observe est R, G, B, A, depth.Z, mais on ne le suppose pas : la
+    profondeur se compte en unites de scene, des dizaines ici, quand les
+    canaux de couleur et l'alpha restent a quelques unites. Le plus grand
+    maximum gagne.
+
+    On ne compare PAS a la profondeur attendue, meme si le manifeste la
+    connait : une variante dont le filtre abime l'AOV de profondeur doit
+    encore etre reconnue, et signalee, plutot que rejetee comme illisible.
+
+    Le maximum est recalcule ici sur les valeurs lues, pas demande a
+    `%[fx:maxima]` : les TIFF sortis de `-separate` trainent un canal alpha qui
+    contient encore la profondeur, si bien que fx rend la meme valeur pour les
+    cinq fichiers et ne distingue plus rien.
     """
-    best, best_gap = None, None
-    for index, path in enumerate(paths):
-        text = run([MAGICK, path, "-format", "%[fx:maxima]", "info:"])
-        try:
-            maxima = float(text.strip())
-        except ValueError:
-            continue
-        gap = abs(maxima - expected_bg)
-        if best_gap is None or gap < best_gap:
-            best, best_gap = index, gap
-    return best, best_gap
+    maxima = [max(values) for values in planes]
+    index = maxima.index(max(maxima))
+    return index, maxima[index]
 
 
 def find_silhouette(depth, width, height, bg_depth, fg_depth):
@@ -132,16 +133,23 @@ def find_silhouette(depth, width, height, bg_depth, fg_depth):
     permet de mesurer le debord d'un cote et l'autre du bord reel.
     """
     middle = 0.5 * (bg_depth + fg_depth)
-    best = None
+    rows = []
     for y in range(height):
         row = depth[y * width:(y + 1) * width]
         near = [x for x, value in enumerate(row) if 0.0 < value < middle]
         if not near:
             continue
-        span = near[-1] - near[0] + 1
-        if best is None or span > best[0]:
-            best = (span, y, near[0], near[-1])
-    return best
+        rows.append((near[-1] - near[0] + 1, y, near[0], near[-1]))
+    if not rows:
+        return None
+
+    # L'objet est une face frontale : toutes ses lignes ont la meme largeur. On
+    # prend celle du MILIEU de la bande, pas la premiere venue -- la premiere
+    # est la ligne du bord superieur, a moitie couverte, et son plateau de
+    # premier plan est deja un melange avec le fond.
+    span = max(entry[0] for entry in rows)
+    widest = [entry for entry in rows if entry[0] == span]
+    return widest[len(widest) // 2]
 
 
 def crossing(profile, start, step, level):
@@ -163,7 +171,13 @@ def crossing(profile, start, step, level):
 
 
 def measure_side(profile, edge, step, radius, level_fg, level_bg):
-    """Un bord. `step` vaut -1 a gauche (le fond est vers les x decroissants)."""
+    """Un bord de la silhouette.
+
+    `step` pointe du bord VERS LE FOND : -1 au bord gauche, +1 au bord droit.
+    Tout le reste en decoule, et se tromper de signe ici fait partir la marche
+    a l'interieur de l'objet, traverser toute la silhouette et mesurer le bord
+    d'en face sans rien signaler.
+    """
     contrast = level_bg - level_fg
     if abs(contrast) < MIN_CONTRAST:
         return None
@@ -172,7 +186,7 @@ def measure_side(profile, edge, step, radius, level_fg, level_bg):
 
     # On demarre franchement dans le fond, hors de toute contamination, et on
     # marche vers l'objet.
-    start = int(round(edge - step * (BACKGROUND_GAP * radius)))
+    start = int(round(edge + step * (BACKGROUND_GAP * radius)))
     start = max(0, min(len(profile) - 1, start))
 
     x90 = crossing(normalised, start, -step, 0.9)
@@ -184,10 +198,14 @@ def measure_side(profile, edge, step, radius, level_fg, level_bg):
         "x90": x90,
         "x10": x10,
         "width": abs(x10 - x90),
-        # Positif = le premier plan a bave sur le fond net, ce qui est le
-        # comportement recherche. Vers zero = la silhouette est restee dure.
-        "spill": (x90 - edge) * -step,
-        "reach": (edge - x10) * -step,
+        # Comptes a partir du bord geometrique, chacun dans SON sens : `step`
+        # pointe vers le fond, `-step` vers l'interieur de l'objet. Les deux
+        # ressortent donc positifs quand la transition s'etale des deux cotes.
+        # Positif du cote fond = le premier plan flou a bave sur le fond net,
+        # ce qui est le comportement recherche ; vers zero = la silhouette est
+        # restee dure.
+        "spill": (x90 - edge) * step,
+        "reach": (x10 - edge) * -step,
     }
 
 
@@ -207,13 +225,11 @@ def read_manifest(directory):
     return rows
 
 
-def measure_variant(entry, directory):
+def measure_variant(entry, directory, reference=None):
     name = entry["variant"]
     radius = float(entry["radius"])
     bg_depth = float(entry["bg_depth"])
     fg_depth = float(entry["fg_depth"])
-    width = int(entry["width"])
-    height = int(entry["height"])
 
     # cnode suffixe le numero d'image au nom demande : slices_01.exr donne
     # slices_01.exr00001.exr.
@@ -227,16 +243,42 @@ def measure_variant(entry, directory):
         return None, ("%d canaux seulement -- l'AOV depth manque, verifier "
                       "output_layer et enabled_aov_list" % len(paths))
 
-    index, gap = pick_depth_channel(paths, bg_depth)
-    if gap is None or gap > 0.25 * bg_depth:
-        return None, ("aucun canal ne ressemble a une profondeur "
-                      "(ecart %.2f sur %.2f attendu)" % (gap or -1, bg_depth))
+    # Les cinq canaux sont lus en entier une bonne fois. La taille vient de
+    # l'entete du rendu, jamais du manifeste : cnode rend le preset de l'image
+    # et non l'attribut `resolution`, donc le manifeste peut annoncer autre
+    # chose que ce qui a ete rendu. Ce qui est sur le disque fait foi.
+    planes = []
+    width = None
+    for path in paths:
+        values, plane_width = dump(path)
+        planes.append(values)
+        width = plane_width
+    height = len(planes[0]) // width
 
-    depth, _ = dump(paths[index])
-    if len(depth) < width * height:
-        return None, "profondeur tronquee (%d valeurs)" % len(depth)
+    if (width, height) != (int(entry["width"]), int(entry["height"])):
+        print("    (rendu %dx%d, le manifeste annoncait %sx%s)"
+              % (width, height, entry["width"], entry["height"]))
 
-    silhouette = find_silhouette(depth, width, height, bg_depth, fg_depth)
+    index, depth_max = pick_depth_channel(planes)
+    depth = planes[index]
+
+    # Le filtre n'est cense toucher que RGBA. Si la profondeur ressort d'une
+    # variante autrement que du rendu brut, c'est un bug du filtre, pas de la
+    # scene -- et il faut le voir, pas le contourner en silence.
+    warning = None
+    if abs(depth_max - bg_depth) > 0.02 * bg_depth:
+        warning = ("l'AOV de profondeur est ressorti a %.2f au lieu de %.2f : "
+                   "le filtre ecrit dans un canal qui ne lui appartient pas"
+                   % (depth_max, bg_depth))
+
+    # La silhouette vient du rendu de reference quand il existe. La geometrie
+    # est la meme dans toutes les variantes -- seul le filtre change -- donc le
+    # bord geometrique est le meme, et le prendre une fois pour toutes met les
+    # variantes sur exactement la meme regle. C'est aussi ce qui sauve la
+    # mesure quand une variante abime sa propre profondeur.
+    silhouette = reference
+    if silhouette is None:
+        silhouette = find_silhouette(depth, width, height, bg_depth, fg_depth)
     if silhouette is None:
         return None, "premier plan introuvable dans la profondeur"
     span, row, left, right = silhouette
@@ -244,15 +286,11 @@ def measure_variant(entry, directory):
     # La luminance sur cette ligne. Trois canaux plutot qu'un seul : si une
     # aberration chromatique traine, les bords rouge et bleu ne tombent pas au
     # meme endroit et la moyenne le dit au lieu de le cacher.
-    crop = "%dx1+0+%d" % (width, row)
-    profile = None
-    for path in paths[:3]:
-        values, _ = dump(path, crop)
-        if profile is None:
-            profile = list(values)
-        else:
-            profile = [a + b for a, b in zip(profile, values)]
-    profile = [v / 3.0 for v in profile]
+    colour = [i for i in range(len(planes)) if i != index][:3]
+    profile = []
+    for x in range(width):
+        offset = row * width + x
+        profile.append(sum(planes[c][offset] for c in colour) / float(len(colour)))
 
     # Les plateaux. Le premier plan est releve au coeur de la silhouette, le
     # fond bien au-dela de la portee du flou, de chaque cote separement : si
@@ -273,9 +311,8 @@ def measure_variant(entry, directory):
         "row": row, "left": left, "right": right, "span": span,
         "fg": level_fg, "bg_left": median(left_bg), "bg_right": median(right_bg),
         "radius": radius, "slices": entry["slices_applied"],
-        "depth_channel": index,
-        "fg_depth_seen": median([depth[row * width + x]
-                                 for x in range(left, right + 1)]),
+        "depth_channel": index, "warning": warning,
+        "silhouette": (span, row, left, right),
     }
     result["L"] = measure_side(profile, left - 0.5, -1, radius,
                                level_fg, result["bg_left"])
@@ -313,6 +350,8 @@ def show(name, result):
              result["depth_channel"]))
     print("    niveaux              premier plan %.4f   fond %.4f / %.4f"
           % (result["fg"], result["bg_left"], result["bg_right"]))
+    if result["warning"]:
+        print("    ATTENTION            %s" % result["warning"])
     for side, label in (("L", "bord gauche"), ("R", "bord droit ")):
         side_result = result[side]
         if side_result is None:
@@ -331,14 +370,23 @@ def main(argv):
     print("Largeur de transition au bord d'un premier plan flou")
     print("dossier : %s" % directory)
 
+    # La variante sans filtre passe en premier : c'est elle qui fixe le bord
+    # geometrique servant de regle commune, et elle qui donne le plancher de la
+    # mesure -- la largeur d'une marche parfaitement franche a ce nombre
+    # d'echantillons.
+    rows.sort(key=lambda entry: entry["slices_requested"] != "none")
+
     measured = 0
+    reference = None
     for entry in rows:
-        result, problem = measure_variant(entry, directory)
+        result, problem = measure_variant(entry, directory, reference)
         if result is None:
             print("")
             print("  %s" % entry["variant"])
             print("    %s" % problem)
             continue
+        if reference is None and entry["slices_requested"] == "none":
+            reference = result["silhouette"]
         show(entry["variant"], result)
         measured += 1
 

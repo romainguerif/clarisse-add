@@ -117,7 +117,8 @@ struct Slice {
 
 class BokehModule : public ModuleKernelFilter {
 public:
-    BokehModule() : ModuleKernelFilter(), focus_override(-1.0) {}
+    BokehModule() : ModuleKernelFilter(), focus_override(-1.0), lens_radius(0.0),
+                    lens_focal(35.0), lens_stop(5.6) {}
     DepthSnapshot depth;
 
     // Distance calculee depuis l'objet vise, ou -1 si aucun n'est renseigne.
@@ -130,6 +131,17 @@ public:
     // Des bornes calculees par tuile donneraient des rayons differents de part
     // et d'autre d'une frontiere de tuile, donc une couture.
     std::vector<Slice> slices;
+
+    // Rayon maximal en pixels quand l'optique le calcule, mesure sur l'image
+    // entiere dans pre_filter. filter doit se servir de la MEME reference,
+    // sans quoi une tuile normaliserait ses fractions autrement qu'une autre.
+    double lens_radius;
+
+    // Focale et ouverture effectives, reprises sur la camera le cas echeant.
+    // Resolues une fois dans pre_filter, comme la mise au point : filter tourne
+    // par tuile et ne doit pas refaire cette remontee.
+    double lens_focal;
+    double lens_stop;
 };
 
 // La doc du SDK ecrit ces callbacks avec ModuleObject * ; le vrai typedef dit
@@ -243,6 +255,18 @@ struct Settings {
     double front_multiplier;    // flou du cote proche seulement
     double back_multiplier;     // flou du cote lointain seulement
     int    slices;              // tranches correctives ; 1 = passe unique
+    int    output_type;         // 0 image, 1 bloom, 2 point, 3 noyau, 4 mattes
+    bool   normalize_view;
+    double bloom_curvature;
+    GMathVec3d chroma_offset;   // refraction relative par canal
+    bool   real_lens;
+    bool   camera_lens;         // reprendre focale et ouverture sur la camera
+    double focal_length;        // mm
+    double f_stop;
+    double aperture_width;      // mm
+    double aperture_height;     // mm
+    double world_to_mm;         // unite de scene -> millimetres
+    double max_kernel;          // plafond du rayon, en pixels
     int    image_width;
     int    image_height;
 };
@@ -289,6 +313,46 @@ read_settings(const CtxEval& eval, const CtxKernelFilter& ctx,
     s.slices          = (int) cma.get_corrective_slices();
     if (s.slices < 1)  s.slices = 1;
     if (s.slices > 64) s.slices = 64;
+
+    s.output_type     = (int) cma.get_output_type();
+    s.normalize_view  = cma.get_normalize_visualization();
+    s.bloom_curvature = cma.get_bloom_curvature();
+    s.chroma_offset   = cma.get_chromatic_offset();
+
+    s.real_lens       = cma.get_real_world_lens();
+    s.camera_lens     = cma.get_lens_from_camera();
+    s.focal_length    = cma.get_focal_length();
+    s.f_stop          = cma.get_f_stop();
+    s.max_kernel      = cma.get_max_kernel_size() * scale;
+
+    // Le format de capteur pilote la taille d'ouverture, sauf en Personnalise.
+    // C'est cette taille qui convertit un cercle de confusion en millimetres
+    // en un rayon en pixels : a focale et ouverture egales, un grand capteur
+    // donne plus de flou.
+    static const double FORMATS[7][2] = {
+        {21.95, 16.00},   // 35 mm Academy
+        {24.89, 18.67},   // Super 35
+        {36.00, 24.00},   // plein format
+        {23.60, 15.70},   // APS-C
+        {12.52,  7.41},   // Super 16
+        {52.48, 23.01},   // 65 mm
+        {17.30, 13.00}    // Micro 4/3
+    };
+    const int format = (int) cma.get_film_format();
+    if (format >= 0 && format < 7) {
+        s.aperture_width  = FORMATS[format][0];
+        s.aperture_height = FORMATS[format][1];
+    } else {
+        s.aperture_width  = cma.get_aperture_width();
+        s.aperture_height = cma.get_aperture_height();
+    }
+
+    // L'optique se calcule en millimetres. Sans cette conversion, une scene
+    // modelisee en metres donnerait un flou mille fois trop faible.
+    static const double UNITS[5] = {1.0, 10.0, 1000.0, 25.4, 304.8};
+    const int unit = (int) cma.get_world_scale();
+    s.world_to_mm = ((unit >= 0 && unit < 5) ? UNITS[unit] : 1000.0)
+                    * cma.get_world_scale_multiplier();
 
     // Les dimensions viennent du proxy, qui les connait : ImageProxy expose
     // get_image_width/height. Passer par source_image obligerait a tenir
@@ -629,6 +693,44 @@ focus_distance_from_object(OfObject& filter_object)
     return (depth > 0.0) ? depth : -1.0;
 }
 
+// La camera active du layer qui porte ce filtre, s'il y en a une.
+//
+// Le filtre est embarque dans un layer ; get_parent() rend ce layer, dont
+// l'attribut active_camera designe la camera.
+OfObject *
+layer_camera(OfObject& filter_object)
+{
+    OfObject *layer = filter_object.get_parent();
+    if (layer == 0) return 0;
+    OfAttr *camera_attr = layer->get_attribute("active_camera");
+    if (camera_attr == 0) return 0;
+    return camera_attr->get_object();
+}
+
+// Reprend la focale et l'ouverture sur la camera, quand elle les expose.
+//
+// C'est le raccord le plus sur : l'optique du flou ne peut plus diverger de
+// celle du rendu. Une CameraPerspective simple n'a pas de nombre f, d'ou la
+// lecture attribut par attribut plutot qu'en bloc -- on prend ce qui existe.
+void
+read_camera_lens(OfObject& filter_object, double& focal_length, double& f_stop)
+{
+    OfObject *camera = layer_camera(filter_object);
+    if (camera == 0) return;
+
+    OfAttr *focal = camera->get_attribute("focal_length");
+    if (focal != 0) {
+        const double value = focal->get_double();
+        if (value > 1e-6) focal_length = value;
+    }
+
+    OfAttr *stop = camera->get_attribute("f_stop");
+    if (stop != 0) {
+        const double value = stop->get_double();
+        if (value > 1e-6) f_stop = value;
+    }
+}
+
 // Retrouve le canal de profondeur a partir du nom de groupe rendu par le tag.
 //
 // Le nom exact d'abord -- un AOV custom peut porter un nom simple -- puis les
@@ -682,19 +784,53 @@ find_depth_channel(const ImageMap& map, const CoreString& group)
 // arriere-plan y prennent la meme valeur. Trancher la profondeur sur cette
 // grandeur melangerait les deux dans la meme tranche, exactement ce que les
 // tranches doivent separer. Signee, l'ordre des valeurs est l'ordre optique.
+// Profondeur reelle, quelle que soit la convention d'entree. Zero ne veut pas
+// dire "a distance nulle" mais "aucune geometrie touchee" : le fond d'un
+// rendu. Le traiter comme un objet colle a la camera lui donnerait le flou
+// maximal, ce qui est faux des que la mise au point est lointaine. On le place
+// a l'infini, ou il doit etre. En mode inverse c'est deja la convention :
+// 1/z tend vers zero quand z tend vers l'infini.
+inline double
+real_depth(const Settings& s, const double& raw)
+{
+    if (s.depth_mode == 1) return (raw > 1e-9) ? (1.0 / raw) : 1e9;
+    return (raw <= 1e-9) ? 1e9 : raw;
+}
+
+// Rayon du cercle de confusion en PIXELS, par la formule de la lentille mince.
+//
+//   A = f / N                          diametre du diaphragme
+//   c = A . f . |S2 - S1| / (S2 (S1 - f))     diametre sur le capteur
+//
+// puis du capteur aux pixels par la largeur d'ouverture. C'est la seule
+// formule qui merite le nom de cercle de confusion : le reglage du groupe
+// Focus, lui, est un modele artistique sans optique dedans.
+//
+// Le resultat est un RAYON, d'ou la moitie : c est un diametre.
+double
+lens_coc_pixels(const Settings& s, const double& z, const double& focus)
+{
+    const double f = s.focal_length;
+    const double N = (s.f_stop > 1e-6) ? s.f_stop : 1e-6;
+
+    const double S1 = focus * s.world_to_mm;
+    const double S2 = z * s.world_to_mm;
+
+    // Mise au point plus proche que la focale : la lentille mince n'a pas de
+    // solution, l'image se formerait derriere l'infini.
+    if (S1 <= f * 1.0001 || S2 <= 1e-6) return 0.0;
+
+    const double aperture = f / N;
+    const double c_mm = aperture * f * fabs(S2 - S1) / (S2 * (S1 - f));
+
+    const double width_mm = (s.aperture_width > 1e-6) ? s.aperture_width : 1.0;
+    return 0.5 * c_mm / width_mm * (double) s.image_width;
+}
+
 double
 signed_coc(const Settings& s, const double& raw)
 {
-    // Zero ne veut pas dire "a distance nulle" mais "aucune geometrie
-    // touchee" : le fond d'un rendu. Le traiter comme un objet colle a la
-    // camera lui donnerait le flou maximal, ce qui est faux des que la mise
-    // au point est lointaine. On le place a l'infini, ou il doit etre.
-    //
-    // En mode inverse, c'est deja la convention : 1/z tend vers zero quand z
-    // tend vers l'infini.
-    double z = raw;
-    if (s.depth_mode == 1) z = (raw > 1e-9) ? (1.0 / raw) : 1e9;
-    else if (raw <= 1e-9) z = 1e9;
+    const double z = real_depth(s, raw);
 
     const double focus = (s.focus_override > 0.0) ? s.focus_override
                                                   : s.focus_distance;
@@ -703,6 +839,19 @@ signed_coc(const Settings& s, const double& raw)
 
     if (s.focus_side == 1 && front)  return 0.0;   // arriere seulement
     if (s.focus_side == 2 && !front) return 0.0;   // avant seulement
+
+    // Mode objectif reel : la taille vient de l'optique, pas du reglage
+    // artistique. s.radius porte alors le maximum atteint sur l'image, calcule
+    // une fois dans pre_filter, et sert de reference pour la fraction.
+    if (s.real_lens) {
+        double px = lens_coc_pixels(s, z, focus)
+                    * (front ? s.front_multiplier : s.back_multiplier);
+        if (px > s.max_kernel) px = s.max_kernel;
+        double fraction = (s.radius > 1e-6) ? (px / s.radius) : 0.0;
+        if (fraction > 1.0) fraction = 1.0;
+        if (fraction < 0.0) fraction = 0.0;
+        return front ? -fraction : fraction;
+    }
 
     double distance = fabs(delta) - s.focus_range;
     if (distance <= 0.0) return 0.0;               // dans la zone nette
@@ -959,26 +1108,10 @@ filter_sliced(const Settings& s, const CtxKernelFilter& ctx, const ImageProxy& s
         }
     }
 
-    // Reprise des hautes lumieres : un facteur par pixel source, applique a la
-    // couleur avant le flou et PAS a la couverture. Une lumiere vive s'etale
-    // donc plus fort sans devenir plus opaque -- c'est ce qui donne des boules
-    // franches. Le critere se prend sur max(r, g, b) et non sur la luminance
-    // ponderee : une lumiere bleue pure a une luma faible et passerait sous le
-    // seuil alors qu'elle est eclatante.
-    const bool boosting = (s.gain != 0.0);
-    std::vector<float> boost;
-    if (boosting) {
-        boost.assign(source_count, 1.0f);
-        const float threshold = (float) s.threshold;
-        const float gain = (float) s.gain;
-        for (size_t i = 0; i < source_count; ++i) {
-            float peak = 0.0f;
-            for (int c = 0; c < 3; ++c)
-                if (channels[c] != 0 && channels[c][i] > peak) peak = channels[c][i];
-            if (peak > threshold) boost[i] = 1.0f + gain * (peak - threshold);
-        }
-    }
-
+    // La reprise des hautes lumieres est deja appliquee aux canaux couleur par
+    // l'appelant : ici la couleur est prete a flouter. Elle ne touche PAS la
+    // couverture, et c'est voulu -- une lumiere vive s'etale plus fort sans
+    // pour autant devenir plus opaque.
     std::vector<float> acc(dest_count * 4, 0.0f);
     std::vector<float> plane(source_count);
     std::vector<float> blurred(dest_count);
@@ -1035,11 +1168,8 @@ filter_sliced(const Settings& s, const CtxKernelFilter& ctx, const ImageProxy& s
         for (int c = 0; c < 4; ++c) {
             if (channels[c] == 0) continue;
 
-            for (size_t i = 0; i < source_count; ++i) {
-                if (sc[i] < sl.lo || sc[i] >= sl.hi) { plane[i] = 0.0f; continue; }
-                plane[i] = (boosting && c < 3) ? channels[c][i] * boost[i]
-                                               : channels[c][i];
-            }
+            for (size_t i = 0; i < source_count; ++i)
+                plane[i] = (sc[i] < sl.lo || sc[i] >= sl.hi) ? 0.0f : channels[c][i];
             if (sharp) copy_plane(&plane[0], stride, ctx, &blurred[0]);
             else       blur_plane(&plane[0], stride, rows, ctx,
                                   kern[(split && c < 3) ? c : 1],
@@ -1055,6 +1185,110 @@ filter_sliced(const Settings& s, const CtxKernelFilter& ctx, const ImageProxy& s
         if (out[c] == 0 || channels[c] == 0) continue;
         const float *a = &acc[(size_t) c * dest_count];
         for (size_t i = 0; i < dest_count; ++i) out[c][i] = a[i];
+    }
+    return true;
+}
+
+// -- modes de reglage ---------------------------------------------------------
+//
+// Ils ne floutent rien : ils montrent ce que le filtre a compris de la scene.
+// Regler une profondeur de champ a l'aveugle, en jugeant sur le resultat
+// floute, revient a deviner ; voir directement ou tombe le plan de nettete et
+// quelle forme aura le diaphragme fait gagner l'essentiel du temps de reglage.
+bool
+draw_diagnostic(const Settings& s, const CtxKernelFilter& ctx, float *const *out,
+                const DepthSnapshot *depth)
+{
+    const int width  = ctx.region.width;
+    const int height = ctx.region.height;
+
+    float *r = out[0], *g = out[1], *b = out[2], *alpha = out[3];
+
+    if (s.output_type == 3) {
+        // Forme du noyau. On bat le VRAI noyau plutot que de redessiner la
+        // forme a part : ce qui s'affiche est alors exactement ce qui sera
+        // convolue, aberration spherique comprise -- une figure redessinee
+        // finirait tot ou tard par mentir.
+        //
+        // Au centre du cadre, donc sans vignettage : c'est la que la forme est
+        // dessinee, et c'est la qu'une optique ne rogne rien.
+        double display = s.image_height * 0.35;
+        if (display > 200.0) display = 200.0;
+        if (display < 8.0)   display = 8.0;
+
+        Settings shape = s;
+        shape.radius = display;
+        Kernel k;
+        build_kernel(k, shape, 1.0, 0.0, 0.0, true);
+
+        double peak = 0.0;
+        for (size_t i = 0; i < k.all.size(); ++i)
+            if (k.all[i].weight > peak) peak = k.all[i].weight;
+        if (peak <= 0.0) peak = 1.0;
+
+        const int reach = k.reach;
+        const int side  = reach * 2 + 1;
+        std::vector<float> grid((size_t) side * side, 0.0f);
+        for (size_t i = 0; i < k.all.size(); ++i) {
+            const Tap& t = k.all[i];
+            const int gx = t.dx + reach, gy = t.dy + reach;
+            if (gx < 0 || gx >= side || gy < 0 || gy >= side) continue;
+            grid[(size_t) gy * side + gx] = (float)(t.weight / peak);
+        }
+
+        const int cx = s.image_width / 2;
+        const int cy = s.image_height / 2;
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                const int gx = ctx.x0 + x - cx + reach;
+                const int gy = ctx.y0 + y - cy + reach;
+                float v = 0.0f;
+                if (gx >= 0 && gx < side && gy >= 0 && gy < side)
+                    v = grid[(size_t) gy * side + gx];
+                const size_t o = (size_t) y * width + x;
+                if (r) r[o] = v;
+                if (g) g[o] = v;
+                if (b) b[o] = v;
+                if (alpha) alpha[o] = 1.0f;
+            }
+        }
+        return true;
+    }
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const size_t o = (size_t) y * width + x;
+            const double sc = (depth != 0)
+                              ? signed_coc(s, depth->at(ctx.x0 + x, ctx.y0 + y))
+                              : 0.0;
+            const double amount = (sc < 0.0) ? -sc : sc;
+
+            double cr, cg, cb;
+            if (s.output_type == 2) {
+                // Rouge la ou c'est net, vert devant le point, bleu derriere.
+                cr = 1.0 - amount;
+                cg = (sc < 0.0) ? -sc : 0.0;
+                cb = (sc > 0.0) ?  sc : 0.0;
+
+                // Non borne, les deux canaux de cote portent le RAYON EN
+                // PIXELS. On peut alors pipetter un pixel et lire de combien
+                // il sera floute -- ce qu'une valeur normalisee ne dit pas.
+                if (!s.normalize_view) {
+                    cg *= s.radius;
+                    cb *= s.radius;
+                }
+            } else {
+                // Mattes : avant en rouge, arriere en vert, zone nette en bleu.
+                cr = (sc < 0.0) ? 1.0 : 0.0;
+                cg = (sc > 0.0) ? 1.0 : 0.0;
+                cb = (amount == 0.0) ? 1.0 : 0.0;
+            }
+
+            if (r) r[o] = (float) cr;
+            if (g) g[o] = (float) cg;
+            if (b) b[o] = (float) cb;
+            if (alpha) alpha[o] = 1.0f;
+        }
     }
     return true;
 }
@@ -1107,6 +1341,12 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
     // des tranches ne correspondraient plus aux rayons appliques.
     s.focus_override = module->focus_override;
 
+    // L'optique reprise sur la camera, resolue ici pour la meme raison.
+    if (s.real_lens && s.camera_lens)
+        read_camera_lens(object, s.focal_length, s.f_stop);
+    module->lens_focal = s.focal_length;
+    module->lens_stop  = s.f_stop;
+
     if (module->focus_override > 0.0)
         LOG_INFO("[Bokeh] mise au point sur l'objet : "
                  << module->focus_override << " unites\n");
@@ -1120,7 +1360,16 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
                     "Activez l'AOV depth sur le Layer 3D, puis choisissez-le "
                     "dans Focus > Depth AOV.\n");
 
-    if (s.radius < 0.5 || s.depth_aov.get_count() == 0) return;
+    // En mode objectif reel le rayon ne se lit pas dans s.radius, il se calcule
+    // plus bas : ne pas court-circuiter dessus.
+    if (s.depth_aov.get_count() == 0) {
+        if (s.real_lens)
+            LOG_WARNING("[Bokeh] l'objectif reel a besoin d'une profondeur pour "
+                        "calculer le cercle de confusion, et aucun AOV n'est "
+                        "choisi. Le flou restera uniforme.\n");
+        return;
+    }
+    if (!s.real_lens && s.radius < 0.5) return;
     if (ctx.source_image == 0) return;
 
     ImageMap *map = ctx.source_image->get_image();
@@ -1208,6 +1457,52 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
     LOG_INFO("[Bokeh] AOV '" << s.depth_aov << "' : " << depth.w << "x" << depth.h
              << ", etendue " << low << " a " << high << "\n");
 
+    // Mode objectif reel : le rayon ne vient plus d'un reglage mais de la
+    // formule de la lentille mince, et il varie donc par pixel sans borne
+    // naturelle. On mesure le maximum reellement atteint sur l'image.
+    //
+    // Deux raisons. La marge du proxy se dimensionne dessus, et reserver
+    // toujours le plafond gaspillerait enormement de calcul sur une scene peu
+    // floue. Et surtout, cette valeur sert de reference pour ramener chaque
+    // rayon a une fraction : elle doit etre la MEME pour toutes les tuiles,
+    // sinon deux tuiles voisines normaliseraient differemment.
+    if (s.real_lens) {
+        s.image_width  = depth.w;
+        s.image_height = depth.h;
+        const double focus = (s.focus_override > 0.0) ? s.focus_override
+                                                      : s.focus_distance;
+        double peak = 0.0;
+        for (size_t i = 0; i < depth.data.size(); ++i) {
+            const double px = lens_coc_pixels(s, real_depth(s, depth.data[i]), focus);
+            if (px > peak) peak = px;
+        }
+        const double side = (s.front_multiplier > s.back_multiplier)
+                            ? s.front_multiplier : s.back_multiplier;
+        peak *= (side > 0.0) ? side : 0.0;
+        const bool clamped = (peak > s.max_kernel);
+        if (clamped) peak = s.max_kernel;
+
+        s.radius = peak;
+        module->lens_radius = peak;
+
+        const double reach = peak * (1.0 + CHROMA_SPREAD * fabs(s.chromatic));
+        kernel_radius = (unsigned int)(reach < 0.0 ? 0.0 : reach + 1.5);
+
+        LOG_INFO("[Bokeh] objectif reel : " << s.focal_length << " mm f/"
+                 << s.f_stop << ", point a " << focus << " unites, rayon max "
+                 << peak << " px\n");
+
+        // Un flou plafonne ne ressemble plus a l'optique demandee, et rien a
+        // l'ecran ne le dit. La cause la plus frequente n'est d'ailleurs pas un
+        // plafond trop bas mais une unite de scene fausse.
+        if (clamped)
+            LOG_WARNING("[Bokeh] le rayon calcule depasse le plafond de "
+                        << s.max_kernel << " px et sera ECRETE. Montez Max "
+                        "Kernel Size, ou verifiez World Scale : une scene "
+                        "declaree en centimetres alors qu'elle est en metres "
+                        "donne un flou cent fois trop fort.\n");
+    }
+
     // Le decoupage en tranches, ici et pas dans filter : il doit etre le meme
     // pour toutes les tuiles, sans quoi deux tuiles voisines appliqueraient des
     // rayons differents a la meme profondeur et la couture se verrait.
@@ -1250,8 +1545,19 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     // remonter au layer et interroger deux transformations monde a chaque
     // tuile serait du gaspillage.
     const BokehModule *owner = (const BokehModule *) object.get_module();
-    if (owner != 0) s.focus_override = owner->focus_override;
-    if (s.radius < 0.5) return true;   // la destination porte deja la source
+    if (owner != 0) {
+        s.focus_override = owner->focus_override;
+
+        // En mode objectif reel, la reference n'est pas le reglage mais le
+        // maximum mesure sur l'image entiere. Recalculer ce maximum par tuile
+        // donnerait une reference differente d'une tuile a l'autre, donc des
+        // rayons incoherents et des coutures.
+        if (s.real_lens) {
+            s.radius       = owner->lens_radius;
+            s.focal_length = owner->lens_focal;
+            s.f_stop       = owner->lens_stop;
+        }
+    }
 
     const float *channels[4];
     channels[0] = src->get_red_channel();
@@ -1282,27 +1588,79 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     // Un noyau par canal quand l'aberration chromatique est active : c'est le
     // decalage de rayon entre canaux qui colore le bord des boules. L'alpha
     // suit le rayon nominal -- il n'a pas de longueur d'onde.
-    // Le couple threshold/gain pondere chaque echantillon par sa propre
-    // luminance : les poids deviennent dependants des donnees, et les sommes
-    // prefixees ne s'appliquent plus. A gain 1 -- le defaut, et le comportement
-    // physique -- on prend le chemin rapide.
-    // Le neutre de la formule de reprise est gain = 0, pas 1 : le facteur
-    // vaut 1 + gain * (luminance - seuil). Le declarer neutre a 1 faisait
-    // sauter le facteur de x1 a x5 entre 1,000 et 1,001, et faisait prendre
-    // le chemin lent -- dix fois plus couteux -- pour un resultat identique
-    // au chemin rapide quand gain valait 0.
-    const bool boosting = (s.gain != 0.0);
-
+    //
+    // La teinte de la frange vient de chromatic_offset, la refraction relative
+    // de chaque canal. A 1 le canal garde le rayon nominal ; en dessous son
+    // bokeh retrecit. Le dosage global module l'ecart a 1, si bien qu'a zero
+    // l'offset n'a plus aucun effet quelle que soit sa valeur.
     const bool split = (s.chromatic != 0.0);
     const double channel_scale[3] = {
-        1.0 + CHROMA_SPREAD * s.chromatic, 1.0, 1.0 - CHROMA_SPREAD * s.chromatic
+        1.0 + s.chromatic * (s.chroma_offset[0] - 1.0),
+        1.0 + s.chromatic * (s.chroma_offset[1] - 1.0),
+        1.0 + s.chromatic * (s.chroma_offset[2] - 1.0)
     };
 
-    // Une passe de profondeur branchee ? Alors le rayon varie par pixel, et on
-    // bat une echelle de noyaux plutot qu'un seul. Le palier 0 est le pixel
-    // net : aucun noyau, on recopie la source.
     const BokehModule *module = (const BokehModule *) object.get_module();
     const DepthSnapshot *depth = (module && module->depth.ready) ? &module->depth : 0;
+
+    // Les modes de reglage : ils ne floutent rien, ils montrent ce que le
+    // filtre a compris. Les traiter ici, avant toute convolution, les rend
+    // instantanes -- c'est ce qui en fait des outils de reglage utilisables.
+    if (s.output_type >= 2)
+        return draw_diagnostic(s, ctx, out, depth);
+
+    if (s.radius < 0.5) return true;   // la destination porte deja la source
+
+    // Reprise des hautes lumieres : un facteur par pixel, applique a la couleur
+    // AVANT le flou. Une lumiere vive s'etale donc plus fort sans devenir plus
+    // opaque, ce qui est le comportement d'un bloom d'objectif.
+    //
+    // Le neutre est gain = 0, pas 1 : le facteur vaut 1 + gain (pic - seuil).
+    // L'avoir declare neutre a 1 faisait sauter le facteur de x1 a x5 entre
+    // 1,000 et 1,001.
+    //
+    // Precalcule ici dans un tampon plutot que pondere echantillon par
+    // echantillon dans la convolution : pondere, les poids deviennent
+    // dependants des donnees et les sommes prefixees ne s'appliquent plus,
+    // ce qui coutait un ordre de grandeur. Precalcule, le flou reste en O(1)
+    // par pixel.
+    std::vector<float> boosted;
+    const bool bloom_only = (s.output_type == 1);
+    if (s.gain != 0.0 || bloom_only) {
+        const size_t count = (size_t) stride * rows;
+        boosted.resize(count * 3);
+        const float threshold = (float) s.threshold;
+        for (size_t i = 0; i < count; ++i) {
+            float peak = 0.0f;
+            for (int c = 0; c < 3; ++c)
+                if (channels[c] != 0 && channels[c][i] > peak) peak = channels[c][i];
+
+            // Le critere se prend sur max(r, g, b) et non sur la luminance
+            // ponderee : une lumiere bleue pure a une luma faible et passerait
+            // sous le seuil alors qu'elle est eclatante.
+            double factor = 0.0;
+            if (peak > threshold) {
+                // La courbure d'objectif module la reprise selon l'endroit du
+                // cadre : une lentille bombee concentre davantage vers ses
+                // bords. A 1 la reprise est uniforme.
+                const int px = (int)(i % (size_t) stride);
+                const int py = (int)(i / (size_t) stride);
+                const double fx = (ctx.x0 + px - ctx.region.x - half_w)
+                                  / (half_w > 0.0 ? half_w : 1.0);
+                const double fy = (ctx.y0 + py - ctx.region.y - half_h)
+                                  / (half_h > 0.0 ? half_h : 1.0);
+                double curve = 1.0 + (s.bloom_curvature - 1.0) * (fx * fx + fy * fy) * 0.5;
+                if (curve < 0.0) curve = 0.0;
+                factor = s.gain * (peak - threshold) * curve;
+            }
+            // Sortie bloom seul : uniquement l'energie AJOUTEE, sans l'image.
+            const double scale = bloom_only ? factor : (1.0 + factor);
+            for (int c = 0; c < 3; ++c)
+                boosted[count * c + i] =
+                    (channels[c] != 0) ? (float)(channels[c][i] * scale) : 0.0f;
+        }
+        for (int c = 0; c < 3; ++c) channels[c] = &boosted[count * c];
+    }
 
     // Le chemin a tranches, quand il y en a plus d'une. Il est plus cher --
     // grossierement proportionnel au nombre de tranches -- mais c'est le seul
@@ -1314,6 +1672,9 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
                              channels, out, frame_x, frame_y,
                              split, channel_scale);
 
+    // Une passe de profondeur branchee ? Alors le rayon varie par pixel, et on
+    // bat une echelle de noyaux plutot qu'un seul. Le palier 0 est le pixel
+    // net : aucun noyau, on recopie la source.
     const int steps = depth ? DEPTH_STEPS : 1;
 
     std::vector<Kernel> ladder((size_t) steps * 3);
@@ -1323,7 +1684,7 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
         for (int c = 0; c < 3; ++c) {
             if (c != 1 && !split) continue;   // un seul noyau sans aberration
             build_kernel(ladder[(size_t) level * 3 + c], scaled,
-                         channel_scale[c], frame_x, frame_y, boosting);
+                         channel_scale[c], frame_x, frame_y, false);
         }
     }
     if (ladder[1].total <= 0.0) return true;
@@ -1332,10 +1693,10 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     // couleurs, donc a la meme resolution et dans le meme repere. ctx.x0 et
     // ctx.y0 sont deja en coordonnees image absolues.
 
-    if (!boosting) {
-        // Chemin rapide. On convolue les quatre canaux avec le meme noyau
-        // normalise, alpha compris : une convolution est une moyenne ponderee
-        // par la couverture, et l'alpha porte la couverture. Ne pas le flouter
+    {
+        // On convolue les quatre canaux avec le meme noyau normalise, alpha
+        // compris : une convolution est une moyenne ponderee par la
+        // couverture, et l'alpha porte la couverture. Ne pas le flouter
         // laisserait une silhouette nette sur une image floue.
         Prefix prefix;
         for (int c = 0; c < 4; ++c) {
@@ -1412,77 +1773,6 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
         }
         return true;
     }
-
-    // Chemin lent : reprise des hautes lumieres. Chaque echantillon compte pour
-    // son poids de noyau multiplie par un facteur qui ne depasse 1 que s'il
-    // passe le seuil, et on divise par la somme reelle de ces poids. Dans un
-    // disque ou un seul pixel est tres clair, il domine la moyenne et le disque
-    // entier prend sa couleur. C'est un forcage artistique : en lineaire non
-    // ecrete, la moyenne simple donne deja des boules lumineuses.
-    const float threshold = (float) s.threshold;
-    const float gain = (float) s.gain;
-
-    // Le critere de reprise se prend sur max(r, g, b), pas sur la luminance
-    // ponderee : une lumiere bleue pure a une luma faible et passerait sous
-    // le seuil alors qu'elle est eclatante.
-    //
-    // Et les canaux peuvent etre nuls : le moteur n'en alloue un que si la
-    // map porte le nom correspondant. Sur un canvas en luminance seule, les
-    // quatre le sont. Les lire sans garde plantait.
-    const float *sr = channels[0], *sg = channels[1], *sb = channels[2];
-
-    for (int y = 0; y < height; ++y) {
-        const int cy = y + ctx.region.y;
-        for (int x = 0; x < width; ++x) {
-            const int cx = x + ctx.region.x;
-            double sum[4] = {0.0, 0.0, 0.0, 0.0};
-            double norm[4] = {0.0, 0.0, 0.0, 0.0};
-
-            int level = steps - 1;
-            if (depth != 0) {
-                const float z = depth->at(ctx.x0 + x, ctx.y0 + y);
-                level = (int)(circle_of_confusion(s, z) * steps + 0.5) - 1;
-            }
-
-            if (level < 0) {
-                for (int c = 0; c < 4; ++c)
-                    if (channels[c] != 0 && out[c] != 0)
-                        out[c][y * width + x] =
-                            channels[c][(size_t)(y + ctx.region.y) * stride + (x + ctx.region.x)];
-                continue;
-            }
-            if (level >= steps) level = steps - 1;
-
-            for (int c = 0; c < 4; ++c) {
-                if (channels[c] == 0 || out[c] == 0) continue;
-                const Kernel& k = ladder[(size_t) level * 3 + ((split && c < 3) ? c : 1)];
-                for (size_t i = 0; i < k.all.size(); ++i) {
-                    const Tap& tap = k.all[i];
-                    const int ty = cy - tap.dy;
-                    const int tx = cx - tap.dx;
-                    if (ty < 0 || ty >= rows || tx < 0 || tx >= stride) continue;
-                    const size_t o = (size_t)ty * stride + tx;
-
-                    float peak = 0.0f;
-                    if (sr != 0 && sr[o] > peak) peak = sr[o];
-                    if (sg != 0 && sg[o] > peak) peak = sg[o];
-                    if (sb != 0 && sb[o] > peak) peak = sb[o];
-
-                    double w = tap.weight;
-                    if (peak > threshold) w *= 1.0 + gain * (peak - threshold);
-                    sum[c] += channels[c][o] * w;
-                    norm[c] += w;
-                }
-            }
-
-            for (int c = 0; c < 4; ++c) {
-                if (out[c] == 0 || channels[c] == 0) continue;
-                out[c][y * width + x] = (float)(norm[c] > 0.0 ? sum[c] / norm[c] : 0.0);
-            }
-        }
-    }
-
-    return true;
 }
 
 void

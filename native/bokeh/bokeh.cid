@@ -4,6 +4,98 @@ class "ImageFilterBokeh" "KernelFilter" {
     category "ImageFilter"
     doc "Flou de mise au point optique. Contrairement a Defocus Blur, le noyau reproduit un vrai diaphragme -- nombre de lames, courbure, rotation, anamorphisme -- et les hautes lumieres se rassemblent en boules nettes au lieu d'etre etalees. Les defauts d'optique qui font le realisme (vignettage optique, aberration spherique, aberration chromatique) sont exposes en parametres."
 
+    attribute_group "Output" {
+        long "output_type" {
+            doc "Ce que la node renvoie. Les quatre modes autres que le premier servent a REGLER, pas a rendre : ils montrent ce que le filtre a compris de la scene, ce qui evite de deviner en regardant le resultat.\n\nImage defocalisee : le rendu normal.\nBloom seul : la seule energie ajoutee par la reprise des hautes lumieres, sans l'image. Ne montre rien tant que Gain vaut zero.\nVisualisation du point : rouge la ou c'est net, vert devant le plan de nettete, bleu derriere. C'est la facon la plus rapide de verifier que la profondeur est bien lue et que le point tombe ou on croit.\nForme du noyau : le diaphragme tel qu'il sera applique, en grand. Lames, courbure, rotation, anamorphisme et aberration spherique s'y lisent d'un coup.\nMattes de mise au point : la matte avant dans le rouge, la matte arriere dans le vert."
+            value 0
+            preset "Image defocalisee" "0"
+            preset "Bloom seul" "1"
+            preset "Visualisation du point" "2"
+            preset "Forme du noyau" "3"
+            preset "Mattes de mise au point" "4"
+        }
+        bool "normalize_visualization" {
+            doc "Borne la visualisation du point a 0-1. Sans elle, les valeurs sortent telles quelles et se lisent au pipette plutot qu'a l'oeil."
+            value yes
+        }
+    }
+
+    attribute_group "Lens" {
+        bool "real_world_lens" {
+            doc "Calcule le flou par la formule de la lentille mince, a partir d'une vraie focale et d'une vraie ouverture, au lieu du reglage artistique du groupe Focus.\n\nQuand elle est active, Radius, Focus Range et Blur Falloff n'ont plus d'effet : la taille du cercle de confusion est entierement determinee par l'optique et par la profondeur. C'est le mode a prendre pour raccorder une prise de vue reelle dont on connait le materiel.\n\nLa mise au point, elle, reste pilotee par Focus Object ou Focus Distance."
+            value no
+        }
+        bool "lens_from_camera" {
+            doc "Prend la focale et l'ouverture sur la camera active du layer au lieu des deux reglages ci-dessous. C'est le raccord le plus sur : l'optique du flou ne peut plus diverger de celle du rendu, meme si quelqu'un change l'objectif de la camera. Sans effet si la camera n'expose pas ces attributs -- une CameraPerspective simple, par exemple, n'a pas de nombre f."
+            value no
+        }
+        double "focal_length" {
+            doc "Focale de l'objectif, en millimetres. Ignore quand la focale est prise sur la camera."
+            value 35.0
+            numeric_range yes 1.0 2000.0
+            ui_range yes 8.0 300.0
+            slider yes
+            animatable yes
+        }
+        double "f_stop" {
+            doc "Ouverture, en nombre f. Plus il est petit, plus le diaphragme est grand et plus la profondeur de champ est courte : f/1.4 isole, f/16 garde presque tout net."
+            value 5.6
+            numeric_range yes 0.5 64.0
+            ui_range yes 1.0 22.0
+            slider yes
+            animatable yes
+        }
+        long "film_format" {
+            doc "Format du capteur. Il fixe la largeur et la hauteur d'ouverture ci-dessous, sauf en Personnalise. C'est lui qui convertit un cercle de confusion en millimetres en un rayon en pixels : a focale et ouverture egales, un grand capteur donne plus de flou.\n\nLa liste des presets de Peregrine n'est pas publiee ; celle-ci reprend les formats usuels."
+            value 0
+            preset "35 mm Academy (21.95 x 16.00)" "0"
+            preset "Super 35 (24.89 x 18.67)" "1"
+            preset "Plein format 24x36 (36.00 x 24.00)" "2"
+            preset "APS-C (23.60 x 15.70)" "3"
+            preset "Super 16 (12.52 x 7.41)" "4"
+            preset "65 mm (52.48 x 23.01)" "5"
+            preset "Micro 4/3 (17.30 x 13.00)" "6"
+            preset "Personnalise" "7"
+        }
+        double "aperture_width" {
+            doc "Largeur du capteur, en millimetres. Pilotee par Film Format sauf en Personnalise."
+            value 21.95
+            numeric_range yes 0.1 200.0
+            ui_range yes 5.0 70.0
+            slider yes
+        }
+        double "aperture_height" {
+            doc "Hauteur du capteur, en millimetres. Pilotee par Film Format sauf en Personnalise."
+            value 16.0
+            numeric_range yes 0.1 200.0
+            ui_range yes 5.0 70.0
+            slider yes
+        }
+        long "world_scale" {
+            doc "Unite dans laquelle est modelisee la scene. L'optique se calcule en millimetres ; sans cette conversion, une scene en metres donnerait un flou mille fois trop faible."
+            value 2
+            preset "Millimetres" "0"
+            preset "Centimetres" "1"
+            preset "Metres" "2"
+            preset "Pouces" "3"
+            preset "Pieds" "4"
+        }
+        double "world_scale_multiplier" {
+            doc "Facteur supplementaire sur l'unite, pour les scenes modelisees en blocs. Une scene en pas de 10 cm se regle sur Centimetres avec un multiplicateur de 10."
+            value 1.0
+            numeric_range yes 0.0001 10000.0
+            ui_range yes 0.01 100.0
+            slider yes
+        }
+        long "max_kernel_size" {
+            doc "Plafond du rayon, en pixels. Le flou calcule par l'optique n'a pas de borne naturelle : un objet colle a l'objectif peut demander un rayon de plusieurs milliers de pixels, que personne ne veut attendre. Au-dela de ce plafond le flou est ECRETE, pas degrade."
+            value 128
+            numeric_range yes 1 1024
+            ui_range yes 8 256
+            slider yes
+        }
+    }
+
     attribute_group "Aperture" {
         subpixel "radius" {
             doc "Rayon du bokeh, en pixels -- le rayon du cercle de confusion, la taille qu'occupe un point lumineux hors mise au point. Quand une image de profondeur est branchee, c'est le rayon MAXIMAL : le rayon reel varie par pixel entre zero et cette valeur."
@@ -145,6 +237,14 @@ class "ImageFilterBokeh" "KernelFilter" {
             slider yes
             animatable yes
         }
+        double "bloom_curvature" {
+            doc "Courbure de l'objectif, qui module la reprise selon l'endroit du cadre ou la lumiere entre. A 1 la reprise est uniforme. Au-dela, elle se renforce vers les bords, la ou une lentille bombee concentre davantage -- c'est ce qui evite un bloom d'un plat uniforme sur toute l'image."
+            value 2.0
+            numeric_range yes 0.0 8.0
+            ui_range yes 0.0 4.0
+            slider yes
+            animatable yes
+        }
     }
 
     attribute_group "Optics" {
@@ -169,11 +269,16 @@ class "ImageFilterBokeh" "KernelFilter" {
             animatable yes
         }
         percentage "chromatic_aberration" {
-            doc "Frange coloree au bord des boules. L'objectif ne fait pas converger toutes les longueurs d'onde au meme endroit : le rayon du bokeh differe legerement par canal. Valeur positive : le rouge deborde. Negative : le bleu."
+            doc "Frange coloree au bord des boules. L'objectif ne fait pas converger toutes les longueurs d'onde au meme endroit : le rayon du bokeh differe legerement par canal. C'est le DOSAGE ; la teinte de la frange se regle ci-dessous."
             value 0.0
             numeric_range yes -1.0 1.0
             ui_range yes -0.5 0.5
             slider yes
+            animatable yes
+        }
+        color "chromatic_offset" {
+            doc "Refraction relative de chaque canal, donc la teinte de la frange. Un canal a 1 garde le rayon nominal ; en dessous son bokeh retrecit, au dessus il s'elargit. Le defaut (0.6, 1, 1) est celui de Peregrine : le rouge converge plus court que le vert et le bleu, ce qui donne la frange chaude des optiques anciennes. Sans effet tant que le dosage ci-dessus vaut zero."
+            value 0.6 1.0 1.0
             animatable yes
         }
     }

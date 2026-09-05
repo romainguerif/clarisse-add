@@ -25,8 +25,17 @@ import os
 OUT = r"J:\_WINDOWSTEMP\claude\fg"
 REPORT = r"J:\_WINDOWSTEMP\claude\fg.log"
 
-WIDTH = 640
-HEIGHT = 400
+# La taille reellement rendue. Ce n'est PAS un choix libre : cnode rend
+# `resolution_preset` multiplie par `resolution_multiplier`, et ignore
+# l'attribut `resolution`, quel que soit resolution_mode -- verifie en rendant.
+# Le preset par defaut est 1920x1080 et le multiplicateur 1 vaut la moitie,
+# d'ou 960x540. C'est deux secondes de rendu par variante, donc on s'en
+# contente au lieu de chercher un preset personnalise qui n'existe peut-etre
+# pas. Le placement ci-dessous ne depend de toute facon que du champ
+# horizontal, donc la boite avant occupe le tiers central quelle que soit la
+# largeur finale.
+WIDTH = 960
+HEIGHT = 540
 
 # Le rayon maximal du bokeh. 30 px pour que la transition attendue -- environ
 # deux fois ce rayon -- ne puisse pas etre confondue avec de l'antialiasing.
@@ -112,38 +121,58 @@ setvec(camera, "translate", 0.0, 0.0, CAMERA_Z)
 
 fov_attr = camera.get_attribute("field_of_view")
 fov = fov_attr.get_double(0) if fov_attr is not None else DEFAULT_FOV
-say("champ horizontal de la camera : %.4f deg" % fov)
 
-# Demi-largeur du cadre par unite de profondeur. Sert a dimensionner le premier
-# plan en PIXELS plutot qu'a l'oeil : le tiers central est une consigne, pas une
-# approximation.
+# field_of_view est le champ VERTICAL : mesure faite en rendant une boite
+# dimensionnee comme si le champ etait horizontal, qui est ressortie trop
+# etroite d'exactement le rapport hauteur/largeur. Tout le placement en decoule,
+# donc l'erreur ne se voit pas a la lecture -- elle se voit dans l'image.
 import math
-half_w = math.tan(math.radians(fov) * 0.5)
+half_v = math.tan(math.radians(fov) * 0.5)
 
 wall_depth = CAMERA_Z - WALL_Z
 front_depth = CAMERA_Z - (FRONT_Z + FRONT_DEPTH_SIZE * 0.5)
 
-# A la profondeur du premier plan, combien d'unites de scene fait un pixel.
-units_per_pixel = (2.0 * half_w * front_depth) / WIDTH
-front_width = units_per_pixel * (WIDTH / 3.0)      # le tiers central
-front_height = units_per_pixel * (HEIGHT * 0.61)   # de la marge en haut et en bas
 
+def units_per_pixel_at(depth):
+    """Combien d'unites de scene mesure un pixel, a une profondeur donnee."""
+    return (2.0 * half_v * depth) / HEIGHT
+
+
+# Dimensionner le premier plan en PIXELS plutot qu'a l'oeil : le tiers central
+# est une consigne, pas une approximation.
+scale = units_per_pixel_at(front_depth)
+front_width = scale * (WIDTH / 3.0)       # le tiers central
+front_height = scale * (HEIGHT * 0.61)    # de la marge en haut et en bas
+
+say("champ vertical de la camera : %.4f deg" % fov)
 say("fond a %.2f unites, premier plan a %.2f" % (wall_depth, front_depth))
-say("boite avant : %.3f x %.3f unites, soit %d x %d px"
-    % (front_width, front_height, int(WIDTH / 3.0), int(HEIGHT * 0.61)))
+say("boite avant : %.3f x %.3f unites, soit %d x %d px sur %dx%d"
+    % (front_width, front_height, int(WIDTH / 3.0), int(HEIGHT * 0.61),
+       WIDTH, HEIGHT))
 
 # --- materiaux ------------------------------------------------------------
-# Deux niveaux francs et surtout PLATS. Les deux surfaces sont frontales donc
-# elles ont la meme normale : leur rapport de luminance vaut exactement le
-# rapport des albedos, quelle que soit la direction de la lumiere.
-mat_wall = create("mat_wall", "MaterialPhysicalDiffuse")
-setvec(mat_wall, "front_color", 0.90, 0.90, 0.90)
+# Des emetteurs, pas des surfaces diffuses. Une surface diffuse rend l'albedo
+# MULTIPLIE par ce qu'elle recoit, et un premier essai a montre que le mur clair
+# renvoie assez d'indirect sur la boite avant pour ramener un rapport voulu de
+# 6:1 a 1,7:1. Un emetteur rend exactement sa valeur, sans dependre d'une
+# direction de lumiere ni d'un rebond : les deux plateaux sont plats par
+# construction, leur rapport est celui qu'on a ecrit, et measure_edge.py peut
+# s'en servir pour verifier toute la chaine de lecture des EXR.
+LEVEL_WALL = 4.0
+LEVEL_FRONT = 0.4      # 10:1, largement de quoi asseoir une mesure 10%-90%
+LEVEL_TICK = 0.05
 
-mat_front = create("mat_front", "MaterialPhysicalDiffuse")
-setvec(mat_front, "front_color", 0.14, 0.14, 0.14)
 
-mat_tick = create("mat_tick", "MaterialPhysicalDiffuse")
-setvec(mat_tick, "front_color", 0.02, 0.02, 0.02)
+def emitter(name, level):
+    mat = create(name, "MaterialPhysicalEmitter")
+    setvec(mat, "emission_color", 1.0, 1.0, 1.0)
+    setv(mat, "emission_weight", level)
+    return mat
+
+
+mat_wall = emitter("mat_wall", LEVEL_WALL)
+mat_front = emitter("mat_front", LEVEL_FRONT)
+mat_tick = emitter("mat_tick", LEVEL_TICK)
 
 # --- le fond --------------------------------------------------------------
 wall = create("bg_wall", "GeometryBox")
@@ -155,9 +184,9 @@ setv(wall, "override_material", str(mat_wall))
 # ce qui permet de VOIR sur l'image que le fond est bien net. Elles sont
 # placees loin de la bande centrale ou se fait la mesure, pour ne jamais
 # polluer le plateau de fond dont depend le calcul 10%-90%.
-wall_half_height = half_w * wall_depth * HEIGHT / float(WIDTH)
-tick_y = wall_half_height * 0.80
-tick_w = half_w * wall_depth * 2.0 / 24.0
+wall_scale = units_per_pixel_at(wall_depth)
+tick_y = wall_scale * (HEIGHT * 0.40)     # a 80% du bord haut et du bord bas
+tick_w = wall_scale * (WIDTH / 24.0)
 for row, sign in enumerate((1.0, -1.0)):
     for i in range(12):
         tick = create("bg_tick_%d_%d" % (row, i), "GeometryBox")
@@ -172,14 +201,11 @@ setvec(front, "size", front_width, front_height, FRONT_DEPTH_SIZE)
 setvec(front, "translate", 0.0, 0.0, FRONT_Z)
 setv(front, "override_material", str(mat_front))
 
-# Sans cela, la lumiere inclinee projette l'ombre de la boite avant a des
-# centaines de pixels sur le mur : elle traverserait la zone de mesure et
-# creuserait un faux plateau de fond.
+# Rien ne doit projeter d'ombre sur le mur : une ombre portee traverserait la
+# zone de mesure et y creuserait un faux plateau de fond. Avec des emetteurs il
+# n'y a de toute facon aucune lumiere directionnelle dans la scene, mais la
+# consigne reste juste si quelqu'un en ajoute une pour regarder l'image.
 setv(front, "cast_shadows", 0)
-
-sun = create("sun", "LightPhysicalDistant")
-setvec(sun, "rotate", -25.0, 15.0, 0.0)
-setv(sun, "intensity", 6.0)
 
 manifest = [u"\t".join(["variant", "image", "project", "radius",
                         "slices_requested", "slices_applied",
@@ -188,15 +214,16 @@ manifest = [u"\t".join(["variant", "image", "project", "radius",
 for name, slices in VARIANTS:
     image = create("img_" + name, "Image")
 
-    # resolution_mode 0 = personnalisee. SetValues sur `resolution` est ignore
-    # en silence -- l'attribut est pilote par le preset -- alors qu'une
-    # ecriture directe passe, comme pour les listes d'AOV plus bas. Sans cela
-    # l'image sort en 1920x1080, soit huit fois le temps de rendu demande.
-    setv(image, "resolution_mode", 0)
+    # On renseigne quand meme resolution_mode et resolution : c'est ce que lit
+    # l'interface, et un projet ouvert dans Clarisse doit montrer la meme chose
+    # que ce que cnode a rendu. SetValues est ignore en silence sur
+    # `resolution`, il faut ecrire l'attribut directement -- meme situation que
+    # les listes d'AOV plus bas. Le rendu, lui, suit le multiplicateur.
+    setv(image, "resolution_mode", 1)
     res = image.get_attribute("resolution")
     res.set_long(WIDTH, 0)
     res.set_long(HEIGHT, 1)
-    setv(image, "resolution_multiplier", 1)
+    setv(image, "resolution_multiplier", 1)   # moitie du preset : 960x540
 
     ix.cmds.AddLayer(str(image) + ".layers", "Layer3d")   # renvoie None si ca marche
     layer = first_of(image, "layers")
