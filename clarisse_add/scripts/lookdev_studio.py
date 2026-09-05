@@ -9,6 +9,9 @@
 #      objet d'options a chaque lancement.
 #   3. Le dossier de contenus par defaut peut venir de la variable
 #      d'environnement CLARISSE_ADD_LOOKDEV_CONTENT.
+#   4. `prefs.is_item_exist(...)` -> `prefs.item_exists(...)`. AppPreferences a
+#      renomme la methode en Clarisse 5 ; le script livre avec 5.0 SP14 utilise
+#      encore l'ancien nom et leve donc un AttributeError des le lancement.
 # -----------------------------------------------------------------------
 
 # This script creates a virtual environment used to simplify lookdev
@@ -87,7 +90,7 @@ class MyEventListener(ix.api.EventObject):
                 # Here we to store the content path to the application preferences to avoid
                 # the user to reset the content path for each new session of Clarisse
                 prefs = ix.application.get_prefs(ix.api.AppPreferences.MODE_APPLICATION)
-                if not prefs.is_item_exist("lookdev_studio", lookdev_studio_path):
+                if not prefs.item_exists("lookdev_studio", lookdev_studio_path):
                     # we set the pref hidden as when we create the entry it will show up
                     # in Clarisse Preferences Panel. However, upon reload the preference entry
                     # in the config file doesn't store the preference definition so it can't be
@@ -124,7 +127,7 @@ import os as _os
 
 envpath = _os.environ.get("CLARISSE_ADD_LOOKDEV_CONTENT", "")
 prefs = ix.application.get_prefs(ix.api.AppPreferences.MODE_APPLICATION)
-if prefs.is_item_exist("lookdev_studio", lookdev_studio_path):
+if prefs.item_exists("lookdev_studio", lookdev_studio_path):
     stored = prefs.get_string_value("lookdev_studio", lookdev_studio_path)
     if stored:
         envpath = stored

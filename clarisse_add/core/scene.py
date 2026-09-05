@@ -35,9 +35,17 @@ __all__ = [
 
 
 def current_context():
-    """Le contexte courant de l'application."""
+    """Le contexte de travail courant.
+
+    C'est bien ``ix.get_current_context()``, pas
+    ``ix.application.get_current_context()`` : le module expose sous le nom
+    ``ix`` est ``clarisse_helper``, et sa fonction lit le contexte de travail
+    du slot de selection -- celui-la meme dans lequel ``MergeProject`` importe.
+    La methode homonyme de ``ClarisseApp`` designe autre chose ; melanger les
+    deux donne un getter et un setter qui ne parlent pas du meme contexte.
+    """
     ix = get_ix()
-    return ix.application.get_current_context()
+    return ix.get_current_context()
 
 
 def context_from_selection(fallback_to_current=True):
@@ -232,16 +240,16 @@ def merge_project(filename, target_context=None):
     if not is_writable(target):
         return None
 
-    previous = ix.application.get_current_context()
+    previous = ix.get_current_context()
     try:
-        ix.application.set_current_context(target)
+        ix.set_current_context(str(target))
         ix.cmds.MergeProject([filename])
     except Exception:
         log.exception("Echec du merge de %s" % os.path.basename(filename))
         return None
     finally:
         try:
-            ix.application.set_current_context(previous)
+            ix.set_current_context(str(previous))
         except Exception:
             log.exception("Impossible de restaurer le contexte courant")
     log.info("Merge : %s -> %s" % (os.path.basename(filename), str(target)))
@@ -259,16 +267,16 @@ def import_project(filename, target_context=None, as_root=False):
     if not is_writable(target):
         return None
 
-    previous = ix.application.get_current_context()
+    previous = ix.get_current_context()
     try:
-        ix.application.set_current_context(target)
+        ix.set_current_context(str(target))
         ix.cmds.ImportProject([filename], as_root)
     except Exception:
         log.exception("Echec de l'import de %s" % os.path.basename(filename))
         return None
     finally:
         try:
-            ix.application.set_current_context(previous)
+            ix.set_current_context(str(previous))
         except Exception:
             log.exception("Impossible de restaurer le contexte courant")
     log.info("Import : %s -> %s" % (os.path.basename(filename), str(target)))

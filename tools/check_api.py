@@ -38,11 +38,24 @@ DEFAULT_SDK = os.environ.get("CLARISSE_SDK_DOCS", "J:/Clarisse-SDK/docs/sdk")
 SOURCES = [
     os.path.join(ROOT, "clarisse_add", "core"),
     os.path.join(ROOT, "clarisse_add", "tools"),
+    os.path.join(ROOT, "clarisse_add", "scripts"),
+    os.path.join(ROOT, "clarisse_add", "presets"),
     os.path.join(ROOT, "clarisse_add", "bootstrap.py"),
 ]
 
 _CMD_RE = re.compile(r"\bix\.cmds\.(\w+)")
 _API_RE = re.compile(r"\bix\.api\.(\w+)")
+_APP_RE = re.compile(r"\bix\.application\.(\w+)")
+# `ix.foo(` mais ni `ix.api`, ni `ix.cmds`, ni `ix.application`, ni `ix.selection`
+_HELPER_RE = re.compile(r"\bix\.(?!api\b|cmds\b|application\b|selection\b)(\w+)\s*\(")
+
+#: Emplacement du module Python expose sous le nom ``ix`` dans les scripts.
+#: C'est `clarisse_helper.py`, pas le binding SWIG : `ix.set_current_context`
+#: y vit, alors que `ix.application.set_current_context` n'existe pas.
+DEFAULT_HELPER = os.environ.get(
+    "CLARISSE_PYTHON_DIR",
+    "C:/Program Files/Isotropix/Clarisse 5.0 SP14/Clarisse/python3",
+)
 
 #: Noms qui ne sont pas des classes mais des constantes ou des sous-modules,
 #: et qu'on retrouve donc autrement dans la documentation.
@@ -60,17 +73,132 @@ def iter_sources():
 
 
 def collect():
-    """``(commandes, classes)`` referencees par le code de l'addon."""
-    commands, classes = {}, {}
+    """Ce que le code appelle, par famille : ``{famille: {nom: {fichiers}}}``."""
+    found = {"cmds": {}, "api": {}, "application": {}, "helper": {}}
+    patterns = [("cmds", _CMD_RE), ("api", _API_RE),
+                ("application", _APP_RE), ("helper", _HELPER_RE)]
     for path in iter_sources():
         with io.open(path, "r", encoding="utf-8") as handle:
             text = handle.read()
         relative = os.path.relpath(path, ROOT)
-        for name in _CMD_RE.findall(text):
-            commands.setdefault(name, set()).add(relative)
-        for name in _API_RE.findall(text):
-            classes.setdefault(name, set()).add(relative)
-    return commands, classes
+        for family, pattern in patterns:
+            for name in pattern.findall(text):
+                found[family].setdefault(name, set()).add(relative)
+    return found
+
+
+def helper_names(python_dir):
+    """Fonctions et variables exposees par ``clarisse_helper.py``.
+
+    On lit le fichier plutot que la documentation : c'est litteralement le
+    module que Clarisse expose sous le nom ``ix`` dans un script de shelf, donc
+    la seule source qui dise la verite sur ce que ``ix.quelquechose`` accepte.
+    """
+    path = os.path.join(python_dir, "clarisse_helper.py")
+    if not os.path.isfile(path):
+        return None
+    with io.open(path, "r", encoding="utf-8", errors="ignore") as handle:
+        text = handle.read()
+    names = set(re.findall(r"^def (\w+)\s*\(", text, re.M))
+    names.update(re.findall(r"^(\w+)\s*=", text, re.M))
+    return names
+
+
+def app_member_names(sdk):
+    """Methodes de ``ClarisseApp`` et de ses classes de base."""
+    names = set()
+    for page in ("class_clarisse_app-members.html", "class_app_object-members.html",
+                 "class_gui_app-members.html", "class_of_app-members.html"):
+        path = os.path.join(sdk, page)
+        if not os.path.isfile(path):
+            continue
+        with io.open(path, "r", encoding="utf-8", errors="ignore") as handle:
+            names.update(re.findall(r"\b(\w+)\s*\(", _strip(handle.read())))
+    return names
+
+
+#: Methodes d'objets Python courants, qu'on ne peut pas distinguer d'un appel
+#: sur un objet Clarisse sans inference de type.  La liste est courte a dessein :
+#: mieux vaut quelques lignes de bruit qu'un vrai probleme masque.
+_STDLIB_METHODS = frozenset("""
+    addHandler setFormatter setLevel finditer match search sub fullmatch
+    total_seconds isoformat timestamp
+    startswith endswith strip lstrip rstrip lower upper title capitalize
+    zfill splitlines rsplit setdefault extend reverse isalnum isdigit
+    encode decode
+""".split())
+
+
+def sdk_all_members(sdk):
+    """Tous les noms de membres documentes, toutes classes confondues."""
+    names = set()
+    for page in os.listdir(sdk):
+        if not page.endswith("-members.html"):
+            continue
+        try:
+            with io.open(os.path.join(sdk, page), "r", encoding="utf-8",
+                         errors="ignore") as handle:
+                names.update(re.findall(r"\b([a-z_][a-z0-9_]{2,})\s*\(",
+                                        _strip(handle.read())))
+        except (OSError, IOError):
+            continue
+    return names
+
+
+def object_method_calls():
+    """Methodes appelees sur des objets, hors modules importes et hors ``ix.*``.
+
+    Une methode sur un objet Clarisse (``prefs.item_exists(...)``) ne peut pas
+    etre verifiee sans savoir de quel type est l'objet, et Python n'a pas cette
+    information avant l'execution.  On s'en approche par elimination : on ecarte
+    les appels dont le receveur est un module importe (Python les validera de
+    lui-meme), ceux passant par ``ix`` (verifies par famille plus haut), et les
+    methodes definies dans l'addon.  Ce qui reste vient, pour l'essentiel, de
+    l'API Clarisse.
+
+    C'est ce filet qui manquait quand ``prefs.is_item_exist`` -- nom valide en
+    Clarisse 4, disparu en 5 -- est passe jusque dans le shelf.
+    """
+    import ast
+
+    ours = set()
+    trees = {}
+    for path in iter_sources():
+        with io.open(path, "r", encoding="utf-8") as handle:
+            source = handle.read()
+        tree = ast.parse(source)
+        trees[path] = tree
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                ours.add(node.name)
+
+    calls = {}
+    for path, tree in trees.items():
+        relative = os.path.relpath(path, ROOT)
+        skip = {"self", "cls", "ix"}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    skip.add((alias.asname or alias.name).split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    skip.add(alias.asname or alias.name)
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if not isinstance(node.func, ast.Attribute):
+                continue
+            base = node.func.value
+            while isinstance(base, ast.Attribute):
+                base = base.value
+            if isinstance(base, ast.Name) and base.id in skip:
+                continue
+            name = node.func.attr
+            if len(name) < 3 or name in ours or name in _STDLIB_METHODS:
+                continue
+            calls.setdefault(name, []).append("%s:%d" % (relative, node.lineno))
+    return calls
 
 
 def sdk_command_names(sdk):
@@ -141,11 +269,19 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--sdk", default=DEFAULT_SDK,
                         help="dossier docs/sdk du SDK Clarisse (defaut : %s)" % DEFAULT_SDK)
+    parser.add_argument("--helper", default=DEFAULT_HELPER,
+                        help="dossier python3/ de Clarisse, ou vit "
+                             "clarisse_helper.py (defaut : %s)" % DEFAULT_HELPER)
+    parser.add_argument("--strict", action="store_true",
+                        help="fait echouer aussi sur les methodes d'objet "
+                             "absentes du SDK (indicatives par defaut)")
     args = parser.parse_args(argv)
 
-    commands, classes = collect()
-    print("Code analyse : %d commande(s), %d classe(s) referencees"
-          % (len(commands), len(classes)))
+    found = collect()
+    commands, classes = found["cmds"], found["api"]
+    print("Code analyse : %s"
+          % ", ".join("%d %s" % (len(found[family]), family)
+                      for family in ("cmds", "api", "application", "helper")))
 
     if not os.path.isdir(args.sdk):
         print("SDK introuvable dans %s : verification impossible." % args.sdk)
@@ -194,6 +330,47 @@ def main(argv=None):
         print("  INCONNU  ix.api.%-29s (%s)"
               % (name, ", ".join(sorted(classes[name]))))
         problems += 1
+
+    # ix.application.* -- c'est la famille qui manquait, et celle qui a laisse
+    # passer `set_current_context` : la methode n'existe pas sur ClarisseApp,
+    # elle est sur le module `ix` lui-meme.
+    app_members = app_member_names(args.sdk)
+    if len(app_members) < 50:
+        print("Extraction douteuse : %d membre(s) de ClarisseApp." % len(app_members))
+        return 1
+    for name in sorted(found["application"]):
+        if name not in app_members:
+            print("  INCONNU  ix.application.%-21s (%s)"
+                  % (name, ", ".join(sorted(found["application"][name]))))
+            problems += 1
+
+    # ix.* -- les fonctions de clarisse_helper.py, le module reellement expose
+    # sous le nom `ix` dans un script de shelf.
+    helpers = helper_names(args.helper)
+    if helpers is None:
+        print("clarisse_helper.py introuvable dans %s : ix.* non verifie."
+              % args.helper)
+    else:
+        print("Helper : %d nom(s) dans clarisse_helper.py" % len(helpers))
+        for name in sorted(found["helper"]):
+            if name not in helpers:
+                print("  INCONNU  ix.%-33s (%s)"
+                      % (name, ", ".join(sorted(found["helper"][name]))))
+                problems += 1
+
+    # Methodes appelees sur des objets : indicatif, pas bloquant sauf --strict.
+    all_members = sdk_all_members(args.sdk)
+    unknown_methods = {}
+    for name, places in object_method_calls().items():
+        if name not in all_members:
+            unknown_methods[name] = places
+    if unknown_methods:
+        print("\nMethodes appelees sur un objet et absentes du SDK "
+              "(%d, a verifier) :" % len(unknown_methods))
+        for name in sorted(unknown_methods):
+            print("  %-26s %s" % (name, ", ".join(unknown_methods[name][:3])))
+        if args.strict:
+            problems += len(unknown_methods)
 
     if problems:
         print("\n%d nom(s) introuvable(s) dans le SDK %s" % (problems, args.sdk))
