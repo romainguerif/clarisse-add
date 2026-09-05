@@ -17,6 +17,7 @@ from ..core.compat import get_ix
 
 FILTER_CLASS = "ImageFilterBokeh"
 CAMERA_CLASS = "CameraBokeh"
+CHROMA_CLASS = "ImageFilterChromaticAberration"
 
 # Des valeurs qui montrent quelque chose. A zero partout, un utilisateur pose
 # le noeud, ne voit aucune difference, et conclut qu'il ne marche pas.
@@ -24,6 +25,10 @@ FILTER_DEFAULTS = (("radius", "18.0"), ("blades", "6"),
                    ("chromatic_aberration", "0.35"))
 CAMERA_DEFAULTS = (("enable_dof", "1"), ("f_stop", "1.4"),
                    ("focus_distance", "10.0"), ("blades", "6"))
+# Un decalage lateral de 0,4 % : dix fois ce que mesure une optique reelle,
+# pour que l'effet se voie tout de suite. A redescendre vers 0,05 % pour du
+# realisme.
+CHROMA_DEFAULTS = (("lateral_amount", "0.004"), ("samples", "7"))
 
 
 def _ensure_loaded(ix):
@@ -52,6 +57,12 @@ def _missing_module_message():
 
 def add_filter(payload=None):
     """Pose le filtre Bokeh sur le ou les layers selectionnes."""
+    _add_filter_class(FILTER_CLASS, "bokeh", FILTER_DEFAULTS, "Bokeh pose",
+                      "Le flou ne se voit que sur des valeurs superieures a 1 en "
+                      "lineaire -- un rendu HDR, des speculaires, des lumieres.")
+
+
+def _add_filter_class(class_name, item_name, defaults, title, note):
     ix = get_ix()
     if not _ensure_loaded(ix):
         _missing_module_message()
@@ -73,16 +84,16 @@ def add_filter(payload=None):
         module = layer.get_module()
         if module is None or not hasattr(module, "add_filter"):
             continue
-        added = module.add_filter(FILTER_CLASS, "bokeh")
+        added = module.add_filter(class_name, item_name)
         if added is None:
             continue
         obj = added.get_object()
-        for name, value in FILTER_DEFAULTS:
+        for name, value in defaults:
             if obj.get_attribute(name) is not None:
                 ix.cmds.SetValues([str(obj) + "." + name], [value])
         posed.append(str(obj))
 
-    log.info("bokeh : %d filtre(s) pose(s)" % len(posed))
+    log.info("%s : %d filtre(s) pose(s)" % (class_name, len(posed)))
     if not posed:
         ui.message("Aucun des layers selectionnes n'a accepte le filtre.",
                    "Rien pose")
@@ -94,6 +105,16 @@ def add_filter(payload=None):
         "un rendu HDR, des speculaires, des lumieres."
         % (len(posed), "\n    ".join(posed)),
         "Bokeh pose")
+
+
+def add_chroma(payload=None):
+    """Pose le filtre d'aberration chromatique sur les layers selectionnes."""
+    _add_filter_class(CHROMA_CLASS, "chromatic_aberration", CHROMA_DEFAULTS,
+                      "Aberration chromatique posee",
+                      "Trois blocs separes : le decalage lateral, geometrique et "
+                      "nul au centre ; le flou differentiel longitudinal ; et la "
+                      "frange violette, qui n'est pas de l'aberration chromatique "
+                      "mais du blooming seuille.")
 
 
 def create_camera(payload=None):
@@ -135,5 +156,7 @@ def run(payload=None):
     """
     if payload == "camera":
         create_camera()
+    elif payload == "chroma":
+        add_chroma()
     else:
         add_filter()

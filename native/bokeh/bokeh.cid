@@ -6,7 +6,7 @@ class "ImageFilterBokeh" "KernelFilter" {
 
     attribute_group "Aperture" {
         subpixel "radius" {
-            doc "Rayon du bokeh, en pixels. C'est le rayon du cercle de confusion : la taille qu'occupe un point lumineux hors mise au point."
+            doc "Rayon du bokeh, en pixels -- le rayon du cercle de confusion, la taille qu'occupe un point lumineux hors mise au point. Quand une image de profondeur est branchee, c'est le rayon MAXIMAL : le rayon reel varie par pixel entre zero et cette valeur."
             value 8.0
             numeric_range yes 0.0 250
             ui_range yes 0.0 50
@@ -49,6 +49,51 @@ class "ImageFilterBokeh" "KernelFilter" {
             ui_range yes -1.0 1.0
             slider yes
             animatable yes
+        }
+    }
+
+    attribute_group "Focus" {
+        reference "depth_image" {
+            doc "Image contenant une passe de profondeur. Sans elle, le rayon est constant sur toute l'image -- un flou uniforme, pas une mise au point. Le canal Z d'un rendu ne remonte pas jusqu'a un filtre : il faut donc rendre la profondeur dans une Image a part et la brancher ici."
+            filter "Image"
+            value ""
+        }
+        long "depth_mode" {
+            doc "Comment lire les valeurs de l'image de profondeur. Distance reelle : la valeur est une distance en unites de la scene. Inverse : la valeur est 1/z, comme le donnent certains moteurs et la plupart des tampons de profondeur temps reel."
+            value 0
+            preset "Distance reelle" "0"
+            preset "Inverse (1/z)" "1"
+        }
+        distance "focus_distance" {
+            doc "Distance de mise au point. Ce qui se trouve a cette distance reste net ; le flou croit de part et d'autre."
+            value 10.0
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 200
+            slider yes
+            animatable yes
+        }
+        distance "focus_range" {
+            doc "Profondeur de la zone nette, de part et d'autre de la distance de mise au point. C'est l'equivalent artistique d'une ouverture : plus la zone est etroite, plus le flou monte vite."
+            value 2.0
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 50
+            slider yes
+            animatable yes
+        }
+        double "blur_falloff" {
+            doc "Vitesse a laquelle le flou croit une fois sorti de la zone nette. A 1 la croissance est lineaire jusqu'au rayon maximal ; au-dela elle est plus douce pres du point de mise au point et plus brutale loin."
+            value 1.0
+            numeric_range yes 0.1 8.0
+            ui_range yes 0.25 4.0
+            slider yes
+            animatable yes
+        }
+        long "focus_side" {
+            doc "Quel cote flouter. Une profondeur de champ reelle floute des deux cotes, mais isoler l'arriere-plan ou l'avant-plan est un besoin courant en compositing."
+            value 0
+            preset "Avant et arriere" "0"
+            preset "Arriere seulement" "1"
+            preset "Avant seulement" "2"
         }
     }
 

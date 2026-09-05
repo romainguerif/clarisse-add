@@ -1,0 +1,107 @@
+class "ImageFilterChromaticAberration" "KernelFilter" {
+    ui_name "Chromatic Aberration [ClarisseAdd]"
+    #version 0.1
+    category "ImageFilter"
+    doc "Aberration chromatique optique. Trois phenomenes distincts, volontairement separes : le decalage lateral, qui est geometrique et croit du centre vers les bords ; le flou differentiel longitudinal, uniforme sur tout le cadre ; et la frange violette, qui n'est pas de l'aberration chromatique mais du blooming seuille. Les melanger en un seul curseur, comme le font la plupart des outils, rend le reglage impossible."
+
+    attribute_group "lateral" {
+        percentage "lateral_amount" {
+            doc "Decalage lateral maximal, en pourcentage de la demi-diagonale de l'image. Le grandissement differe selon la couleur : l'ecart est nul au centre optique et maximal dans les coins. Les mesures d'optiques reelles donnent 0,04 a 0,15 % -- soit un demi-pixel en HD, un pixel en 4K. Au-dela, on quitte le realisme pour l'effet."
+            value 0.0
+            numeric_range yes 0.0 0.5
+            ui_range yes 0.0 0.02
+            slider yes
+            animatable yes
+        }
+        color "lateral_spectrum" {
+            doc "Position de chaque canal sur le segment de dispersion, de 0 a 1. Le defaut place le rouge a une extremite, le vert au milieu et le bleu a l'autre : c'est l'ordre des longueurs d'onde. Inverser rouge et bleu inverse le sens de la frange."
+            value 1.0 0.5 0.0
+            animatable yes
+        }
+        double "lateral_falloff" {
+            doc "Exposant de la croissance radiale. A 1 le decalage croit lineairement du centre vers les bords, ce qui correspond aux mesures d'objectifs courants. Au-dela, l'effet se concentre dans les coins."
+            value 1.0
+            numeric_range yes 0.5 4.0
+            ui_range yes 1.0 4.0
+            slider yes
+            animatable yes
+        }
+    }
+
+    attribute_group "longitudinal" {
+        collapsed yes
+        subpixel "longitudinal_amount" {
+            doc "Flou differentiel entre canaux, en pixels. Les couleurs ne convergent pas sur le meme plan : un canal est net quand un autre ne l'est pas, uniformement sur tout le cadre. A laisser a zero quand le filtre Bokeh ou la camera Bokeh s'en charge -- eux le font correctement, avec la profondeur."
+            value 0.0
+            numeric_range yes 0.0 32
+            ui_range yes 0.0 10
+            slider yes
+            animatable yes
+        }
+        color "longitudinal_defocus" {
+            doc "Part de flou appliquee a chaque canal. Le defaut floute le rouge et le bleu en gardant le vert net, ce qui est le comportement d'un objectif corrige sur le vert."
+            value 1.0 0.0 1.0
+            animatable yes
+        }
+    }
+
+    attribute_group "fringe" {
+        collapsed yes
+        doc "La frange violette des hautes lumieres n'est pas de l'aberration chromatique : c'est un melange de blooming et de diffusion dans le verre. D'ou un bloc separe, additif et seuille."
+        double "fringe_amount" {
+            doc "Intensite de la frange ajoutee autour des hautes lumieres."
+            value 0.0
+            numeric_range yes 0.0 4.0
+            ui_range yes 0.0 2.0
+            slider yes
+            animatable yes
+        }
+        double "fringe_threshold" {
+            doc "Seuil de luminance a partir duquel la frange apparait. Le critere est max(r, g, b) et non la luminance ponderee : une lumiere bleue pure a une luma faible et passerait sous le seuil alors qu'elle est eclatante."
+            value 1.0
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 10
+            slider yes
+            animatable yes
+        }
+        percentage "fringe_knee" {
+            doc "Adoucit le passage du seuil. A zero le seuil est franc et les pixels qui le traversent scintillent en animation ; en montant, la transition devient continue."
+            value 0.5
+            numeric_range yes 0.0 1.0
+            ui_range yes 0.0 1.0
+            slider yes
+            animatable yes
+        }
+        pixel "fringe_radius" {
+            doc "Rayon sur lequel la frange se repand autour des hautes lumieres."
+            value 4
+            numeric_range yes 0 64
+            ui_range yes 0 16
+            slider yes
+            animatable yes
+        }
+        color "fringe_color" {
+            doc "Teinte de la frange. Le violet du defaut est le cas le plus courant sur les optiques modernes ; le vert apparait de l'autre cote du plan de mise au point."
+            value 0.55 0.25 1.0
+            animatable yes
+        }
+    }
+
+    attribute_group "common" {
+        collapsed yes
+        percentage[2] "center" {
+            doc "Centre optique, en fraction de l'image depuis son centre. Une optique decentree, ou un recadrage, deplace le point ou l'aberration laterale s'annule."
+            value 0.0 0.0
+            numeric_range yes -1.0 1.0
+            ui_range yes -0.5 0.5
+            animatable yes
+        }
+        long "samples" {
+            doc "Nombre d'echantillons le long du segment de dispersion. Trois donne trois copies decalees, visibles comme telles ; au-dela le degrade devient continu. Le nombre est force impair pour qu'un echantillon central de deplacement nul existe toujours -- c'est ce qui rend la renormalisation de bordure sure en toutes circonstances."
+            value 7
+            numeric_range yes 3 33
+            ui_range yes 3 15
+            slider yes
+        }
+    }
+}

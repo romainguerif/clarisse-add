@@ -111,6 +111,16 @@ OPTICS = [
         payload="filter",
     ),
     Tool(
+        "optics.chroma",
+        "Filtre Aberration Chromatique",
+        "Pose le filtre d'aberration chromatique sur les layers selectionnes. "
+        "A utiliser apres un rendu fait avec la camera Bokeh : elle ne peut pas "
+        "la produire, le moteur etant RVB et non spectral.",
+        "clarisse_add.tools.optics",
+        CATEGORY_OPTICS,
+        payload="chroma",
+    ),
+    Tool(
         "optics.load",
         "Charger les modules C++",
         "Declare les classes natives sans relancer Clarisse. Normalement "

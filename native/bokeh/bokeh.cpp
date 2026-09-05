@@ -48,6 +48,11 @@
 #include <ctx_filter.h>
 #include <image_canvas.h>
 #include <image_proxy.h>
+#include <image_handle.h>
+#include <module_image.h>
+#include <module_image_quality.h>
+#include <of_object.h>
+#include <of_attr.h>
 #include <core_log.h>
 
 #include <math.h>
@@ -56,9 +61,39 @@
 #include "aperture.h"
 #include <bokeh.cma>
 
+// Instantane de la passe de profondeur, pris une fois par evaluation dans
+// pre_filter. On recopie les pixels plutot que garder un pointeur du moteur :
+// filter() est multi-thread, et toute question de duree de vie ou de
+// concurrence disparait avec la copie. Cout : un flottant par pixel.
+//
+// Il vit dans le module, pas dans un global : un filtre par objet, un
+// instantane par objet. Deux filtres dans la meme scene ne se marchent pas
+// dessus.
+struct DepthSnapshot {
+    std::vector<float> data;
+    int  x, y, w, h;        // fenetre visible du canvas de profondeur
+    bool ready;
+    double near_value;      // etendue reelle, mesuree sur l'instantane
+    double far_value;
+
+    DepthSnapshot() : x(0), y(0), w(0), h(0), ready(false),
+                      near_value(0.0), far_value(0.0) {}
+
+    // Plus proche voisin, en coordonnees absolues, borne aux bords. Une
+    // profondeur interpolee sur un bord d'objet est de toute facon un
+    // mensonge -- la moyenne entre un premier plan et un arriere-plan.
+    inline float at(int px, int py) const {
+        px -= x; py -= y;
+        if (px < 0) px = 0; else if (px >= w) px = w - 1;
+        if (py < 0) py = 0; else if (py >= h) py = h - 1;
+        return data[(size_t) py * w + px];
+    }
+};
+
 class BokehModule : public ModuleKernelFilter {
 public:
     BokehModule() : ModuleKernelFilter() {}
+    DepthSnapshot depth;
 };
 
 // La doc du SDK ecrit ces callbacks avec ModuleObject * ; le vrai typedef dit
@@ -137,6 +172,18 @@ const int SPHERICAL_LEVELS = 64;
 // montrent bien plus sur les boules de bokeh.
 const double CHROMA_SPREAD = 0.18;
 
+// Nombre de paliers de rayon quand une passe de profondeur pilote le flou.
+//
+// pre_filter ne rend qu'un seul kernel_radius, valable pour toute l'image :
+// c'est lui qui dimensionne la marge du proxy, et rien ne peut la changer par
+// pixel. Un rayon variable se rend donc par une echelle de noyaux batis a
+// l'avance, tous bornes par le rayon maximal declare, et on choisit le palier
+// pixel par pixel.
+//
+// Douze paliers : au-dela on ne distingue plus les marches sur un degrade de
+// profondeur, en deca elles se voient sur les surfaces inclinees.
+const int DEPTH_STEPS = 12;
+
 struct Settings {
     double radius;          // en pixels de l'image evaluee
     int    blades;
@@ -150,6 +197,11 @@ struct Settings {
     bool   preserve_exposure;
     double spherical;
     double chromatic;
+    int    depth_mode;          // 0 distance reelle, 1 inverse
+    double focus_distance;
+    double focus_range;
+    double blur_falloff;
+    int    focus_side;          // 0 les deux, 1 arriere, 2 avant
     int    image_width;
     int    image_height;
 };
@@ -184,6 +236,11 @@ read_settings(const CtxEval& eval, const CtxKernelFilter& ctx,
     s.preserve_exposure = cma.get_preserve_exposure();
     s.spherical   = cma.get_spherical_aberration();
     s.chromatic   = cma.get_chromatic_aberration();
+    s.depth_mode      = (int) cma.get_depth_mode();
+    s.focus_distance  = cma.get_focus_distance();
+    s.focus_range     = cma.get_focus_range();
+    s.blur_falloff    = cma.get_blur_falloff();
+    s.focus_side      = (int) cma.get_focus_side();
 
     // Les dimensions viennent du proxy, qui les connait : ImageProxy expose
     // get_image_width/height. Passer par source_image obligerait a tenir
@@ -462,6 +519,37 @@ build_kernel(Kernel& k, const Settings& s, const double& channel_scale,
     if (quantised > 0.0) k.total = quantised;
 }
 
+// Fraction du rayon maximal a appliquer pour une valeur de profondeur donnee.
+// Rend 0 dans la zone nette, 1 au-dela de la portee utile.
+//
+// Ce n'est pas la formule optique du cercle de confusion : celle-ci demande
+// une focale, une ouverture et une taille de capteur, dont un filtre 2D ne
+// dispose pas. C'est le modele artistique, celui de tous les outils de
+// compositing -- un plan de mise au point, une profondeur de zone nette, et
+// une courbe de montee.
+inline double
+circle_of_confusion(const Settings& s, const double& raw)
+{
+    // Une profondeur en 1/z se lit a l'envers, et le zero y designe l'infini.
+    double z = raw;
+    if (s.depth_mode == 1) z = (raw > 1e-9) ? (1.0 / raw) : 1e9;
+
+    const double delta = z - s.focus_distance;
+    if (s.focus_side == 1 && delta <= 0.0) return 0.0;   // arriere seulement
+    if (s.focus_side == 2 && delta >= 0.0) return 0.0;   // avant seulement
+
+    double distance = fabs(delta) - s.focus_range;
+    if (distance <= 0.0) return 0.0;                     // dans la zone nette
+
+    // La montee se fait sur une seconde fois la profondeur de zone nette :
+    // c'est ce qui donne une transition lisible plutot qu'un saut.
+    const double span = (s.focus_range > 1e-6) ? s.focus_range * 2.0
+                                               : (s.focus_distance * 0.25 + 1.0);
+    double t = distance / span;
+    if (t > 1.0) t = 1.0;
+    return pow(t, s.blur_falloff);
+}
+
 // -- sommes prefixees ---------------------------------------------------------
 //
 // Toutes nos formes sont convexes, ou intersection de convexes : chaque coupe
@@ -518,6 +606,89 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
 
     kernel_radius = (unsigned int)(reach < 0.0 ? 0.0 : reach + 1.5);
     total_pass_count = 1;
+
+    // La passe de profondeur se lit ICI, et nulle part ailleurs.
+    //
+    // pre_filter tourne une seule fois, sur le thread appelant -- exactement
+    // la ou LayerImage demande l'image d'un autre objet depuis toujours.
+    // filter(), lui, tourne sur les threads du pool, une fois par tuile : y
+    // demander l'evaluation d'une autre Image ferait se bousculer tous les
+    // workers sur son verrou m_image_lock, qui n'est pas recursif.
+    BokehModule *module = (BokehModule *) object.get_module();
+    if (module == 0) return;
+    module->depth = DepthSnapshot();
+    if (s.radius < 0.5) return;
+
+    OfAttr *attr = object.get_attribute("depth_image");
+    if (attr == 0) return;
+    OfObject *image_object = attr->get_object();
+    if (image_object == 0) return;   // rien de branche : rayon constant
+
+    // Cast VERIFIE. Isotropix caste sans verifier dans layer_builtin.dll ;
+    // ici l'attribut pourrait un jour accepter ImageNode, dont le module
+    // n'est pas un ModuleImage.
+    ModuleImage *image = image_object->get_module<ModuleImage>();
+    if (image == 0) return;
+
+    // D'abord la voie qui ne declenche RIEN : get_highest_quality_image
+    // balaie la pyramide et rend le meilleur niveau deja propre, sans verrou
+    // ni evaluation. Elle ecrase la valeur d'entree de `quality` des sa
+    // premiere instruction -- la documentation qui la presente comme une
+    // qualite minimale requise est fausse.
+    ImageHandle handle;
+    ModuleImageQuality::Level got = ModuleImageQuality::QUALITY_UNKNOWN;
+
+    if (!image->get_highest_quality_image(handle, got)) {
+        // Rien n'est calcule. Sortir si l'evaluation est deja interrompue :
+        // get_image rendrait une image incomplete, sans le dire.
+        if (object.get_application().must_stop_evaluation()) return;
+
+        ModuleImageQuality::Level want = ModuleImageQuality::QUALITY_FULL;
+        if (ModuleImageQuality::is_valid_quality((unsigned int) ctx.image_quality))
+            want = ModuleImageQuality::get_quality((unsigned int) ctx.image_quality);
+        handle = image->get_image(want, false, 0);
+    }
+
+    ImageCanvas *canvas = *handle;
+    // is_empty() ne suffit pas : le constructeur par defaut d'ImageHandle
+    // alloue une Data, donc il rend faux sur un handle vide. La taille fait foi.
+    if (canvas == 0 || canvas->get_width() <= 0) return;
+
+    DepthSnapshot& depth = module->depth;
+    depth.x = canvas->get_x();
+    depth.y = canvas->get_y();
+    depth.w = canvas->get_width();
+    depth.h = canvas->get_height();
+    if (depth.w <= 0 || depth.h <= 0) return;
+
+    // Reference const sur la valeur de retour : la duree de vie du temporaire
+    // est etendue, et aucune copie n'est faite -- ImageProxy n'a qu'un
+    // constructeur de copie superficiel, qui provoquerait une double
+    // liberation de ses cinq tampons.
+    const ImageProxy& proxy = canvas->get_proxy(depth.x, depth.y, depth.w, depth.h);
+
+    // Une passe de profondeur est monochrome : le rouge suffit. Les tampons
+    // peuvent etre nuls -- le proxy n'alloue un canal que si la map le porte.
+    const float *values = proxy.get_red_channel();
+    if (values == 0) values = proxy.get_green_channel();
+    if (values == 0) values = proxy.get_blue_channel();
+    if (values == 0) return;
+
+    depth.data.assign(values, values + (size_t) depth.w * depth.h);
+
+    double low = depth.data[0], high = depth.data[0];
+    for (size_t i = 1; i < depth.data.size(); ++i) {
+        const float v = depth.data[i];
+        if (v < low) low = v;
+        if (v > high) high = v;
+    }
+    depth.near_value = low;
+    depth.far_value = high;
+    depth.ready = true;
+
+    LOG_INFO("[Bokeh] profondeur " << depth.w << "x" << depth.h
+             << " en (" << depth.x << "," << depth.y << ")"
+             << "  etendue " << low << " a " << high << "\n");
 }
 
 bool
@@ -576,14 +747,37 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     // au chemin rapide quand gain valait 0.
     const bool boosting = (s.gain != 0.0);
 
-    Kernel kernel_rgb[3];
     const bool split = (s.chromatic != 0.0);
-    build_kernel(kernel_rgb[1], s, 1.0, frame_x, frame_y, boosting);
-    if (split) {
-        build_kernel(kernel_rgb[0], s, 1.0 + CHROMA_SPREAD * s.chromatic, frame_x, frame_y, boosting);
-        build_kernel(kernel_rgb[2], s, 1.0 - CHROMA_SPREAD * s.chromatic, frame_x, frame_y, boosting);
+    const double channel_scale[3] = {
+        1.0 + CHROMA_SPREAD * s.chromatic, 1.0, 1.0 - CHROMA_SPREAD * s.chromatic
+    };
+
+    // Une passe de profondeur branchee ? Alors le rayon varie par pixel, et on
+    // bat une echelle de noyaux plutot qu'un seul. Le palier 0 est le pixel
+    // net : aucun noyau, on recopie la source.
+    const BokehModule *module = (const BokehModule *) object.get_module();
+    const DepthSnapshot *depth = (module && module->depth.ready) ? &module->depth : 0;
+    const int steps = depth ? DEPTH_STEPS : 1;
+
+    std::vector<Kernel> ladder((size_t) steps * 3);
+    for (int level = 0; level < steps; ++level) {
+        Settings scaled = s;
+        if (depth) scaled.radius = s.radius * (level + 1) / (double) steps;
+        for (int c = 0; c < 3; ++c) {
+            if (c != 1 && !split) continue;   // un seul noyau sans aberration
+            build_kernel(ladder[(size_t) level * 3 + c], scaled,
+                         channel_scale[c], frame_x, frame_y, boosting);
+        }
     }
-    if (kernel_rgb[1].total <= 0.0) return true;
+    if (ladder[1].total <= 0.0) return true;
+
+    // Le canvas source, pour convertir les coordonnees de la tuile vers celles
+    // de l'image de profondeur : les deux peuvent differer de resolution.
+    double depth_u = 0.0, depth_v = 0.0;
+    if (depth && ctx.source_image != 0) {
+        depth_u = 1.0 / (double) ctx.source_image->get_width();
+        depth_v = 1.0 / (double) ctx.source_image->get_height();
+    }
 
     if (!boosting) {
         // Chemin rapide. On convolue les quatre canaux avec le meme noyau
@@ -593,8 +787,7 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
         Prefix prefix;
         for (int c = 0; c < 4; ++c) {
             if (channels[c] == 0 || out[c] == 0) continue;
-            const Kernel& k = (split && c < 3) ? kernel_rgb[c] : kernel_rgb[1];
-            if (k.total <= 0.0) continue;
+            const int channel = (split && c < 3) ? c : 1;
 
             prefix.build(channels[c], stride, rows);
             // Le vignettage optique DOIT assombrir les coins -- c'est ce qu'il
@@ -603,14 +796,40 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
             // a 55,9 % d'energie dans le coin, et un gain de 1,000 quand meme.
             // On divise donc par la somme du noyau NON tronque, sauf si
             // l'utilisateur demande de preserver l'exposition.
-            const double reference = (s.preserve_exposure || k.total_unvignetted <= 0.0)
-                                     ? k.total : k.total_unvignetted;
-            const double inverse = 1.0 / reference;
-
             for (int y = 0; y < height; ++y) {
                 const int cy = y + ctx.region.y;
                 for (int x = 0; x < width; ++x) {
                     const int cx = x + ctx.region.x;
+
+                    // Le palier de rayon, choisi par la profondeur au pixel.
+                    int level = steps - 1;
+                    if (depth != 0) {
+                        const int abs_x = ctx.x0 + x;
+                        const int abs_y = ctx.y0 + y;
+                        const double u = (abs_x + 0.5 - ctx.source_image->get_x()) * depth_u;
+                        const double v = (abs_y + 0.5 - ctx.source_image->get_y()) * depth_v;
+                        const float z = depth->at(depth->x + (int)(u * depth->w),
+                                                  depth->y + (int)(v * depth->h));
+                        const double coc = circle_of_confusion(s, z);
+                        level = (int)(coc * steps + 0.5) - 1;
+                        if (level < 0) {
+                            // Pixel net : rien a flouter, on recopie.
+                            out[c][y * width + x] = channels[c][(size_t)cy * stride + cx];
+                            continue;
+                        }
+                        if (level >= steps) level = steps - 1;
+                    }
+
+                    const Kernel& k = ladder[(size_t) level * 3 + channel];
+                    if (k.total <= 0.0) {
+                        out[c][y * width + x] = channels[c][(size_t)cy * stride + cx];
+                        continue;
+                    }
+                    const double reference =
+                        (s.preserve_exposure || k.total_unvignetted <= 0.0)
+                        ? k.total : k.total_unvignetted;
+                    const double inverse = 1.0 / reference;
+
                     double sum = 0.0;
 
                     // Convolution, pas correlation : le noyau est retourne.
@@ -671,9 +890,27 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
             double sum[4] = {0.0, 0.0, 0.0, 0.0};
             double norm[4] = {0.0, 0.0, 0.0, 0.0};
 
+            int level = steps - 1;
+            if (depth != 0) {
+                const double u = (ctx.x0 + x + 0.5 - ctx.source_image->get_x()) * depth_u;
+                const double v = (ctx.y0 + y + 0.5 - ctx.source_image->get_y()) * depth_v;
+                const float z = depth->at(depth->x + (int)(u * depth->w),
+                                          depth->y + (int)(v * depth->h));
+                level = (int)(circle_of_confusion(s, z) * steps + 0.5) - 1;
+            }
+
+            if (level < 0) {
+                for (int c = 0; c < 4; ++c)
+                    if (channels[c] != 0 && out[c] != 0)
+                        out[c][y * width + x] =
+                            channels[c][(size_t)(y + ctx.region.y) * stride + (x + ctx.region.x)];
+                continue;
+            }
+            if (level >= steps) level = steps - 1;
+
             for (int c = 0; c < 4; ++c) {
                 if (channels[c] == 0 || out[c] == 0) continue;
-                const Kernel& k = (split && c < 3) ? kernel_rgb[c] : kernel_rgb[1];
+                const Kernel& k = ladder[(size_t) level * 3 + ((split && c < 3) ? c : 1)];
                 for (size_t i = 0; i < k.all.size(); ++i) {
                     const Tap& tap = k.all[i];
                     const int ty = cy - tap.dy;
