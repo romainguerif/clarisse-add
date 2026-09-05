@@ -20,6 +20,7 @@ CATEGORY_SCATTER = PREFIX + " Scatter"
 CATEGORY_LIGHTS = PREFIX + " Lights"
 CATEGORY_LOOKDEV = PREFIX + " Look-dev"
 CATEGORY_SCENE = PREFIX + " Scene"
+CATEGORY_BUILD = PREFIX + " Build"
 CATEGORY_PRESETS = PREFIX + " Presets"
 CATEGORY_KIT = PREFIX + " Survival Kit"
 
@@ -175,6 +176,22 @@ LOOKDEV = [
         CATEGORY_LOOKDEV,
     ),
 ]
+
+# ---------------------------------------------------------------------------
+# Assemblage BUiLDER
+# ---------------------------------------------------------------------------
+
+BUILD = [
+    Tool(
+        "build.template",
+        "Nouveau build",
+        "Monte le squelette d'un build BUiLDER deja cable : Read Project, "
+        "Edit, Merge, Render Scene, AOV Set et l'ecriture d'image.",
+        "clarisse_add.tools.build_template",
+        CATEGORY_BUILD,
+    ),
+]
+
 
 # ---------------------------------------------------------------------------
 # Hygiene de scene
@@ -335,6 +352,7 @@ def all_tools():
         tools.extend(LIGHTS)
         tools.extend(LOOKDEV)
         tools.extend(SCENE)
+        tools.extend(BUILD)
         tools.extend(preset_tools())
         tools.extend(kit_tools())
         _ALL = tools
