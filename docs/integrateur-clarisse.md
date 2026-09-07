@@ -192,7 +192,9 @@ livré.
 
 ### 2.5 Le cinquième trou : l'échantillonnage adaptatif est écrit et éteint
 
-Sur `RendererRaytracer` :
+Dans l'interface, tout se règle sur le nœud `path_tracer`, groupe **Sampling** —
+le panneau réunit les attributs du renderer et ceux de l'intégrateur, quelle que
+soit la classe qui les porte dans le SDK :
 
 | attribut | défaut | ce que c'est |
 |---|---|---|
