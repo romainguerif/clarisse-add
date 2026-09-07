@@ -275,9 +275,18 @@ GPL-3.0 — mais à savoir.
 
 ## 5. LuxCoreRender, en détail
 
-**Licence Apache-2.0**, vérifiée dans l'en-tête de `luxcore.h`. Embarquable même
-en produit fermé. *(L'addon Blender `BlendLuxCore` est en GPL-3.0 et ne peut pas
-être recopié dans un produit fermé — sans objet pour nous.)*
+**Licence : Apache-2.0 annonce, mais du GPLv3 dans le source.** `COPYING.txt`
+est bien la licence Apache 2.0 — mais **sept fichiers portent un en-tete GPLv3**,
+dont l'en-tete PUBLIC `include/luxrays/core/geometry/matrix3x3.h`, et ils sont
+compiles dans les cibles `luxcore` et `luxcore_static`. Vestige de LuxRender 1.x
+que la reecriture d'en-tetes de 2017 n'a pas nettoye.
+
+**Sans consequence dans l'architecture retenue** : en processus externe il n'y a
+aucune edition de liens, donc aucune contamination. Et ClarisseAdd est deja en
+GPL-3.0. **Cela deviendrait bloquant** pour un produit ferme, ou pour toute
+variante in-process. A verifier soi-meme avant tout engagement de ce type.
+
+*(L'addon Blender `BlendLuxCore` est lui franchement en GPL-3.0.)*
 
 **Le projet a failli mourir puis a été relancé.** Commits par an sur `master` :
 1 033 en 2019, puis chute à **11 en 2024**, puis **650 en 2025** et 310 en 2026.
