@@ -500,7 +500,37 @@ est une node qui le condense.
 
 ---
 
-## 10. Les deux saveurs de licence
+## 10. Pourquoi Clarisse tient des échelles que les autres ne tiennent pas
+
+Utile à savoir avant de comparer Clarisse à quoi que ce soit d'autre.
+
+`GasSceneTree` expose `get_geometry_count()` et `get_primitive_count()` — et
+ces compteurs sont des **`double`**, pas des entiers 32 bits. Un double
+représente exactement les entiers jusqu'à 2⁵³, soit 9·10¹⁵. C'est cohérent avec
+les chiffres qu'Isotropix affichait (« 7,8 trillions de primitives ») là où un
+`uint32` plafonne à 4,3 milliards.
+
+Et surtout, l'instanciation n'est pas un objet par instance. `GasGeometryBundle`
+prend une courte liste de géométries de base plus des **tableaux parallèles** :
+indices, matrices, visibilités. Mieux, il accepte un
+`set_matrices_callback(...)` — les matrices peuvent être **générées à la
+demande** au lieu d'être stockées. Enfin `GasGeometryBundle` hérite de
+`GasObject`, la même base que `GasSceneTree` : **un bundle est lui-même un nœud
+traversable, donc les bundles s'imbriquent**.
+
+D'où les scatterers et combiners récursifs : imbriquer coûte le produit des
+**nœuds**, pas celui des feuilles.
+
+Point de comparaison qui rend la chose concrète : Cycles stocke **un objet C++
+complet plus 256 octets sur la carte, par instance**, ne compose que deux
+niveaux de BVH, aplatit toute imbrication de façon multiplicative, et plafonne
+à ~134 millions d'objets sur OptiX. Ce sont deux architectures sans commune
+mesure — et c'est pourquoi aucun moteur GPU ne remplacera Clarisse sur ses
+grosses scènes.
+
+---
+
+## 11. Les deux saveurs de licence
 
 Mesuré, pas supposé : **359 classes existent dans les deux saveurs**, 49 sont
 verrouillées par licence en iFX, 13 en BUiLDER. *(Une seconde mesure, faite sur
@@ -528,7 +558,7 @@ exactement la famille d'assemblage de builds — `ImageNode*`, `Process*`,
 
 ---
 
-## 11. L'API Python, et ce qu'elle laisse croire
+## 12. L'API Python, et ce qu'elle laisse croire
 
 | Ce qu'on croit | Ce qui est vrai |
 |---|---|
@@ -550,7 +580,7 @@ selected.set_string("depth", 0); enabled.set_bool(True, 0)
 
 ---
 
-## 12. Rendre en ligne de commande
+## 13. Rendre en ligne de commande
 
 ```
 cnode.exe <projet> \
@@ -571,7 +601,7 @@ cnode.exe <projet> \
 
 ---
 
-## 13. Relire les EXR produits
+## 14. Relire les EXR produits
 
 Piège d'outillage, mais il coûte du temps à chaque fois.
 
@@ -595,7 +625,7 @@ ligne.
 
 ---
 
-## 14. Méthode : ce qui nous a fait gagner du temps
+## 15. Méthode : ce qui nous a fait gagner du temps
 
 - **Mesurer avant d'affirmer.** Presque toutes les entrées de ce document
   contredisent une déduction raisonnable. Le rapport d'un nombre — 11,43 pour

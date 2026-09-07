@@ -1,3 +1,17 @@
+**Trois debruiteurs livres**, en plugins de pipeline d'image : Intel OIDN,
+le debruiteur OptiX, et BCD. Autrement dit LuxCore apporte deja un debruiteur
+moderne -- celui de Clarisse est bati sur OptiX 6.5, date de 2019. Ca repond en
+partie a la question du post-traitement par IA : le premier gain est peut-etre
+deja dans le moteur.
+
+**OCIO est present**, plus un plugin `colorlut`. Utile pour raccorder la
+transformation de vue d'AgX.
+
+**L'out-of-core existe mais est optionnel et desactive par defaut** :
+`opencl.outofcore.enable` et `opencl.outofcore.film.enable`. Il couvre les
+tampons generaux et le film, pas seulement les textures -- plus large que celui
+de Cycles.
+
 # Un moteur GPU pour Clarisse — état de la question
 
 Document de réflexion, discussion du 2026-09-07. **Aucun code écrit, aucune
