@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Cycles Hydra Render Delegate and USD feedback - Feature &amp; Design Feedback - Developer Forum</title>
+    <meta name="description" content="This is a topic for discussion about the Hydra Render Delegate for integration in other applications, and USD support for the standalone Cycles. 
+This is mainly aimed at developers that want to improve the implementation&amp;hellip;">
+    <meta name="generator" content="Discourse 2026.6.0-latest - https://github.com/discourse/discourse version 86dd515474d24eb26cd013dd25fb1eacaf568567">
+<link rel="icon" type="image/png" href="https://devtalk.blender.org/uploads/default/optimized/2X/c/c2c1842941daa95dd813394bbdf98988cdc392ec_2_32x32.ico">
+<link rel="apple-touch-icon" type="image/png" href="https://devtalk.blender.org/uploads/default/optimized/2X/8/810a87a939440e79ea0d2f55906dabcc7925196c_2_180x180.png">
+<meta name="theme-color" media="all" content="#191c1f">
+
+<meta name="color-scheme" content="dark">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+<link rel="canonical" href="https://devtalk.blender.org/t/cycles-hydra-render-delegate-and-usd-feedback/24075" />
+
+<meta name="discourse-track-view-session-id" content="wmQlBZBFUBvpiYkDmEoieqvpV1u4JL2w">
+<link rel="search" type="application/opensearchdescription+xml" href="https://devtalk.blender.org/opensearch.xml" title="Developer Forum Search">
+
+    
+    <link href="/stylesheets/color_definitions_blender-dark_1_1_af4c539d30587cd393af68bd9e5fafdf2d06bd99.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" class="light-scheme" data-scheme-id="1"/>
+
+<link href="/stylesheets/common_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="common"  />
+
+<link href="/stylesheets/mobile_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="(width < 40rem)" rel="stylesheet" data-target="mobile"  />
+<link href="/stylesheets/desktop_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="(width >= 40rem)" rel="stylesheet" data-target="desktop"  />
+
+
+
+  <link href="/stylesheets/checklist_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="checklist"  />
+  <link href="/stylesheets/discourse-blender-id_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-blender-id"  />
+  <link href="/stylesheets/discourse-details_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-details"  />
+  <link href="/stylesheets/discourse-lazy-videos_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-lazy-videos"  />
+  <link href="/stylesheets/discourse-local-dates_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-local-dates"  />
+  <link href="/stylesheets/discourse-math_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-math"  />
+  <link href="/stylesheets/discourse-narrative-bot_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-narrative-bot"  />
+  <link href="/stylesheets/discourse-presence_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-presence"  />
+  <link href="/stylesheets/discourse-solved_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-solved"  />
+  <link href="/stylesheets/discourse-templates_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-templates"  />
+  <link href="/stylesheets/discourse-topic-voting_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-topic-voting"  />
+  <link href="/stylesheets/docker_manager_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="docker_manager"  />
+  <link href="/stylesheets/footnote_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="footnote"  />
+  <link href="/stylesheets/poll_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="poll"  />
+  <link href="/stylesheets/spoiler-alert_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="spoiler-alert"  />
+  <link href="/stylesheets/poll_desktop_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="(width >= 40rem)" rel="stylesheet" data-target="poll_desktop"  />
+
+  <link href="/stylesheets/common_theme_5_9ce7c7bcb08f74252015c0613dbbd90fa61bdd09.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="common_theme" data-theme-id="5" data-theme-name="custom header links"/>
+<link href="/stylesheets/common_theme_6_2d0dbdfa40315575c7fc6752c2a3c4d0386f4c1f.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="common_theme" data-theme-id="6" data-theme-name="global navigation"/>
+<link href="/stylesheets/common_theme_8_ff793805defd9346f6bbf41e2c04826a40fffa1e.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="common_theme" data-theme-id="8" data-theme-name="global styling"/>
+<link href="/stylesheets/common_theme_1_cd482b44f5201cdae56972198e06618d558debf4.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="common_theme" data-theme-id="1" data-theme-name="dark"/>
+  
+  
+
+    <script defer="" data-domain="devtalk.blender.org" src="https://analytics.blender.org/js/script.js" nonce="mOgxEG9q28mY1PmZd6R2kqMRJ"></script>
+    
+        <link rel="alternate nofollow" type="application/rss+xml" title="RSS feed of &#39;Cycles Hydra Render Delegate and USD feedback&#39;" href="https://devtalk.blender.org/t/cycles-hydra-render-delegate-and-usd-feedback/24075.rss" />
+    <meta property="og:site_name" content="Developer Forum" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:image" content="https://devtalk.blender.org/uploads/default/original/3X/9/c/9c4d1f115e2900ec6b30df0e5b4cc3aff97b68ff.jpeg" />
+<meta property="og:image" content="https://devtalk.blender.org/uploads/default/original/3X/9/c/9c4d1f115e2900ec6b30df0e5b4cc3aff97b68ff.jpeg" />
+<meta property="og:url" content="https://devtalk.blender.org/t/cycles-hydra-render-delegate-and-usd-feedback/24075" />
+<meta name="twitter:url" content="https://devtalk.blender.org/t/cycles-hydra-render-delegate-and-usd-feedback/24075" />
+<meta property="og:title" content="Cycles Hydra Render Delegate and USD feedback" />
+<meta name="twitter:title" content="Cycles Hydra Render Delegate and USD feedback" />
+<meta property="og:description" content="This is a topic for discussion about the Hydra Render Delegate for integration in other applications, and USD support for the standalone Cycles.  This is mainly aimed at developers that want to improve the implementation to turn this into something usable, not a supported feature for end users. Contributions are welcome.  Editing of device settings, render settings and materials is completely missing or limited host applications, which is the main thing to improve. Choosing the render device can..." />
+<meta name="twitter:description" content="This is a topic for discussion about the Hydra Render Delegate for integration in other applications, and USD support for the standalone Cycles.  This is mainly aimed at developers that want to improve the implementation to turn this into something usable, not a supported feature for end users. Contributions are welcome.  Editing of device settings, render settings and materials is completely missing or limited host applications, which is the main thing to improve. Choosing the render device can..." />
+<meta property="og:article:section" content="Feature &amp; Design Feedback" />
+<meta property="og:article:section:color" content="652D90" />
+<meta name="twitter:label1" value="Reading time" />
+<meta name="twitter:data1" value="8 mins 🕑" />
+<meta name="twitter:label2" value="Likes" />
+<meta name="twitter:data2" value="41 ❤" />
+<meta property="article:published_time" content="2022-04-20T17:43:45+00:00" />
+<meta property="og:ignore_canonical" content="true" />
+
+        <link rel="next" href="/t/cycles-hydra-render-delegate-and-usd-feedback/24075?page=2">
+
+    
+  </head>
+  <body class="crawler ">
+    <style>
+  /* Fontfaces are added via the CSS tab. */
+</style>
+
+<style>
+  /* This style block is copied across all sites using the developer navbar.
+   * For custom styling on this website, add a <style> block after this one. */
+
+  /* Variables. */
+  .nav-global {
+    -webkit-font-smoothing: antialiased;
+
+    --nav-global-color-bg: hsl(213, 10%, 14%);
+    --nav-global-color-text: hsl(213, 5%, 64%);
+    --nav-global-color-text-secondary: hsl(213, 5%, 44%);
+    --nav-global-color-text-highlight: hsl(213, 5%, 84%);
+    --nav-global-color-text-hover: white;
+    --nav-global-color-text-active: white;
+
+    --nav-global-color-primary: hsl(204, 98%, 54%);
+    --nav-global-color-primary-bg: hsla(204, 100%, 46%, .1);
+
+    --nav-global-color-button-bg-hover: hsl(213, 10%, 24%);
+    --nav-global-color-button-text: var(--nav-global-color-text);
+
+    --nav-global-color-menu-bg: var(--nav-global-color-bg);
+    --nav-global-color-menu-border: hsl(213, 10%, 18%);
+
+    --nav-global-color-menu-zindex: 1040;
+
+    --nav-global-box-shadow-menu: 0px 5px 15px -2px rgba(0, 0, 0, 0.33), 0px 5px 15px -5px rgba(0, 0, 0, 0.33);
+    --nav-global-box-shadow-menu-item: 0px 1px 4px 0px rgba(0, 0, 0, 0.05), 0px 15px 20px -1px rgba(0, 0, 0, 0.025);
+
+    --nav-global-navbar-height: var(--navbar-primary-height, 56px);
+
+    --nav-global-spacer: 15px;
+    --nav-global-spacer-sm: 10px;
+    --nav-global-spacer-xs: 5px;
+
+    --nav-global-border-radius: 6px;
+    --nav-global-border-radius-lg: 10px;
+
+    --nav-global-button-height: 35px;
+    --nav-global-link-padding-x: var(--nav-global-spacer);
+    --nav-global-link-padding-y: var(--nav-global-spacer-sm);
+
+    --nav-global-font-size: 14px;
+    --nav-global-transition-speed: 150ms;
+  }
+
+  /* Reset. */
+  @namespace svg "http://www.w3.org/2000/svg";
+
+  .nav-global :not(svg|*),
+  .nav-global *::before,
+  .nav-global *::after {
+    -webkit-box-sizing: border-box;
+
+    all: unset;
+    display: revert;
+    box-sizing: border-box;
+  }
+
+  .nav-global [default-styles] {
+    all: revert;
+  }
+
+  .nav-global * {
+    -webkit-text-size-adjust: 100%;
+
+    font-family: 'Heebo', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    font-variation-settings: 'wght' 400;
+    font-weight: normal;
+  }
+
+  .nav-global {
+    background-color: var(--nav-global-color-bg);
+    color: var(--nav-global-color-text);
+    display: flex;
+    position: relative;
+    z-index: var(--zindex-fixed);
+  }
+
+  .nav-global h3,
+  .nav-global h4,
+  .nav-global strong {
+    font-variation-settings: 'wght' 500;
+  }
+
+  .nav-global figure,
+  .nav-global section {
+    display: block;
+  }
+
+  .nav-global svg:not(:root) {
+    overflow: hidden;
+    vertical-align: middle;
+  }
+
+  .nav-global .nav-global-container {
+    flex: 1;
+    margin: 0 auto;
+  }
+
+  /* Navigation. */
+  .nav-global nav {
+    align-items: center;
+    display: flex;
+    line-height: var(--nav-global-font-size);
+    font-size: var(--nav-global-font-size);
+    height: var(--nav-global-navbar-height);
+    margin: 0 auto;
+    padding: 0 var(--nav-global-spacer);
+    position: relative;
+  }
+
+  /* Links. */
+  .nav-global a:not(.dropdown-item) {
+    color: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color var(--nav-global-transition-speed) ease-out, color var(--nav-global-transition-speed) ease-out;
+  }
+
+  .nav-global a:not(.dropdown-item):hover {
+    color: var(--nav-global-color-text-hover);
+  }
+
+  /* Navigation items. */
+  .nav-global nav > ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav-global nav > ul,
+  .nav-global nav > ul > li,
+  .nav-global nav > ul > li > a,
+  .nav-global-apps-dropdown-container {
+    align-items: center;
+    display: inline-flex;
+    height: 100%;
+  }
+
+  .nav-global-apps-dropdown-container {
+    position: relative;
+  }
+
+  .nav-global nav > ul > li > a {
+    padding: var(--nav-global-link-padding-y) var(--nav-global-link-padding-x);
+  }
+
+  .nav-global nav > a.is-active,
+  .nav-global nav > a.is-active svg,
+  .nav-global nav > ul > li > a.is-active,
+  .nav-global .nav-global-link-active,
+  .nav-global .nav-global-link-active svg {
+    color: var(--nav-global-color-text-active) !important;
+    fill: var(--nav-global-color-text-active);
+    font-variation-settings: 'wght' 500;
+  }
+
+  .nav-global .nav-global-links-right {
+    margin-left: auto;
+  }
+
+  /* Logo. */
+  .nav-global a.nav-global-logo {
+    margin-right: var(--nav-global-spacer);
+    position: relative;
+    top: 2px;
+  }
+
+  .nav-global a.nav-global-logo strong {
+    margin-inline: var(--nav-global-spacer-sm);
+    font-size: 18px;
+  }
+
+  .nav-global .nav-global-logo svg {
+    height: 21px;
+  }
+
+  .nav-global a.nav-global-logo svg {
+    position: relative;
+    top: -4px;
+  }
+
+  .nav-global svg {
+    fill: var(--nav-global-color-text);
+    transition: fill var(--nav-global-transition-speed) ease-out;
+  }
+
+  .nav-global .nav-global-logo:hover svg {
+    fill: white;
+  }
+
+  /* Apps button. */
+  .nav-global button,
+  .nav-global .nav-global-btn {
+    -webkit-appearance: button;
+
+    align-items: center;
+    background-color: transparent;
+    border-radius: var(--nav-global-border-radius);
+    border: 0;
+    color: var(--nav-global-color-button-text);
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    height: var(--nav-global-button-height);
+    margin: 0;
+    outline: 0;
+    overflow: visible;
+    padding: var(--nav-global-spacer-xs) var(--nav-global-spacer);
+    text-transform: none;
+    transition: background-color var(--nav-global-transition-speed) ease-out, color var(--nav-global-transition-speed) ease-out, transform var(--nav-global-transition-speed) ease-out;
+    white-space: nowrap;
+  }
+
+  .nav-global button span,
+  .nav-global .nav-global-btn span {
+    white-space: nowrap;
+  }
+
+  .nav-global button:hover,
+  .nav-global .nav-global-btn:hover {
+    background-color: var(--nav-global-color-button-bg-hover);
+    color: var(--nav-global-color-text-hover);
+    cursor: pointer;
+  }
+
+  .nav-global button.nav-global-btn-active,
+  .nav-global .nav-global-btn.nav-global-btn-active {
+    background-color: var(--nav-global-color-primary-bg);
+    color: var(--nav-global-color-primary);
+  }
+
+  .nav-global button.nav-global-btn-active svg,
+  .nav-global .nav-global-btn.nav-global-btn-active svg {
+    fill: var(--nav-global-color-primary);
+  }
+
+  .nav-global .nav-global-icon {
+    height: 20px;
+    pointer-events: none;
+    width: 20px;
+  }
+
+  .nav-global-icon-dropdown-toggle {
+    margin-left: var(--nav-global-spacer-xs);
+  }
+
+  .nav-global button:hover svg,
+  .nav-global .nav-global-btn:hover svg {
+    fill: white;
+  }
+
+  /* Apps dropdown menu. */
+  .nav-global .nav-global-apps-menu {
+    background-color: var(--nav-global-color-menu-bg);
+    border-radius: var(--nav-global-border-radius-lg);
+    border: thin solid var(--nav-global-color-menu-border);
+    box-shadow: var(--nav-global-box-shadow-menu);
+    display: none;
+    padding: var(--nav-global-spacer-sm);
+    position: absolute;
+    right: 0;
+    top: calc(100% + 15px);
+    visibility: hidden;
+    width: 640px;
+    z-index: var(--nav-global-color-menu-zindex);
+  }
+
+  .nav-global .nav-global-dropdown.is-visible {
+    display: block;
+    visibility: visible;
+  }
+
+  /* Tiny triangle in the corner. */
+  .nav-global .nav-global-apps-menu::before {
+    background-color: var(--nav-global-color-menu-bg);
+    border-radius: 3px;
+    border: 2px var(--nav-global-color-menu-bg) solid;
+    content: '';
+    display: block;
+    height: .85rem;
+    position: absolute;
+    right: .85rem;
+    top: -0.25rem;
+    transform: rotate(45deg);
+    width: 1rem;
+    z-index: -1;
+  }
+
+  .nav-global .nav-global-apps-menu ul {
+    border-bottom: 2px solid rgba(255, 255, 255, .05);
+    display: grid;
+    gap: var(--nav-global-spacer-sm);
+    grid-template-columns: repeat(2, 1fr);
+    list-style: none;
+    margin: 0 0 var(--nav-global-spacer-xs) 0;
+    padding: var(--nav-global-spacer-xs) 0 var(--nav-global-spacer-sm) 0;
+  }
+
+  .nav-global .nav-global-apps-menu ul>li>a {
+    border-radius: var(--nav-global-border-radius-lg);
+    display: flex;
+    flex: 1;
+    height: 100%;
+  }
+
+  .nav-global .nav-global-apps-menu ul>li>a:hover {
+    background-color: rgba(255, 255, 255, .05);
+    color: var(--nav-global-color-text-active);
+    box-shadow: var(--nav-global-box-shadow-menu-item);
+  }
+
+  .nav-global .nav-global-apps-menu ul>li>a:hover h4,
+  .nav-global .nav-global-apps-menu ul>li>a:hover svg {
+    color: var(--nav-global-color-primary);
+    fill: var(--nav-global-color-primary);
+  }
+
+  .nav-global .nav-global-apps-menu h3 {
+    color: white;
+    display: inline-block;
+    font-size: 13px;
+    line-height: 18px;
+    margin: 0;
+    opacity: .3;
+    padding-left: var(--nav-global-spacer);
+  }
+
+  .nav-global .nav-global-apps-menu h4 {
+    color: var(--nav-global-color-text-highlight);
+    font-size: 17px;
+    line-height: 18px;
+    margin: var(--nav-global-spacer-xs) 0 0;
+    padding: var(--nav-global-spacer-sm) var(--nav-global-spacer) 0;
+    transition: color var(--nav-global-transition-speed) ease-out;
+  }
+
+  .nav-global .nav-global-apps-menu p {
+    font-size: 15px;
+    line-height: 20px;
+    margin: 0;
+    opacity: .8;
+    padding: var(--nav-global-spacer-xs) var(--nav-global-spacer) var(--nav-global-spacer-sm);
+  }
+
+  .nav-global .nav-global-apps-menu figure {
+    margin: var(--nav-global-spacer) 0 0 var(--nav-global-spacer);
+  }
+
+  .nav-global .nav-global-apps-menu ul>li>a svg {
+    position: relative;
+    top: -2px;
+  }
+
+  /* Donate section of the menu. */
+  .nav-global .nav-global-apps-menu-section-donate ul {
+    border: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .nav-global .nav-global-apps-menu-section-donate a svg {
+    fill: hsl(352, 90%, 62%) !important;
+    transition: transform var(--nav-global-transition-speed) ease-out;
+  }
+
+  .nav-global .nav-global-apps-menu-section-donate ul>li:first-child>a {
+    background-color: hsla(352deg, 90%, 42%, .2);
+  }
+
+  .nav-global .nav-global-apps-menu-section-donate ul>li:first-child>a:hover {
+    background-color: hsla(352deg, 90%, 42%, .5);
+  }
+
+  .nav-global .nav-global-apps-menu-section-donate ul>li:first-child>a:hover svg {
+    fill: hsl(352, 90%, 72%) !important;
+    transform: scale(1.2);
+  }
+
+  .nav-global .nav-global-apps-menu-section-donate ul>li:first-child>a:hover h4 {
+    color: white;
+  }
+
+/* Mobile. */
+.nav-global button.nav-global-logo {
+  display: none;
+  visibility: hidden;
+}
+
+@media (max-width: 767px) {
+
+  .nav-global-apps-dropdown-container,
+  .nav-global a.nav-global-logo {
+    display: none;
+  }
+
+  .nav-global button.nav-global-logo {
+    display: block;
+    visibility: visible;
+  }
+
+  .nav-global .nav-global-nav-links {
+    align-items: flex-start;
+    background-color: var(--nav-global-color-menu-bg);
+    border-radius: var(--nav-global-border-radius-lg);
+    display: none;
+    flex-direction: column;
+    left: 1rem;
+    padding: 0 var(--nav-global-spacer-sm);
+    position: absolute;
+    top: calc(100% + .5rem);
+    visibility: visible;
+    width: 10rem;
+    z-index: var(--nav-global-color-menu-zindex);
+  }
+
+  .nav-global .nav-global-nav-links.is-visible {
+    display: flex;
+  }
+
+  .nav-global .nav-global-nav-links::before {
+    background-color: var(--nav-global-color-menu-bg);
+    border-radius: 3px;
+    border: 2px var(--nav-global-color-menu-bg) solid;
+    content: '';
+    display: block;
+    height: 0.8rem;
+    position: absolute;
+    left: 1.5rem;
+    top: -0.133rem;
+    transform: rotate(45deg);
+    width: 1rem;
+    z-index: -1;
+  }
+
+  .nav-global nav>ul {
+    height: initial;
+  }
+
+  .nav-global .nav-global-nav-links>li {
+    border-bottom: 2px solid rgba(255, 255, 255, .05);
+    width: 100%;
+  }
+
+  .nav-global .nav-global-nav-links>li:last-child {
+    border: none;
+  }
+
+  .nav-global .nav-global-nav-links>li>a {
+    padding-inline: 0;
+    width: 100%;
+  }
+}
+</style>
+
+<style>
+  /* Custom styling for code.blender.org */
+  /* Make sure to start every line with ".nav-global"
+   * so changes affect the developer navbar only. */
+
+  /* Limit navbar width on large screens. */
+  @media (min-width: 1200px) {
+    .nav-global .nav-global-container {
+      max-width: 1170px;
+    }
+  }
+</style>
+
+<div class="nav-global">
+  <div class="nav-global-container">
+    <nav>
+      <a href="https://developer.blender.org/" class="nav-global-logo">
+        <svg fill-rule="nonzero" viewBox="0 0 200 162.05">
+          <path d="M61.1 104.56c.05 2.6.88 7.66 2.12 11.61a61.27 61.27 0 0 0 13.24 22.92 68.39 68.39 0 0 0 23.17 16.64 74.46 74.46 0 0 0 30.42 6.32 74.52 74.52 0 0 0 30.4-6.42 68.87 68.87 0 0 0 23.15-16.7 61.79 61.79 0 0 0 13.23-22.97 58.06 58.06 0 0 0 2.07-25.55 59.18 59.18 0 0 0-8.44-23.1 64.45 64.45 0 0 0-15.4-16.98h.02L112.76 2.46l-.16-.12c-4.09-3.14-10.96-3.13-15.46.02-4.55 3.18-5.07 8.44-1.02 11.75l-.02.02 26 21.14-79.23.08h-.1c-6.55.01-12.85 4.3-14.1 9.74-1.27 5.53 3.17 10.11 9.98 10.14v.02l40.15-.07-71.66 55-.27.2c-6.76 5.18-8.94 13.78-4.69 19.23 4.32 5.54 13.51 5.55 20.34.03l39.1-32s-.56 4.32-.52 6.91zm100.49 14.47c-8.06 8.2-19.34 12.86-31.54 12.89-12.23.02-23.5-4.6-31.57-12.79-3.93-4-6.83-8.59-8.61-13.48a35.57 35.57 0 0 1 2.34-29.25 39.1 39.1 0 0 1 9.58-11.4 44.68 44.68 0 0 1 28.24-9.85 44.59 44.59 0 0 1 28.24 9.77 38.94 38.94 0 0 1 9.58 11.36 35.58 35.58 0 0 1 4.33 14.18 35.1 35.1 0 0 1-1.98 15.05 37.7 37.7 0 0 1-8.61 13.52zm-57.6-27.91a23.55 23.55 0 0 1 8.55-16.68 28.45 28.45 0 0 1 18.39-6.57 28.5 28.5 0 0 1 18.38 6.57 23.57 23.57 0 0 1 8.55 16.67c.37 6.83-2.37 13.19-7.2 17.9a28.18 28.18 0 0 1-19.73 7.79c-7.83 0-14.84-3-19.75-7.8a23.13 23.13 0 0 1-7.19-17.88z"></path>
+          </svg><strong>Developer</strong>
+        
+      </a>
+
+      <button class="nav-global-logo js-dropdown-toggle" data-toggle-menu-id="nav-global-nav-links">
+        <svg fill-rule="nonzero" viewBox="0 0 850.2 162.05">
+          <path d="M61.1 104.56c.05 2.6.88 7.66 2.12 11.61a61.27 61.27 0 0 0 13.24 22.92 68.39 68.39 0 0 0 23.17 16.64 74.46 74.46 0 0 0 30.42 6.32 74.52 74.52 0 0 0 30.4-6.42 68.87 68.87 0 0 0 23.15-16.7 61.79 61.79 0 0 0 13.23-22.97 58.06 58.06 0 0 0 2.07-25.55 59.18 59.18 0 0 0-8.44-23.1 64.45 64.45 0 0 0-15.4-16.98h.02L112.76 2.46l-.16-.12c-4.09-3.14-10.96-3.13-15.46.02-4.55 3.18-5.07 8.44-1.02 11.75l-.02.02 26 21.14-79.23.08h-.1c-6.55.01-12.85 4.3-14.1 9.74-1.27 5.53 3.17 10.11 9.98 10.14v.02l40.15-.07-71.66 55-.27.2c-6.76 5.18-8.94 13.78-4.69 19.23 4.32 5.54 13.51 5.55 20.34.03l39.1-32s-.56 4.32-.52 6.91zm100.49 14.47c-8.06 8.2-19.34 12.86-31.54 12.89-12.23.02-23.5-4.6-31.57-12.79-3.93-4-6.83-8.59-8.61-13.48a35.57 35.57 0 0 1 2.34-29.25 39.1 39.1 0 0 1 9.58-11.4 44.68 44.68 0 0 1 28.24-9.85 44.59 44.59 0 0 1 28.24 9.77 38.94 38.94 0 0 1 9.58 11.36 35.58 35.58 0 0 1 4.33 14.18 35.1 35.1 0 0 1-1.98 15.05 37.7 37.7 0 0 1-8.61 13.52zm-57.6-27.91a23.55 23.55 0 0 1 8.55-16.68 28.45 28.45 0 0 1 18.39-6.57 28.5 28.5 0 0 1 18.38 6.57 23.57 23.57 0 0 1 8.55 16.67c.37 6.83-2.37 13.19-7.2 17.9a28.18 28.18 0 0 1-19.73 7.79c-7.83 0-14.84-3-19.75-7.8a23.13 23.13 0 0 1-7.19-17.88z"></path>
+          <path d="M829.17 133.76h-15.9V64.39h15.13l.77 13.59zM850.07 79q-1.47-.25-3.14-.38-1.6-.13-3.2-.13-5.26 0-8.8 1.92-3.45 1.86-5.25 5.39-1.8 3.46-2.11 8.2l-3.66.07q0-8.78 2.31-15.77 2.3-6.99 6.92-11.1 4.62-4.1 11.54-4.1 1.35 0 3.02.26 1.66.26 2.5.58zm-76.55 56.04q-10.32 0-17.82-4.42-7.5-4.5-11.55-12.06-4.03-7.63-4.03-17.05v-2.63q0-10.84 4.1-18.85 4.1-8.08 11.22-12.5 7.18-4.43 16.22-4.43 10 0 16.6 4.36 6.6 4.3 9.88 12 3.27 7.62 3.27 17.69V104h-53.67V92.53h37.96v-1.22q-.13-4.04-1.54-7.56-1.4-3.53-4.49-5.7-3.01-2.19-8.07-2.19-5.07 0-8.53 2.89-3.46 2.82-5.26 8.01-1.8 5.13-1.8 12.12v2.63q0 5.9 2.19 10.58 2.18 4.68 6.34 7.43 4.17 2.7 9.94 2.7 5.58 0 9.87-2.18 4.36-2.18 7.5-6.29l8.34 8.34q-3.27 4.93-9.87 8.97-6.54 3.98-16.8 3.98zm-88.67 25.39h-15.9V64.39h14.68l1.22 13.33zm45-60.72q0 10.13-3.13 18.15-3.08 7.95-9.1 12.56-5.97 4.62-14.63 4.62-8.72 0-14.49-4.23-5.7-4.3-8.9-11.8-3.21-7.5-4.43-17.12v-4.55q1.22-10.26 4.42-17.89 3.2-7.7 8.91-11.99 5.71-4.36 14.3-4.36 8.79 0 14.81 4.43 6.03 4.42 9.1 12.37 3.15 7.95 3.15 18.47zm-15.9-1.34q0-6.22-1.6-11.29-1.53-5.06-5-8.01-3.4-2.95-8.9-2.95-3.98 0-6.87 1.35-2.88 1.28-4.87 3.65-1.92 2.37-3.01 5.64-1.1 3.2-1.54 7.05v11.6q.77 4.62 2.56 8.47 1.8 3.85 5.13 6.16 3.4 2.24 8.72 2.24 5.51 0 8.91-3.08 3.4-3.14 4.94-8.2 1.54-5.13 1.54-11.29zm-122.51.06q0-10.13 3.84-18.08 3.85-7.95 11.03-12.57 7.25-4.68 17.38-4.68 10.25 0 17.5 4.68 7.24 4.62 11.03 12.57 3.84 7.95 3.84 18.08v1.35q0 10.06-3.84 18.08-3.79 7.95-11.03 12.56-7.18 4.62-17.38 4.62-10.19 0-17.43-4.62-7.25-4.61-11.1-12.56-3.84-8.02-3.84-18.08zm15.9 1.35q0 6.15 1.73 11.28 1.73 5.07 5.32 8.14 3.65 3.08 9.42 3.08 5.71 0 9.3-3.08 3.65-3.07 5.32-8.14 1.73-5.13 1.73-11.28v-1.35q0-6.09-1.73-11.22-1.67-5.13-5.32-8.2-3.65-3.15-9.42-3.15-5.71 0-9.36 3.14-3.6 3.08-5.33 8.21-1.66 5.13-1.66 11.22zm-29.69 33.98h-15.9V35.28h15.9zm-56.67 1.28q-10.33 0-17.83-4.42-7.5-4.5-11.54-12.06-4.04-7.63-4.04-17.05v-2.63q0-10.84 4.1-18.85 4.11-8.08 11.23-12.5 7.18-4.43 16.22-4.43 10 0 16.6 4.36 6.6 4.3 9.88 12 3.27 7.62 3.27 17.69V104H495.2V92.53h37.96v-1.22q-.13-4.04-1.54-7.56-1.41-3.53-4.49-5.7-3.01-2.19-8.08-2.19-5.06 0-8.52 2.89-3.47 2.82-5.26 8.01-1.8 5.13-1.8 12.12v2.63q0 5.9 2.18 10.58t6.35 7.43q4.17 2.7 9.94 2.7 5.58 0 9.87-2.18 4.36-2.18 7.5-6.29l8.34 8.34q-3.27 4.93-9.88 8.97-6.54 3.98-16.8 3.98zM464.3 64.39h16.48l-23.98 69.37h-10.26l1.03-12.57zm-12.25 57 .77 12.37h-10.19l-24.17-69.37H435zm-65.88 13.65q-10.32 0-17.82-4.42-7.5-4.5-11.54-12.06-4.04-7.63-4.04-17.05v-2.63q0-10.84 4.1-18.85 4.1-8.08 11.22-12.5 7.18-4.43 16.22-4.43 10 0 16.6 4.36 6.61 4.3 9.88 12 3.27 7.62 3.27 17.69V104H360.4V92.53h37.95v-1.22q-.12-4.04-1.53-7.56-1.42-3.53-4.5-5.7-3-2.19-8.07-2.19t-8.53 2.89q-3.46 2.82-5.26 8.01-1.8 5.13-1.8 12.12v2.63q0 5.9 2.19 10.58 2.18 4.68 6.35 7.43 4.16 2.7 9.93 2.7 5.58 0 9.88-2.18 4.36-2.18 7.5-6.29l8.33 8.34q-3.27 4.93-9.87 8.97-6.54 3.98-16.8 3.98zm-107.64-1.28.12-13.27h19.75q8.6 0 14.36-3.72 5.77-3.72 8.72-10.65 2.95-6.98 2.95-16.67v-4.87q0-9.94-2.95-16.8-2.88-6.86-8.59-10.45-5.7-3.59-13.91-3.59h-20.84V40.41h20.84q12.5 0 21.93 5.51 9.48 5.52 14.8 15.45 5.33 9.94 5.33 23.34v4.74q0 13.47-5.32 23.4-5.33 9.94-14.94 15.46-9.56 5.45-22.38 5.45zm9.23 0h-16.54V40.4h16.54z"></path>
+        </svg>
+        <svg class="nav-global-icon nav-global-icon-dropdown-toggle" height="100px" width="100px" viewBox="0 0 1000 1000">
+          <path d="m 206.53824,376.41174 a 42,42 0 0 1 71,-29 l 221,220 220,-220 a 42,42 0 1 1 59,59 l -250,250 a 42,42 0 0 1 -59,0 l -250,-250 a 42,42 0 0 1 -12,-30 z"></path>
+        </svg>
+      </button>
+
+      <ul class="nav-global-nav-links nav-global-dropdown js-dropdown-menu" id="nav-global-nav-links">
+        <li>
+          <a href="https://code.blender.org/roadmap/">Roadmap</a>
+        </li>
+        <li>
+          <a href="https://projects.blender.org">Projects</a>
+        </li>
+        <li>
+          <a href="https://developer.blender.org/docs">Docs</a>
+        </li>
+        <li>
+          <a href="https://code.blender.org">Blog</a>
+        </li>
+        <li>
+          <a href="https://devtalk.blender.org" class="nav-global-link-active">Forum</a>
+        </li>
+        <li>
+          <a href="https://builder.blender.org">Builds</a>
+        </li>
+      </ul>
+
+      <ul class="nav-global-links-right">
+        <li>
+          <div class="nav-global-apps-dropdown-container">
+            <button class="js-dropdown-toggle" data-toggle-menu-id="nav-global-apps-menu">
+              <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                <path d="m 150.5,899 a 50,50 0 0 1 -49,-50 V 749 a 50,50 0 0 1 49,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 749 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 749 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m -598,-299 a 50,50 0 0 1 -49,-50 V 450 a 50,50 0 0 1 49,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 450 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 450 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m -598,-299 a 50,50 0 0 1 -49,-50 V 151 a 50,50 0 0 1 49,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 151 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 151 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z"></path>
+              </svg>
+            </button>
+
+            <div class="nav-global-apps-menu nav-global-dropdown js-dropdown-menu" id="nav-global-apps-menu">
+              <h3>BLENDER.ORG</h3>
+              <ul>
+                <li>
+                  <a href="https://www.blender.org/download/" target="_blank">
+                    <figure>
+                      <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                        <path d="m 49.15424,599.52895 a 50.360431,50.360431 0 0 0 -49.16137168,50.36043 v 200.24266 c 0,81.53594 68.34629768,149.88226 149.88223168,149.88226 h 700.2498 c 81.53593,0 149.8822,-68.34632 149.8822,-149.88226 V 649.88938 a 50.360431,50.360431 0 1 0 -100.72083,0 v 200.24266 c 0,27.57834 -21.58304,49.16138 -49.16137,49.16138 H 149.8751 c -27.57833,0 -49.16137,-21.58304 -49.16137,-49.16138 V 649.88938 A 50.360431,50.360431 0 0 0 49.15424,599.52895 Z M 249.3969,350.12491 a 50.360431,50.360431 0 0 0 -34.77267,85.13311 l 250.60309,249.40404 a 50.360431,50.360431 0 0 0 70.74442,0 L 785.37577,435.25802 A 50.360431,50.360431 0 1 0 714.63136,364.51361 L 500,579.14497 285.36864,364.51361 A 50.360431,50.360431 0 0 0 249.3969,350.12491 Z M 498.80094,0 A 50.360431,50.360431 0 0 0 449.63957,50.360432 V 649.88938 a 50.360431,50.360431 0 1 0 100.72086,0 V 50.360432 A 50.360431,50.360431 0 0 0 498.80094,0 Z" style="stroke-width:1.19906"></path>
+                      </svg>
+                    </figure>
+                    <div>
+                      <h4>Download</h4>
+                      <p>Get the latest Blender, older versions, or experimental builds.</p>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://www.blender.org/download/releases/" target="_blank">
+                    <div>
+                      <h4>What's New</h4>
+                      <p>Stay up-to-date with the new features in the latest Blender releases.</p>
+                    </div>
+                  </a>
+                </li>
+              </ul>
+
+              <h3>RESOURCES</h3>
+              <ul>
+                <li>
+                  <a href="https://studio.blender.org/" target="_blank">
+                    <figure>
+                      <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                        <path d="m 146.70939,1.6802353 c -78.362959,0 -143.678322,64.2057377 -143.6783209,143.6570547 -7.2533835,268.45385 0,463.93349 0,709.63356 0,79.45132 65.3153619,143.65705 143.6783209,143.65705 266.17757,0.51388 460.32009,0 709.61228,0 79.45134,0 143.67832,-64.20573 143.67832,-143.65705 0.37471,-118.45983 0,-235.03162 0,-353.72203 0.017,-0.72264 0.017,-1.4456 0,-2.16825 0.43351,-118.60776 0,-235.80643 0,-353.74328 0,-79.451317 -64.22698,-143.6570547 -143.67832,-143.6570547 -241.21275,-1.18614431 -498.91438,-0.041532 -709.61228,0 z m 0,90.3436617 h 82.71228 V 228.07083 H 93.374735 v -82.73354 c 0,-30.47448 22.860165,-53.313393 53.334655,-53.313393 z m 173.05594,0 h 363.5004 c -5.81542,127.740813 0,236.658243 0,362.416273 h -363.5004 c 0.39671,-121.62159 0,-241.06277 0,-362.416273 z m 453.84406,0 h 82.71228 c 30.4745,0 53.33466,22.838913 53.33466,53.313393 v 82.73354 H 773.60939 Z M 93.374735,318.39324 H 229.42167 V 454.44017 H 93.374735 Z m 680.234655,0 H 909.65633 V 454.44017 H 773.60939 Z M 93.374735,545.86796 H 229.42167 V 681.91489 H 93.374735 Z m 226.390595,0 h 363.5004 c -5.81534,127.74773 0,236.67164 0,362.43753 h -363.5004 c 0.3967,-121.62867 0,-241.07685 0,-362.43753 z m 453.84406,0 H 909.65633 V 681.91489 H 773.60939 Z M 93.374735,772.25856 H 229.42167 v 136.04693 h -82.71228 c -30.47449,0 -53.334655,-22.86016 -53.334655,-53.33464 z m 680.234655,0 h 136.04694 v 82.71229 c 0,30.47448 -22.86016,53.33464 -53.33466,53.33464 h -82.71228 z" style="stroke-width:1.08838"></path>
+                      </svg>
+                    </figure>
+                    <div>
+                      <h4>Blender Studio</h4>
+                      <p>Access production assets and knowledge from the open movies.</p>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://docs.blender.org/manual/en/latest/" target="_blank">
+                    <div>
+                      <h4>Manual</h4>
+                      <p>Documentation on the usage and features in Blender.</p>
+                    </div>
+                  </a>
+                </li>
+              </ul>
+
+              <h3>DEVELOPMENT</h3>
+              <ul>
+                <li>
+                  <a href="https://code.blender.org/" target="_blank">
+                    <figure>
+                      <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                        <path d="m 683.36434,818.19976 a 45.841084,45.841084 0 0 1 -33.83509,-13.09745 45.841084,45.841084 0 0 1 0,-64.39581 L 890.74067,499.49508 649.52925,259.37512 a 45.841084,45.841084 0 0 1 0,-64.39582 45.841084,45.841084 0 0 1 64.39581,0 l 272.8636,272.8636 a 45.841084,45.841084 0 0 1 0,64.39581 l -272.8636,272.8636 a 45.841084,45.841084 0 0 1 -30.56072,13.09745 z m -363.45431,0 A 45.841084,45.841084 0 0 1 286.07494,805.10231 L 13.211339,532.23871 a 45.841084,45.841084 0 0 1 0,-64.39581 L 286.07494,194.9793 a 45.841084,45.841084 0 0 1 64.39581,0 45.841084,45.841084 0 0 1 0,64.39582 L 109.25933,499.49508 350.47075,740.7065 a 45.841084,45.841084 0 0 1 0,64.39581 45.841084,45.841084 0 0 1 -30.56072,13.09745 z" style="stroke-width:1.09145"></path>
+                      </svg>
+                    </figure>
+                    <div>
+                      <h4>Developers Blog</h4>
+                      <p>Latest development updates, by Blender developers.</p>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://wiki.blender.org/" target="_blank">
+                    <div>
+                      <h4>Documentation</h4>
+                      <p>Guidelines, release notes and development docs.</p>
+                    </div>
+                  </a>
+                </li>
+              </ul>
+
+              <ul>
+                <li>
+                  <a href="https://opendata.blender.org/" target="_blank">
+                    <figure>
+                      <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                        <path d="M 499.99424,0 A 55.30474,55.30474 0 0 0 444.6895,55.30474 V 944.69526 A 55.30474,55.30474 0 0 0 499.99424,1000 55.30474,55.30474 0 0 0 555.29898,944.69526 V 55.30474 A 55.30474,55.30474 0 0 0 499.99424,0 Z m 332.95711,332.95711 a 55.30474,55.30474 0 0 0 -55.30474,56.43341 V 944.69526 A 55.30474,55.30474 0 0 0 832.95135,1000 55.30474,55.30474 0 0 0 888.25609,944.69526 V 389.39052 A 55.30474,55.30474 0 0 0 832.95135,332.95711 Z M 167.03713,555.30474 a 55.30474,55.30474 0 0 0 -55.30474,55.30474 V 944.69526 A 55.30474,55.30474 0 0 0 167.03713,1000 55.30474,55.30474 0 0 0 222.34187,944.69526 V 610.60948 a 55.30474,55.30474 0 0 0 -55.30474,-55.30474 z" style="stroke-width:1.12867"></path>
+                      </svg>
+                    </figure>
+                    <div>
+                      <h4>Benchmark</h4>
+                      <p>A platform to collect and share results of the Blender Benchmark.</p>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://conference.blender.org/" target="_blank">
+                    <div>
+                      <h4>Blender Conference</h4>
+                      <p>The yearly event that brings the community together.</p>
+                    </div>
+                  </a>
+                </li>
+              </ul>
+
+              <div class="nav-global-apps-menu-section-donate">
+                <h3>DONATE</h3>
+                <ul>
+                  <li>
+                    <a href="https://fund.blender.org/" target="_blank">
+                      <figure>
+                        <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                          <path d="M 273.67169,58.416076 C 201.59785,62.59427 135.79129,94.975269 86.697523,145.11359 37.603742,194.20736 4.1781939,260.01391 0,332.08775 -4.1781926,403.11704 22.980065,480.41362 86.697523,545.17562 l 45.960127,45.96013 339.47823,338.43367 a 43.871033,43.871033 0 0 0 61.62835,0 L 872.1979,591.13575 918.15804,545.17562 c 109.67766,-110.72213 109.67766,-290.38445 0,-400.06203 -110.72213,-110.722127 -290.38445,-110.722127 -400.06204,0 l -15.66822,14.62368 -15.66822,-14.62368 C 423.04211,80.351592 345.74553,53.193334 273.67169,58.416076 Z m 5.22274,86.697514 c 48.04922,-3.13365 98.18754,12.53458 146.23677,60.5838 l 47.00468,47.00468 a 43.871033,43.871033 0 0 0 61.62835,0 l 45.96013,-47.00468 c 76.25204,-76.25203 199.50874,-76.25203 276.80532,0 77.29658,77.29658 77.29658,200.5533 0,277.84988 L 810.56956,529.50739 502.42778,837.64917 194.286,529.50739 148.32588,483.54727 C 100.27665,434.45349 84.608431,384.31516 86.697523,336.26594 c 3.133646,-47.00467 26.113717,-95.0539 61.628357,-130.56855 35.51464,-35.51464 82.51932,-58.49471 130.56855,-60.5838 z" style="stroke-width:1.04455"></path>
+                        </svg>
+                      </figure>
+                      <div>
+                        <h4>Development Fund</h4>
+                        <p>Support core development with a monthly contribution.</p>
+                      </div>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.blender.org/about/donations/" target="_blank">
+                      <div>
+                        <h4>One-time Donations</h4>
+                        <p>Perform a single donation with more payment options available.</p>
+                      </div>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<script defer="" src="/theme-javascripts/26371d452d8dc98bf86ca8414628515e654d3d69.js?__ws=devtalk.blender.org" data-theme-id="6" nonce="mOgxEG9q28mY1PmZd6R2kqMRJ"></script>
+
+
+    <header>
+  <a href="/">Developer Forum</a>
+</header>
+
+    <div id="main-outlet" class="wrap" role="main">
+        <div id="topic-title">
+    <h1>
+      <a href="/t/cycles-hydra-render-delegate-and-usd-feedback/24075">Cycles Hydra Render Delegate and USD feedback</a>
+    </h1>
+
+      <div class="topic-category" itemscope itemtype="http://schema.org/BreadcrumbList">
+          <span itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <a href="/c/feature-design-feedback/30" class="badge-wrapper bullet" itemprop="item">
+              <span class='badge-category-bg' style='background-color: #652D90'></span>
+              <span class='badge-category clear-badge'>
+                <span class='category-name' itemprop='name'>Feature &amp; Design Feedback</span>
+              </span>
+            </a>
+            <meta itemprop="position" content="1" />
+          </span>
+      </div>
+
+  </div>
+
+  
+
+    <div itemscope="itemscope" itemtype="http://schema.org/DiscussionForumPosting">
+      <meta itemprop='headline' content='Cycles Hydra Render Delegate and USD feedback'>
+      <link itemprop='url' href='https://devtalk.blender.org/t/cycles-hydra-render-delegate-and-usd-feedback/24075'>
+      <meta itemprop='datePublished' content='2022-04-20T17:43:44Z'>
+      <meta itemprop='keywords' content=''>
+          <meta itemprop='articleSection' content='Feature &amp; Design Feedback'>
+        <div itemprop='publisher' itemscope itemtype="http://schema.org/Organization">
+          <meta itemprop='name' content='Blender Foundation'>
+        </div>
+
+
+
+          <div id='post_1'  class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/brecht'><span itemprop="name">brecht</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/brecht'>
+                
+              </span>
+
+                <link itemprop="mainEntityOfPage" href="https://devtalk.blender.org/t/cycles-hydra-render-delegate-and-usd-feedback/24075">
+
+
+              <span class="crawler-post-infos">
+                  <time  datetime='2022-04-20T17:43:45Z' class='post-time'>
+                    April 20, 2022,  5:43pm
+                  </time>
+                  <meta itemprop='dateModified' content='2023-04-26T15:35:13Z'>
+              <span itemprop="position">1</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>This is a topic for discussion about the Hydra Render Delegate for integration in other applications, and USD support for the standalone Cycles.</p>
+<p>This is mainly aimed at developers that want to improve the implementation to turn this into something usable, not a supported feature for end users. Contributions are welcome.</p>
+<p>Editing of device settings, render settings and materials is completely missing or limited host applications, which is the main thing to improve. Choosing the render device can be done with an environment variable like  <code>CYCLES_DEVICE=OPTIX</code>.</p>
+<ul>
+<li><a href="https://developer.blender.org/T96731">Development Task</a></li>
+<li><a href="https://github.com/blender/cycles">Cycles Repository</a></li>
+<li><a href="https://github.com/blender/cycles/blob/master/BUILDING.md">Build Instructions</a></li>
+</ul>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="14" />
+                <span class='post-likes'>14 Likes</span>
+              </div>
+
+                <div class='crawler-linkback-list'>
+                    <div>
+                      <a href="https://devtalk.blender.org/t/usd-cycles-materials-black-in-hydra-delegate/26554/2">USD cycles materials black in Hydra delegate</a>
+                    </div>
+                    <div>
+                      <a href="https://devtalk.blender.org/t/2022-3-29-blender-rendering-meeting/23677/49">2022-3-29 Blender Rendering Meeting</a>
+                    </div>
+                </div>
+
+            
+
+
+          </div>
+          <div id='post_2' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/NizarAmous'><span itemprop="name">NizarAmous</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/NizarAmous'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-20T17:59:58Z' class='post-time'>
+                    April 20, 2022,  5:59pm
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-20T17:59:58Z'>
+              <span itemprop="position">2</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>hey <a class="mention" href="/u/steffend">@SteffenD</a>  how do you build cycles for houdini ?<br>
+i know nothing about building blender nor cycles, should i wait for someone to upload a cycles version for houdini or should i learn to do it myself ?</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_3' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/EstebanCovo'><span itemprop="name">EstebanCovo</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/EstebanCovo'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-21T02:58:34Z' class='post-time'>
+                    April 21, 2022,  2:58am
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-24T23:13:40Z'>
+              <span itemprop="position">3</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Hey <a class="mention" href="/u/brecht">@brecht</a> I co-own a small 30ish people studio, we’ve been Blender based since a few years now and are producing solid work with it. Thank you so much to the Blender team for putting some effort into this Hydra delegate, It will allow us to expand and solidify our pipeline take bigger jobs, diversify our team and grow.</p>
+<p>Again thank you.</p>
+<p><a class="mention" href="/u/nizaramous">@NizarAmous</a>, there is a sort of guide published on building for houdini <a href="https://developer.blender.org/D14594" class="inline-onebox" rel="noopener nofollow ugc">⚙ D14594 Cycles Hydra: support for building against Houdini</a>, also on the build instructions on this page, <a href="https://github.com/blender/cycles/blob/master/BUILDING.md" rel="noopener nofollow ugc">https://github.com/blender/cycles/blob/master/BUILDING.md</a></p>
+<p>Hope this helps <img src="https://devtalk.blender.org/images/emoji/twitter/slight_smile.png?v=9" title=":slight_smile:" class="emoji" alt=":slight_smile:"></p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="10" />
+                <span class='post-likes'>10 Likes</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_4' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SteffenD'><span itemprop="name">SteffenD</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SteffenD'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-21T07:46:18Z' class='post-time'>
+                    April 21, 2022,  7:46am
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-21T07:46:18Z'>
+              <span itemprop="position">4</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Hi <a class="mention" href="/u/nizaramous">@NizarAmous</a> and sorry for the late reply.<br>
+I’m not a coder or experienced builder, but following the guides <a href="https://wiki.blender.org/wiki/Building_Blender" rel="noopener nofollow ugc">here</a> I managed to successfully build Blender on Linux and Windows. Both should work fine if you follow the guides closely.<br>
+As <a class="mention" href="/u/estebancovo">@EstebanCovo</a> already mentioned there is also a guide on how to build Cycles Hydra delegate for Houdini and it should be just as easy to follow. I haven’t tried it on Windows yet but on Linux everything works as stated there.<br>
+The support for Cycles inside Houdini Solaris is pretty basic still but it already feels quite nice to see “Cycles” in the Houdini viewport.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="1" />
+                <span class='post-likes'>1 Like</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_5' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/brecht'><span itemprop="name">brecht</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/brecht'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-21T13:19:03Z' class='post-time'>
+                    April 21, 2022,  1:19pm
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-21T13:19:03Z'>
+              <span itemprop="position">5</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>The guide for building Cycles is not as detailed as the one for Blender. Generally you need to install all the same development tools and packages as Blender, and then following the build instructions in the Cycles BUILDING.md should work.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="3" />
+                <span class='post-likes'>3 Likes</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_6' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/soulcage'><span itemprop="name">soulcage</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/soulcage'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-22T17:25:47Z' class='post-time'>
+                    April 22, 2022,  5:25pm
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-22T18:18:14Z'>
+              <span itemprop="position">6</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>hi,</p>
+<p>managed to build cycles for houdini 19.0.561 with the instruction in “building.md” for windows.<br>
+the plugin loads fine in houdini and i can select cycles in solaris.<br>
+but it renders nothing…(test geo, domelight, usdpreviewsurface material…)<br>
+i can see its doing the samples (1024) in the top info but nothing to see in the viewport…empty…<br>
+any hints whats going wrong?</p>
+<p>(on building, i got some warnings concerning cycles_scene.vcxproj, but the build was successfull)</p>
+<p>edit: the …/hydra/camera.cpp hack didnt help…</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_7' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/matthe'><span itemprop="name">matthe</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/matthe'>
+                
+              </span>
+
+
+                <link itemprop="image" href="https://devtalk.blender.org/uploads/default/original/1X/b277e0d1fae7ba105b6d03e603c55efe2f52b59d.png">
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-23T12:01:12Z' class='post-time'>
+                    April 23, 2022, 12:01pm
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-23T12:01:12Z'>
+              <span itemprop="position">7</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <aside class="onebox discoursetopic" data-onebox-src="https://blenderartists.org/t/pixar-released-hydra-storm-for-metal/1375630?u=matthe">
+  <header class="source">
+      <img src="https://devtalk.blender.org/uploads/default/original/3X/8/e/8ea9b17104ad3a72efe3302ebc1e6098901732fd.png" class="site-icon" data-dominant-color="F4B382" width="32" height="32">
+
+      <a href="https://blenderartists.org/t/pixar-released-hydra-storm-for-metal/1375630?u=matthe" target="_blank" rel="noopener nofollow ugc" title="09:39AM - 23 April 2022">Blender Artists Community – 23 Apr 22</a>
+  </header>
+
+  <article class="onebox-body">
+    <div class="aspect-image" style="--aspect-ratio:240/148;"><img src="https://devtalk.blender.org/uploads/default/original/1X/b277e0d1fae7ba105b6d03e603c55efe2f52b59d.png" class="thumbnail" data-dominant-color="F4B684" width="240" height="148"></div>
+
+<div class="title-wrapper">
+  <h3><a href="https://blenderartists.org/t/pixar-released-hydra-storm-for-metal/1375630?u=matthe" target="_blank" rel="noopener nofollow ugc">Pixar released Hydra Storm for Metal</a></h3>
+  <div class="topic-category">
+      <span class="badge-wrapper bullet">
+        <span class="badge-category-bg" style="background-color: #e86800;"></span>
+        <span class="badge-category clear-badge">
+          <span class="category-name">General Forums</span>
+        </span>
+      </span>
+      <span class="badge-wrapper bullet">
+        <span class="badge-category-bg" style="background-color: #e86800;"></span>
+        <span class="badge-category clear-badge">
+          <span class="category-name">Latest News</span>
+        </span>
+      </span>
+  </div>
+</div>
+
+  <p>https://twitter.com/davidgyu/status/1517581490795675648  Hydra Strom = Real-time Hydra renderer plugin</p>
+
+  <p>
+    <span class="label1">Reading time: 1 mins 🕑</span>
+      <span class="label2">Likes: 11 ❤</span>
+  </p>
+
+  </article>
+
+  <div class="onebox-metadata">
+    
+    
+  </div>
+
+  <div style="clear: both"></div>
+</aside>
+
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_8' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/EstebanCovo'><span itemprop="name">EstebanCovo</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/EstebanCovo'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-24T05:06:10Z' class='post-time'>
+                    April 24, 2022,  5:06am
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-24T17:38:30Z'>
+              <span itemprop="position">8</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Hi, I’m not an expert by any stretch but I managed to build Cycles standalone in windows and get some render examples running out of it, this has been really straightforward, just to clarify a few points: for OPTIX I recommend sticking with the 7.3 installation since to get the 7.4 running you have to update the libs cmake file.<br>
+To generate the build files for the Hydra delegate using Houdini on windows you have to use something like: <code>cmake -D HOUDINI_ROOT=C:\Program Files\Side Effects Software\Houdini 19.0.383 -S cycles/ -B builddel/ -G "Visual Studio 16 2019"</code><br>
+On the guide it says that the variable is called -DHOUDINI_ROOT, this might be easy to spot to a seasoned programmer but for a beginner it might be confusing.</p>
+<p>Also if Cycles asks for some libraries that it can’t find, what I did was to copy and paste those libraries next to the executable, at least in debug mode this happened to me</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_9' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/EstebanCovo'><span itemprop="name">EstebanCovo</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/EstebanCovo'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-24T05:19:52Z' class='post-time'>
+                    April 24, 2022,  5:19am
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-24T05:19:52Z'>
+              <span itemprop="position">9</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>After getting Cycles Standalone running on windows no problem, I get painfully stuck while trying to get it to build with Houdini based Hydra Delegate, it throws a few errors that I don’t get while just building the standalone version, Basically it says  that differences have been detected between a value in a library and a valio in the plugin.obj file or the standalone.obj file. I’m surely doing something wrong but if someone has any idea of what this might be it would be tremendously helpful.<br>
+I’m attaching the errors as reference as not to clog the post but I’m going to copy a couple of lines here, maybe someone smarter than I can get an Idea of what’s going on without too much hassle</p>
+<pre><code>"C:\HydraDelegates\Cycles\builddel\Cycles.sln" (default target) (1) -&gt;
+"C:\HydraDelegates\Cycles\builddel\ALL_BUILD.vcxproj.metaproj" (default target) (2) -&gt;
+"C:\HydraDelegates\Cycles\builddel\src\app\cycles.vcxproj.metaproj" (default target) (4) -&gt;
+"C:\HydraDelegates\Cycles\builddel\src\app\cycles.vcxproj" (default target) (31) -&gt;
+(Link target) -&gt;
+  libosdCPU_md.lib(patchTable.obj) : error LNK2038: se detectaron diferencias para '_ITERATOR_DEBUG_LEVEL': el valor '0' no coincide con el valor '2' en cycles_standalone.obj [C:\HydraDelegates\Cycles\builddel\src\app\cycles.vcxproj]
+  libosdCPU_md.lib(patchTable.obj) : error LNK2038: se detectaron diferencias para 'RuntimeLibrary': el valor 'MD_DynamicRelease' no coincide con el valor 'MDd_DynamicDebug' en cycles_standalone.obj [C:\HydraDelegates\Cycles\builddel\sr
+c\app\cycles.vcxproj]
+
+
+"C:\HydraDelegates\Cycles\builddel\Cycles.sln" (default target) (1) -&gt;
+"C:\HydraDelegates\Cycles\builddel\ALL_BUILD.vcxproj.metaproj" (default target) (2) -&gt;
+"C:\HydraDelegates\Cycles\builddel\src\hydra\hdCycles.vcxproj.metaproj" (default target) (36) -&gt;
+"C:\HydraDelegates\Cycles\builddel\src\hydra\hdCycles.vcxproj" (default target) (37) -&gt;
+  libosdCPU_md.lib(patchTable.obj) : error LNK2038: se detectaron diferencias para '_ITERATOR_DEBUG_LEVEL': el valor '0' no coincide con el valor '2' en plugin.obj [C:\HydraDelegates\Cycles\builddel\src\hydra\hdCycles.vcxproj]
+  libosdCPU_md.lib(patchTable.obj) : error LNK2038: se detectaron diferencias para 'RuntimeLibrary': el valor 'MD_DynamicRelease' no coincide con el valor 'MDd_DynamicDebug' en plugin.obj [C:\HydraDelegates\Cycles\builddel\src\hydra\hdC
+ycles.vcxproj]
+</code></pre>
+<p><a class="attachment" href="/uploads/short-url/wQDBFI2kobK8ZjzaPh4h0dUkcga.txt">errors.txt</a> (31.0 KB)</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_10' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/zNight'><span itemprop="name">zNight</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/zNight'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-24T08:36:18Z' class='post-time'>
+                    April 24, 2022,  8:36am
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-24T08:36:18Z'>
+              <span itemprop="position">10</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>I don’t know this consider is a feedback or not.<br>
+I have the same thing now, it’s success but not really render anything out in viewport but render does work in the MPlay with color management disable Specify $OCIO environment variable thing prompt.</p>
+<p>I’m not sure the build fail in someway, is it suppose to have the viewport settings? there is no render parameter settings there like samples, light path?</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_11' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/EstebanCovo'><span itemprop="name">EstebanCovo</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/EstebanCovo'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-24T17:44:09Z' class='post-time'>
+                    April 24, 2022,  5:44pm
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-24T17:44:09Z'>
+              <span itemprop="position">11</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>I’m leaving this here in case another noob (like me <img src="https://devtalk.blender.org/images/emoji/twitter/slight_smile.png?v=9" title=":slight_smile:" class="emoji" alt=":slight_smile:"> ) with msbuild stumbles on the problem, basically the problem has to do with msbuild making a debug compile by default, this caused aparently a mismatch with the Hydra build which was release, to fix I just flagged the release property.</p>
+<p><code>MSBuild Cycles.sln -p:Configuration=Release</code></p>
+<p>In this instance MSBuild’s path is already added to my path’s variables<br>
+As a last note, you can use visual studio community directly if you don’t want to use the console, just build as release not as debug.</p>
+<p>Hope this helps someone.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_12' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/EstebanCovo'><span itemprop="name">EstebanCovo</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/EstebanCovo'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-24T18:13:43Z' class='post-time'>
+                    April 24, 2022,  6:13pm
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-24T18:17:08Z'>
+              <span itemprop="position">12</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Hi, everything builds correctly now (apparently) but the path I get to the Hydra delegate is:<br>
+<code>&lt;path to build&gt;\build\bin\Release\hdCycles.dll</code><br>
+next to the Cycles.exe<br>
+On the instructions it is made apparent that the build should have yield a folder structure similar to:</p>
+<p><code>&lt;path to cycles&gt;/build/bin/houdini/dso/usd_plugins houdini</code><br>
+<code>&lt;path to cycles&gt;/build/bin/houdini/packages/cycles.json</code></p>
+<p>I don’t seem to have these structures or these files, I’m sure I messed up doing the build somewhere, most likely during the project generation, since this line:</p>
+<pre><code class="lang-auto">make BUILD_CMAKE_ARGS="WITH_CYCLES_HYDRA_RENDER_DELEGATE=ON -DHOUDINI_ROOT=&lt;path to Houdini&gt;"
+</code></pre>
+<p>didn’t work for me on windows I had to change it to</p>
+<pre><code class="lang-auto">cmake -D HOUDINI_ROOT="C:\Program Files\Side Effects Software\Houdini 19.0.383" -S cycles/ -B build/ -G "Visual Studio 16 2019"
+</code></pre>
+<p>And probably messed up something,  if someone could point where this mistake might be or how to use a better line to build the project on windows I would greatly appreciate it.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_13' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/EstebanCovo'><span itemprop="name">EstebanCovo</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/EstebanCovo'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-24T18:49:06Z' class='post-time'>
+                    April 24, 2022,  6:49pm
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-24T18:49:06Z'>
+              <span itemprop="position">13</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>I found them in here:</p>
+<p><code>C:\HydraDelegates\Cycles\builddel\src\hydra\resources</code></p>
+<p>Still don’t know how to make the process generate the right folder structure</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_14' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/soulcage'><span itemprop="name">soulcage</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/soulcage'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-24T19:25:21Z' class='post-time'>
+                    April 24, 2022,  7:25pm
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-24T19:39:39Z'>
+              <span itemprop="position">14</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>the “make” command line also not worked for me , so i ended up modifying the make.bat file and wrote the arguments in there…</p>
+<p>for me it builds the folder structure so i can point to it with the PXR_PLUGINPATH_NAME env var…<br>
+i also use WITH_BLENDER=0</p>
+<p><a href="https://wiki.blender.org/wiki/Building_Blender/CyclesHydra" class="onebox" target="_blank" rel="noopener nofollow ugc">https://wiki.blender.org/wiki/Building_Blender/CyclesHydra</a></p>
+<p>but as i mentioned above i get an empty solaris viewport when choosing cycles…</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_15' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/EstebanCovo'><span itemprop="name">EstebanCovo</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/EstebanCovo'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-24T23:22:24Z' class='post-time'>
+                    April 24, 2022, 11:22pm
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-24T23:22:24Z'>
+              <span itemprop="position">15</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p><a class="mention" href="/u/soulcage">@soulcage</a> would it be to much to ask to see your folder structure and json files?</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_16' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/EstebanCovo'><span itemprop="name">EstebanCovo</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/EstebanCovo'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-25T00:00:44Z' class='post-time'>
+                    April 25, 2022, 12:00am
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-25T00:14:50Z'>
+              <span itemprop="position">16</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Ok, I’ve got the same problem you have, now it recognizes that there is a Cycles Delegate but I have no geometry showing, if I switch to Karma the geo is there, switch to cycles and there is no geo present.</p>
+<p>I actually don’t get cycles render parameters or apparently any cycles material nodes, I can only infer that since it recognizes the plugInfo.json file it makes a placeholder render delegate but the file structure and .json file is messed up, so it just doesn’t find the actual delegate or renderer or both (although it seems to be running samples when I switch to cycles so I’m at a loss here).</p>
+<p>Can please somebody that has made it work for windows post a small for dummies guide?, I’ll keep digging, probable will make an ubuntu partition so I can try to run it there and compare the file structure</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_17' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SteffenD'><span itemprop="name">SteffenD</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SteffenD'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-25T07:24:56Z' class='post-time'>
+                    April 25, 2022,  7:24am
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-25T07:24:56Z'>
+              <span itemprop="position">17</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>I haven’t been trying too many things with the Hydra delegate in Houdini, but at least I can get the “Rubbertoy” test geometry to show up in the rendered Cycles view. I’m on Linux and use the latest daily build of Houdini.<br>
+Lighting looks like a completely white environment and there are no further settings like samples or dev ice. But at least something shows up in the Viewport which is a huge baby step <img src="https://devtalk.blender.org/images/emoji/twitter/wink.png?v=9" title=":wink:" class="emoji" alt=":wink:"></p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_18' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/soulcage'><span itemprop="name">soulcage</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/soulcage'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-25T07:41:24Z' class='post-time'>
+                    April 25, 2022,  7:41am
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-25T07:58:20Z'>
+              <span itemprop="position">18</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>then the empty viewport seems to be a windows build thing…</p>
+<p><a class="mention" href="/u/estebancovo">@EstebanCovo</a> my folder structure is like that:</p>
+<pre><code>..\cycles\build\bin\Release\houdini\dso\usd_plugins\hdCycles.dll
+..\cycles\build\bin\Release\houdini\dso\usd_plugins\plugInfo.json
+..\cycles\build\bin\Release\houdini\dso\usd_plugins\hdCycles\resources\plugInfo.json
+..\cycles\build\bin\Release\houdini\packages\cycles.json
+</code></pre>
+<p>plugInfo.json</p>
+<pre><code>{
+"Plugins": [
+    {
+        "Info": {
+            "Types": {
+                "HdCyclesPlugin": {
+                    "bases": [
+                        "HdRendererPlugin"
+                    ],
+                    "displayName": "Cycles",
+                    "priority": 0
+                }
+            }
+        },
+        "LibraryPath": "../hdCycles.dll",
+        "Name": "hdCycles",
+        "ResourcePath": "../../../../",
+        "Root": "..",
+        "Type": "library"
+    }
+  ]
+}
+</code></pre>
+<p>quick n dirty modified make.bat:</p>
+<pre><code>@echo off
+
+REM Convenience wrapper for CMake commands
+
+setlocal enableextensions enabledelayedexpansion
+
+set BUILD_CMAKE_ARGS=
+set BUILD_DIR=build
+set PYTHON=python
+set COMMAND=%1
+
+if "%COMMAND%" == "" (
+  set COMMAND=release
+)
+
+if "%COMMAND%" == "release" (
+	if not exist "%BUILD_DIR%" mkdir %BUILD_DIR%
+	cd %BUILD_DIR% &amp;&amp; cmake %BUILD_CMAKE_ARGS% -DWITH_BLENDER=0 -DWITH_CYCLES_HYDRA_RENDER_DELEGATE=ON -DHOUDINI_ROOT="C:\Program Files\Side Effects Software\Houdini 19.0.561" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=bin/Release .. &amp;&amp; cmake --build . --target install --config Release
+) else if "%COMMAND%" == "debug" (
+	if not exist "%BUILD_DIR%" mkdir %BUILD_DIR%
+	cd %BUILD_DIR% &amp;&amp; cmake %BUILD_CMAKE_ARGS% -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=bin/Debug .. &amp;&amp; cmake --build . --target install --config Debug
+) else if "%COMMAND%" == "clean" (
+	cd %BUILD_DIR% &amp;&amp; cmake --build . --target install --config Clean
+) else if "%COMMAND%" == "test" (
+	cd %BUILD_DIR% &amp;&amp; ctest --config Release
+) else if "%COMMAND%" == "update" (
+	%PYTHON% src/cmake/make_update.py
+) else if "%COMMAND%" == "format" (
+	%PYTHON% src/cmake/make_format.py
+) else (
+  echo Command "%COMMAND%" unknown
+)</code></pre>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_19' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/pmoursnv'><span itemprop="name">pmoursnv</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/pmoursnv'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-25T09:21:50Z' class='post-time'>
+                    April 25, 2022,  9:21am
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-25T09:21:50Z'>
+              <span itemprop="position">19</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Looks like the OpenGL interop “hack” to keep viewport updates on the GPU isn’t always working properly in Houdini right now. Will need to look into that, since it’s working in other applications. But you can disable that for now by replacing this line: <a href="https://developer.blender.org/diffusion/C/browse/master/src/hydra/render_delegate.cpp%24150" class="inline-onebox" rel="noopener nofollow ugc">render_delegate.cpp · rC</a> from <code>#ifdef _WIN32</code> to <code>#if 0</code>. That should cause things to show up in Houdini on Windows too, instead of just getting an empty viewport.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_20' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/brecht'><span itemprop="name">brecht</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/brecht'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2022-04-25T11:59:54Z' class='post-time'>
+                    April 25, 2022, 11:59am
+                  </time>
+                  <meta itemprop='dateModified' content='2022-04-25T11:59:54Z'>
+              <span itemprop="position">20</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>I did some changes to make building on Windows easier:</p>
+<ul>
+<li>Change default install directory to install/, so that multi config always installs files to the same directory regardless of build config</li>
+<li>Install Hydra dll in install/hydra subdirectory, to make the directory layout a bit cleaner and be more consistent with the Houdini case</li>
+<li>Init install prefix and build type to good defaults even when not using the make wrapper</li>
+<li>Tweak build instructions to work for Windows, using a cmake command instead of BUILD_CMAKE_ARGS</li>
+<li>Build with Visual Studio project files for make wrapper. Speeds up builds since NMake is single threaded, and gives a Visual Studio project to work with.</li>
+</ul>
+<p>I can confirm that with the change suggested by <a class="mention" href="/u/pmoursnv">@pmoursnv</a> the viewport starts working.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+
+    </div>
+
+      <div role='navigation' itemscope itemtype='http://schema.org/SiteNavigationElement' class="topic-body crawler-post">
+            <span itemprop='name'><b><a rel="next" itemprop="url" href="/t/cycles-hydra-render-delegate-and-usd-feedback/24075?page=2">next page →</a></b></span>
+      </div>
+
+    
+
+
+
+
+    </div>
+    <footer class="container wrap">
+  <nav class='crawler-nav'>
+    <ul>
+      <li itemscope itemtype='http://schema.org/SiteNavigationElement'>
+        <span itemprop='name'>
+          <a href='/' itemprop="url">Home </a>
+        </span>
+      </li>
+      <li itemscope itemtype='http://schema.org/SiteNavigationElement'>
+        <span itemprop='name'>
+          <a href='/categories' itemprop="url">Categories </a>
+        </span>
+      </li>
+      <li itemscope itemtype='http://schema.org/SiteNavigationElement'>
+        <span itemprop='name'>
+          <a href='/guidelines' itemprop="url">Guidelines </a>
+        </span>
+      </li>
+        <li itemscope itemtype='http://schema.org/SiteNavigationElement'>
+          <span itemprop='name'>
+            <a href='/tos' itemprop="url">Terms of Service </a>
+          </span>
+        </li>
+        <li itemscope itemtype='http://schema.org/SiteNavigationElement'>
+          <span itemprop='name'>
+            <a href='/privacy' itemprop="url">Privacy Policy </a>
+          </span>
+        </li>
+    </ul>
+  </nav>
+  <p class='powered-by-link'>Powered by <a href="https://www.discourse.org">Discourse</a>, best viewed with JavaScript enabled</p>
+</footer>
+
+    
+    
+  </body>
+  
+</html>

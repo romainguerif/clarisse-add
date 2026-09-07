@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>GPL license discussion &amp; Blender Forks (E-Cycles or any other fork) - Archive - Developer Forum</title>
+    <meta name="description" content="Original message: Cycles Requests - #87 by coder.kalyan 
+
+There is nothing illegal or to be ashamed of about discussing about open-source softwares. 
+Both Blender and E-Cycles are released under the GPL license. 
+This li&amp;hellip;">
+    <meta name="generator" content="Discourse 2026.6.0-latest - https://github.com/discourse/discourse version 86dd515474d24eb26cd013dd25fb1eacaf568567">
+<link rel="icon" type="image/png" href="https://devtalk.blender.org/uploads/default/optimized/2X/c/c2c1842941daa95dd813394bbdf98988cdc392ec_2_32x32.ico">
+<link rel="apple-touch-icon" type="image/png" href="https://devtalk.blender.org/uploads/default/optimized/2X/8/810a87a939440e79ea0d2f55906dabcc7925196c_2_180x180.png">
+<meta name="theme-color" media="all" content="#191c1f">
+
+<meta name="color-scheme" content="dark">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+<link rel="canonical" href="https://devtalk.blender.org/t/gpl-license-discussion-blender-forks-e-cycles-or-any-other-fork/15551" />
+
+<meta name="discourse-track-view-session-id" content="JWihgOYqngaynC6GjO8T6PZjCdxRZWqP">
+<link rel="search" type="application/opensearchdescription+xml" href="https://devtalk.blender.org/opensearch.xml" title="Developer Forum Search">
+
+    
+    <link href="/stylesheets/color_definitions_blender-dark_1_1_af4c539d30587cd393af68bd9e5fafdf2d06bd99.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" class="light-scheme" data-scheme-id="1"/>
+
+<link href="/stylesheets/common_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="common"  />
+
+<link href="/stylesheets/mobile_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="(width < 40rem)" rel="stylesheet" data-target="mobile"  />
+<link href="/stylesheets/desktop_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="(width >= 40rem)" rel="stylesheet" data-target="desktop"  />
+
+
+
+  <link href="/stylesheets/checklist_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="checklist"  />
+  <link href="/stylesheets/discourse-blender-id_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-blender-id"  />
+  <link href="/stylesheets/discourse-details_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-details"  />
+  <link href="/stylesheets/discourse-lazy-videos_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-lazy-videos"  />
+  <link href="/stylesheets/discourse-local-dates_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-local-dates"  />
+  <link href="/stylesheets/discourse-math_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-math"  />
+  <link href="/stylesheets/discourse-narrative-bot_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-narrative-bot"  />
+  <link href="/stylesheets/discourse-presence_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-presence"  />
+  <link href="/stylesheets/discourse-solved_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-solved"  />
+  <link href="/stylesheets/discourse-templates_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-templates"  />
+  <link href="/stylesheets/discourse-topic-voting_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="discourse-topic-voting"  />
+  <link href="/stylesheets/docker_manager_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="docker_manager"  />
+  <link href="/stylesheets/footnote_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="footnote"  />
+  <link href="/stylesheets/poll_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="poll"  />
+  <link href="/stylesheets/spoiler-alert_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="spoiler-alert"  />
+  <link href="/stylesheets/poll_desktop_6ae107f1814e1757f0c9bbdb48530f4e0269e931.css?__ws=devtalk.blender.org" media="(width >= 40rem)" rel="stylesheet" data-target="poll_desktop"  />
+
+  <link href="/stylesheets/common_theme_5_9ce7c7bcb08f74252015c0613dbbd90fa61bdd09.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="common_theme" data-theme-id="5" data-theme-name="custom header links"/>
+<link href="/stylesheets/common_theme_6_2d0dbdfa40315575c7fc6752c2a3c4d0386f4c1f.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="common_theme" data-theme-id="6" data-theme-name="global navigation"/>
+<link href="/stylesheets/common_theme_8_ff793805defd9346f6bbf41e2c04826a40fffa1e.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="common_theme" data-theme-id="8" data-theme-name="global styling"/>
+<link href="/stylesheets/common_theme_1_cd482b44f5201cdae56972198e06618d558debf4.css?__ws=devtalk.blender.org" media="all" rel="stylesheet" data-target="common_theme" data-theme-id="1" data-theme-name="dark"/>
+  
+  
+
+    <script defer="" data-domain="devtalk.blender.org" src="https://analytics.blender.org/js/script.js" nonce="LhKgiSXANhjBJnS78uAbtvys7"></script>
+    
+        <link rel="alternate nofollow" type="application/rss+xml" title="RSS feed of &#39;GPL license discussion &amp; Blender Forks (E-Cycles or any other fork)&#39;" href="https://devtalk.blender.org/t/gpl-license-discussion-blender-forks-e-cycles-or-any-other-fork/15551.rss" />
+    <meta property="og:site_name" content="Developer Forum" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:image" content="https://devtalk.blender.org/uploads/default/original/3X/9/c/9c4d1f115e2900ec6b30df0e5b4cc3aff97b68ff.jpeg" />
+<meta property="og:image" content="https://devtalk.blender.org/uploads/default/original/3X/9/c/9c4d1f115e2900ec6b30df0e5b4cc3aff97b68ff.jpeg" />
+<meta property="og:url" content="https://devtalk.blender.org/t/gpl-license-discussion-blender-forks-e-cycles-or-any-other-fork/15551" />
+<meta name="twitter:url" content="https://devtalk.blender.org/t/gpl-license-discussion-blender-forks-e-cycles-or-any-other-fork/15551" />
+<meta property="og:title" content="GPL license discussion &amp; Blender Forks (E-Cycles or any other fork)" />
+<meta name="twitter:title" content="GPL license discussion &amp; Blender Forks (E-Cycles or any other fork)" />
+<meta property="og:description" content="Original message: Cycles Requests - #87 by coder.kalyan   There is nothing illegal or to be ashamed of about discussing about open-source softwares.  Both Blender and E-Cycles are released under the GPL license.  This license allows everyone to legally reuse, modify, share and even (re)sell the source code of the softwares or addons (free or commercial) that are released under this licence.  🔗  Sharing or selling Blender add-ons (Python scripts)  BTW, that’s what bliblubli (mathieu), the au..." />
+<meta name="twitter:description" content="Original message: Cycles Requests - #87 by coder.kalyan   There is nothing illegal or to be ashamed of about discussing about open-source softwares.  Both Blender and E-Cycles are released under the GPL license.  This license allows everyone to legally reuse, modify, share and even (re)sell the source code of the softwares or addons (free or commercial) that are released under this licence.  🔗  Sharing or selling Blender add-ons (Python scripts)  BTW, that’s what bliblubli (mathieu), the au..." />
+<meta property="og:article:section" content="Archive" />
+<meta property="og:article:section:color" content="0E76BD" />
+<meta name="twitter:label1" value="Reading time" />
+<meta name="twitter:data1" value="60 mins 🕑" />
+<meta name="twitter:label2" value="Likes" />
+<meta name="twitter:data2" value="302 ❤" />
+<meta property="article:published_time" content="2020-09-27T13:17:26+00:00" />
+<meta property="og:ignore_canonical" content="true" />
+
+        <link rel="next" href="/t/gpl-license-discussion-blender-forks-e-cycles-or-any-other-fork/15551?page=2">
+
+    
+  </head>
+  <body class="crawler ">
+    <style>
+  /* Fontfaces are added via the CSS tab. */
+</style>
+
+<style>
+  /* This style block is copied across all sites using the developer navbar.
+   * For custom styling on this website, add a <style> block after this one. */
+
+  /* Variables. */
+  .nav-global {
+    -webkit-font-smoothing: antialiased;
+
+    --nav-global-color-bg: hsl(213, 10%, 14%);
+    --nav-global-color-text: hsl(213, 5%, 64%);
+    --nav-global-color-text-secondary: hsl(213, 5%, 44%);
+    --nav-global-color-text-highlight: hsl(213, 5%, 84%);
+    --nav-global-color-text-hover: white;
+    --nav-global-color-text-active: white;
+
+    --nav-global-color-primary: hsl(204, 98%, 54%);
+    --nav-global-color-primary-bg: hsla(204, 100%, 46%, .1);
+
+    --nav-global-color-button-bg-hover: hsl(213, 10%, 24%);
+    --nav-global-color-button-text: var(--nav-global-color-text);
+
+    --nav-global-color-menu-bg: var(--nav-global-color-bg);
+    --nav-global-color-menu-border: hsl(213, 10%, 18%);
+
+    --nav-global-color-menu-zindex: 1040;
+
+    --nav-global-box-shadow-menu: 0px 5px 15px -2px rgba(0, 0, 0, 0.33), 0px 5px 15px -5px rgba(0, 0, 0, 0.33);
+    --nav-global-box-shadow-menu-item: 0px 1px 4px 0px rgba(0, 0, 0, 0.05), 0px 15px 20px -1px rgba(0, 0, 0, 0.025);
+
+    --nav-global-navbar-height: var(--navbar-primary-height, 56px);
+
+    --nav-global-spacer: 15px;
+    --nav-global-spacer-sm: 10px;
+    --nav-global-spacer-xs: 5px;
+
+    --nav-global-border-radius: 6px;
+    --nav-global-border-radius-lg: 10px;
+
+    --nav-global-button-height: 35px;
+    --nav-global-link-padding-x: var(--nav-global-spacer);
+    --nav-global-link-padding-y: var(--nav-global-spacer-sm);
+
+    --nav-global-font-size: 14px;
+    --nav-global-transition-speed: 150ms;
+  }
+
+  /* Reset. */
+  @namespace svg "http://www.w3.org/2000/svg";
+
+  .nav-global :not(svg|*),
+  .nav-global *::before,
+  .nav-global *::after {
+    -webkit-box-sizing: border-box;
+
+    all: unset;
+    display: revert;
+    box-sizing: border-box;
+  }
+
+  .nav-global [default-styles] {
+    all: revert;
+  }
+
+  .nav-global * {
+    -webkit-text-size-adjust: 100%;
+
+    font-family: 'Heebo', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    font-variation-settings: 'wght' 400;
+    font-weight: normal;
+  }
+
+  .nav-global {
+    background-color: var(--nav-global-color-bg);
+    color: var(--nav-global-color-text);
+    display: flex;
+    position: relative;
+    z-index: var(--zindex-fixed);
+  }
+
+  .nav-global h3,
+  .nav-global h4,
+  .nav-global strong {
+    font-variation-settings: 'wght' 500;
+  }
+
+  .nav-global figure,
+  .nav-global section {
+    display: block;
+  }
+
+  .nav-global svg:not(:root) {
+    overflow: hidden;
+    vertical-align: middle;
+  }
+
+  .nav-global .nav-global-container {
+    flex: 1;
+    margin: 0 auto;
+  }
+
+  /* Navigation. */
+  .nav-global nav {
+    align-items: center;
+    display: flex;
+    line-height: var(--nav-global-font-size);
+    font-size: var(--nav-global-font-size);
+    height: var(--nav-global-navbar-height);
+    margin: 0 auto;
+    padding: 0 var(--nav-global-spacer);
+    position: relative;
+  }
+
+  /* Links. */
+  .nav-global a:not(.dropdown-item) {
+    color: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color var(--nav-global-transition-speed) ease-out, color var(--nav-global-transition-speed) ease-out;
+  }
+
+  .nav-global a:not(.dropdown-item):hover {
+    color: var(--nav-global-color-text-hover);
+  }
+
+  /* Navigation items. */
+  .nav-global nav > ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav-global nav > ul,
+  .nav-global nav > ul > li,
+  .nav-global nav > ul > li > a,
+  .nav-global-apps-dropdown-container {
+    align-items: center;
+    display: inline-flex;
+    height: 100%;
+  }
+
+  .nav-global-apps-dropdown-container {
+    position: relative;
+  }
+
+  .nav-global nav > ul > li > a {
+    padding: var(--nav-global-link-padding-y) var(--nav-global-link-padding-x);
+  }
+
+  .nav-global nav > a.is-active,
+  .nav-global nav > a.is-active svg,
+  .nav-global nav > ul > li > a.is-active,
+  .nav-global .nav-global-link-active,
+  .nav-global .nav-global-link-active svg {
+    color: var(--nav-global-color-text-active) !important;
+    fill: var(--nav-global-color-text-active);
+    font-variation-settings: 'wght' 500;
+  }
+
+  .nav-global .nav-global-links-right {
+    margin-left: auto;
+  }
+
+  /* Logo. */
+  .nav-global a.nav-global-logo {
+    margin-right: var(--nav-global-spacer);
+    position: relative;
+    top: 2px;
+  }
+
+  .nav-global a.nav-global-logo strong {
+    margin-inline: var(--nav-global-spacer-sm);
+    font-size: 18px;
+  }
+
+  .nav-global .nav-global-logo svg {
+    height: 21px;
+  }
+
+  .nav-global a.nav-global-logo svg {
+    position: relative;
+    top: -4px;
+  }
+
+  .nav-global svg {
+    fill: var(--nav-global-color-text);
+    transition: fill var(--nav-global-transition-speed) ease-out;
+  }
+
+  .nav-global .nav-global-logo:hover svg {
+    fill: white;
+  }
+
+  /* Apps button. */
+  .nav-global button,
+  .nav-global .nav-global-btn {
+    -webkit-appearance: button;
+
+    align-items: center;
+    background-color: transparent;
+    border-radius: var(--nav-global-border-radius);
+    border: 0;
+    color: var(--nav-global-color-button-text);
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    height: var(--nav-global-button-height);
+    margin: 0;
+    outline: 0;
+    overflow: visible;
+    padding: var(--nav-global-spacer-xs) var(--nav-global-spacer);
+    text-transform: none;
+    transition: background-color var(--nav-global-transition-speed) ease-out, color var(--nav-global-transition-speed) ease-out, transform var(--nav-global-transition-speed) ease-out;
+    white-space: nowrap;
+  }
+
+  .nav-global button span,
+  .nav-global .nav-global-btn span {
+    white-space: nowrap;
+  }
+
+  .nav-global button:hover,
+  .nav-global .nav-global-btn:hover {
+    background-color: var(--nav-global-color-button-bg-hover);
+    color: var(--nav-global-color-text-hover);
+    cursor: pointer;
+  }
+
+  .nav-global button.nav-global-btn-active,
+  .nav-global .nav-global-btn.nav-global-btn-active {
+    background-color: var(--nav-global-color-primary-bg);
+    color: var(--nav-global-color-primary);
+  }
+
+  .nav-global button.nav-global-btn-active svg,
+  .nav-global .nav-global-btn.nav-global-btn-active svg {
+    fill: var(--nav-global-color-primary);
+  }
+
+  .nav-global .nav-global-icon {
+    height: 20px;
+    pointer-events: none;
+    width: 20px;
+  }
+
+  .nav-global-icon-dropdown-toggle {
+    margin-left: var(--nav-global-spacer-xs);
+  }
+
+  .nav-global button:hover svg,
+  .nav-global .nav-global-btn:hover svg {
+    fill: white;
+  }
+
+  /* Apps dropdown menu. */
+  .nav-global .nav-global-apps-menu {
+    background-color: var(--nav-global-color-menu-bg);
+    border-radius: var(--nav-global-border-radius-lg);
+    border: thin solid var(--nav-global-color-menu-border);
+    box-shadow: var(--nav-global-box-shadow-menu);
+    display: none;
+    padding: var(--nav-global-spacer-sm);
+    position: absolute;
+    right: 0;
+    top: calc(100% + 15px);
+    visibility: hidden;
+    width: 640px;
+    z-index: var(--nav-global-color-menu-zindex);
+  }
+
+  .nav-global .nav-global-dropdown.is-visible {
+    display: block;
+    visibility: visible;
+  }
+
+  /* Tiny triangle in the corner. */
+  .nav-global .nav-global-apps-menu::before {
+    background-color: var(--nav-global-color-menu-bg);
+    border-radius: 3px;
+    border: 2px var(--nav-global-color-menu-bg) solid;
+    content: '';
+    display: block;
+    height: .85rem;
+    position: absolute;
+    right: .85rem;
+    top: -0.25rem;
+    transform: rotate(45deg);
+    width: 1rem;
+    z-index: -1;
+  }
+
+  .nav-global .nav-global-apps-menu ul {
+    border-bottom: 2px solid rgba(255, 255, 255, .05);
+    display: grid;
+    gap: var(--nav-global-spacer-sm);
+    grid-template-columns: repeat(2, 1fr);
+    list-style: none;
+    margin: 0 0 var(--nav-global-spacer-xs) 0;
+    padding: var(--nav-global-spacer-xs) 0 var(--nav-global-spacer-sm) 0;
+  }
+
+  .nav-global .nav-global-apps-menu ul>li>a {
+    border-radius: var(--nav-global-border-radius-lg);
+    display: flex;
+    flex: 1;
+    height: 100%;
+  }
+
+  .nav-global .nav-global-apps-menu ul>li>a:hover {
+    background-color: rgba(255, 255, 255, .05);
+    color: var(--nav-global-color-text-active);
+    box-shadow: var(--nav-global-box-shadow-menu-item);
+  }
+
+  .nav-global .nav-global-apps-menu ul>li>a:hover h4,
+  .nav-global .nav-global-apps-menu ul>li>a:hover svg {
+    color: var(--nav-global-color-primary);
+    fill: var(--nav-global-color-primary);
+  }
+
+  .nav-global .nav-global-apps-menu h3 {
+    color: white;
+    display: inline-block;
+    font-size: 13px;
+    line-height: 18px;
+    margin: 0;
+    opacity: .3;
+    padding-left: var(--nav-global-spacer);
+  }
+
+  .nav-global .nav-global-apps-menu h4 {
+    color: var(--nav-global-color-text-highlight);
+    font-size: 17px;
+    line-height: 18px;
+    margin: var(--nav-global-spacer-xs) 0 0;
+    padding: var(--nav-global-spacer-sm) var(--nav-global-spacer) 0;
+    transition: color var(--nav-global-transition-speed) ease-out;
+  }
+
+  .nav-global .nav-global-apps-menu p {
+    font-size: 15px;
+    line-height: 20px;
+    margin: 0;
+    opacity: .8;
+    padding: var(--nav-global-spacer-xs) var(--nav-global-spacer) var(--nav-global-spacer-sm);
+  }
+
+  .nav-global .nav-global-apps-menu figure {
+    margin: var(--nav-global-spacer) 0 0 var(--nav-global-spacer);
+  }
+
+  .nav-global .nav-global-apps-menu ul>li>a svg {
+    position: relative;
+    top: -2px;
+  }
+
+  /* Donate section of the menu. */
+  .nav-global .nav-global-apps-menu-section-donate ul {
+    border: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .nav-global .nav-global-apps-menu-section-donate a svg {
+    fill: hsl(352, 90%, 62%) !important;
+    transition: transform var(--nav-global-transition-speed) ease-out;
+  }
+
+  .nav-global .nav-global-apps-menu-section-donate ul>li:first-child>a {
+    background-color: hsla(352deg, 90%, 42%, .2);
+  }
+
+  .nav-global .nav-global-apps-menu-section-donate ul>li:first-child>a:hover {
+    background-color: hsla(352deg, 90%, 42%, .5);
+  }
+
+  .nav-global .nav-global-apps-menu-section-donate ul>li:first-child>a:hover svg {
+    fill: hsl(352, 90%, 72%) !important;
+    transform: scale(1.2);
+  }
+
+  .nav-global .nav-global-apps-menu-section-donate ul>li:first-child>a:hover h4 {
+    color: white;
+  }
+
+/* Mobile. */
+.nav-global button.nav-global-logo {
+  display: none;
+  visibility: hidden;
+}
+
+@media (max-width: 767px) {
+
+  .nav-global-apps-dropdown-container,
+  .nav-global a.nav-global-logo {
+    display: none;
+  }
+
+  .nav-global button.nav-global-logo {
+    display: block;
+    visibility: visible;
+  }
+
+  .nav-global .nav-global-nav-links {
+    align-items: flex-start;
+    background-color: var(--nav-global-color-menu-bg);
+    border-radius: var(--nav-global-border-radius-lg);
+    display: none;
+    flex-direction: column;
+    left: 1rem;
+    padding: 0 var(--nav-global-spacer-sm);
+    position: absolute;
+    top: calc(100% + .5rem);
+    visibility: visible;
+    width: 10rem;
+    z-index: var(--nav-global-color-menu-zindex);
+  }
+
+  .nav-global .nav-global-nav-links.is-visible {
+    display: flex;
+  }
+
+  .nav-global .nav-global-nav-links::before {
+    background-color: var(--nav-global-color-menu-bg);
+    border-radius: 3px;
+    border: 2px var(--nav-global-color-menu-bg) solid;
+    content: '';
+    display: block;
+    height: 0.8rem;
+    position: absolute;
+    left: 1.5rem;
+    top: -0.133rem;
+    transform: rotate(45deg);
+    width: 1rem;
+    z-index: -1;
+  }
+
+  .nav-global nav>ul {
+    height: initial;
+  }
+
+  .nav-global .nav-global-nav-links>li {
+    border-bottom: 2px solid rgba(255, 255, 255, .05);
+    width: 100%;
+  }
+
+  .nav-global .nav-global-nav-links>li:last-child {
+    border: none;
+  }
+
+  .nav-global .nav-global-nav-links>li>a {
+    padding-inline: 0;
+    width: 100%;
+  }
+}
+</style>
+
+<style>
+  /* Custom styling for code.blender.org */
+  /* Make sure to start every line with ".nav-global"
+   * so changes affect the developer navbar only. */
+
+  /* Limit navbar width on large screens. */
+  @media (min-width: 1200px) {
+    .nav-global .nav-global-container {
+      max-width: 1170px;
+    }
+  }
+</style>
+
+<div class="nav-global">
+  <div class="nav-global-container">
+    <nav>
+      <a href="https://developer.blender.org/" class="nav-global-logo">
+        <svg fill-rule="nonzero" viewBox="0 0 200 162.05">
+          <path d="M61.1 104.56c.05 2.6.88 7.66 2.12 11.61a61.27 61.27 0 0 0 13.24 22.92 68.39 68.39 0 0 0 23.17 16.64 74.46 74.46 0 0 0 30.42 6.32 74.52 74.52 0 0 0 30.4-6.42 68.87 68.87 0 0 0 23.15-16.7 61.79 61.79 0 0 0 13.23-22.97 58.06 58.06 0 0 0 2.07-25.55 59.18 59.18 0 0 0-8.44-23.1 64.45 64.45 0 0 0-15.4-16.98h.02L112.76 2.46l-.16-.12c-4.09-3.14-10.96-3.13-15.46.02-4.55 3.18-5.07 8.44-1.02 11.75l-.02.02 26 21.14-79.23.08h-.1c-6.55.01-12.85 4.3-14.1 9.74-1.27 5.53 3.17 10.11 9.98 10.14v.02l40.15-.07-71.66 55-.27.2c-6.76 5.18-8.94 13.78-4.69 19.23 4.32 5.54 13.51 5.55 20.34.03l39.1-32s-.56 4.32-.52 6.91zm100.49 14.47c-8.06 8.2-19.34 12.86-31.54 12.89-12.23.02-23.5-4.6-31.57-12.79-3.93-4-6.83-8.59-8.61-13.48a35.57 35.57 0 0 1 2.34-29.25 39.1 39.1 0 0 1 9.58-11.4 44.68 44.68 0 0 1 28.24-9.85 44.59 44.59 0 0 1 28.24 9.77 38.94 38.94 0 0 1 9.58 11.36 35.58 35.58 0 0 1 4.33 14.18 35.1 35.1 0 0 1-1.98 15.05 37.7 37.7 0 0 1-8.61 13.52zm-57.6-27.91a23.55 23.55 0 0 1 8.55-16.68 28.45 28.45 0 0 1 18.39-6.57 28.5 28.5 0 0 1 18.38 6.57 23.57 23.57 0 0 1 8.55 16.67c.37 6.83-2.37 13.19-7.2 17.9a28.18 28.18 0 0 1-19.73 7.79c-7.83 0-14.84-3-19.75-7.8a23.13 23.13 0 0 1-7.19-17.88z"></path>
+          </svg><strong>Developer</strong>
+        
+      </a>
+
+      <button class="nav-global-logo js-dropdown-toggle" data-toggle-menu-id="nav-global-nav-links">
+        <svg fill-rule="nonzero" viewBox="0 0 850.2 162.05">
+          <path d="M61.1 104.56c.05 2.6.88 7.66 2.12 11.61a61.27 61.27 0 0 0 13.24 22.92 68.39 68.39 0 0 0 23.17 16.64 74.46 74.46 0 0 0 30.42 6.32 74.52 74.52 0 0 0 30.4-6.42 68.87 68.87 0 0 0 23.15-16.7 61.79 61.79 0 0 0 13.23-22.97 58.06 58.06 0 0 0 2.07-25.55 59.18 59.18 0 0 0-8.44-23.1 64.45 64.45 0 0 0-15.4-16.98h.02L112.76 2.46l-.16-.12c-4.09-3.14-10.96-3.13-15.46.02-4.55 3.18-5.07 8.44-1.02 11.75l-.02.02 26 21.14-79.23.08h-.1c-6.55.01-12.85 4.3-14.1 9.74-1.27 5.53 3.17 10.11 9.98 10.14v.02l40.15-.07-71.66 55-.27.2c-6.76 5.18-8.94 13.78-4.69 19.23 4.32 5.54 13.51 5.55 20.34.03l39.1-32s-.56 4.32-.52 6.91zm100.49 14.47c-8.06 8.2-19.34 12.86-31.54 12.89-12.23.02-23.5-4.6-31.57-12.79-3.93-4-6.83-8.59-8.61-13.48a35.57 35.57 0 0 1 2.34-29.25 39.1 39.1 0 0 1 9.58-11.4 44.68 44.68 0 0 1 28.24-9.85 44.59 44.59 0 0 1 28.24 9.77 38.94 38.94 0 0 1 9.58 11.36 35.58 35.58 0 0 1 4.33 14.18 35.1 35.1 0 0 1-1.98 15.05 37.7 37.7 0 0 1-8.61 13.52zm-57.6-27.91a23.55 23.55 0 0 1 8.55-16.68 28.45 28.45 0 0 1 18.39-6.57 28.5 28.5 0 0 1 18.38 6.57 23.57 23.57 0 0 1 8.55 16.67c.37 6.83-2.37 13.19-7.2 17.9a28.18 28.18 0 0 1-19.73 7.79c-7.83 0-14.84-3-19.75-7.8a23.13 23.13 0 0 1-7.19-17.88z"></path>
+          <path d="M829.17 133.76h-15.9V64.39h15.13l.77 13.59zM850.07 79q-1.47-.25-3.14-.38-1.6-.13-3.2-.13-5.26 0-8.8 1.92-3.45 1.86-5.25 5.39-1.8 3.46-2.11 8.2l-3.66.07q0-8.78 2.31-15.77 2.3-6.99 6.92-11.1 4.62-4.1 11.54-4.1 1.35 0 3.02.26 1.66.26 2.5.58zm-76.55 56.04q-10.32 0-17.82-4.42-7.5-4.5-11.55-12.06-4.03-7.63-4.03-17.05v-2.63q0-10.84 4.1-18.85 4.1-8.08 11.22-12.5 7.18-4.43 16.22-4.43 10 0 16.6 4.36 6.6 4.3 9.88 12 3.27 7.62 3.27 17.69V104h-53.67V92.53h37.96v-1.22q-.13-4.04-1.54-7.56-1.4-3.53-4.49-5.7-3.01-2.19-8.07-2.19-5.07 0-8.53 2.89-3.46 2.82-5.26 8.01-1.8 5.13-1.8 12.12v2.63q0 5.9 2.19 10.58 2.18 4.68 6.34 7.43 4.17 2.7 9.94 2.7 5.58 0 9.87-2.18 4.36-2.18 7.5-6.29l8.34 8.34q-3.27 4.93-9.87 8.97-6.54 3.98-16.8 3.98zm-88.67 25.39h-15.9V64.39h14.68l1.22 13.33zm45-60.72q0 10.13-3.13 18.15-3.08 7.95-9.1 12.56-5.97 4.62-14.63 4.62-8.72 0-14.49-4.23-5.7-4.3-8.9-11.8-3.21-7.5-4.43-17.12v-4.55q1.22-10.26 4.42-17.89 3.2-7.7 8.91-11.99 5.71-4.36 14.3-4.36 8.79 0 14.81 4.43 6.03 4.42 9.1 12.37 3.15 7.95 3.15 18.47zm-15.9-1.34q0-6.22-1.6-11.29-1.53-5.06-5-8.01-3.4-2.95-8.9-2.95-3.98 0-6.87 1.35-2.88 1.28-4.87 3.65-1.92 2.37-3.01 5.64-1.1 3.2-1.54 7.05v11.6q.77 4.62 2.56 8.47 1.8 3.85 5.13 6.16 3.4 2.24 8.72 2.24 5.51 0 8.91-3.08 3.4-3.14 4.94-8.2 1.54-5.13 1.54-11.29zm-122.51.06q0-10.13 3.84-18.08 3.85-7.95 11.03-12.57 7.25-4.68 17.38-4.68 10.25 0 17.5 4.68 7.24 4.62 11.03 12.57 3.84 7.95 3.84 18.08v1.35q0 10.06-3.84 18.08-3.79 7.95-11.03 12.56-7.18 4.62-17.38 4.62-10.19 0-17.43-4.62-7.25-4.61-11.1-12.56-3.84-8.02-3.84-18.08zm15.9 1.35q0 6.15 1.73 11.28 1.73 5.07 5.32 8.14 3.65 3.08 9.42 3.08 5.71 0 9.3-3.08 3.65-3.07 5.32-8.14 1.73-5.13 1.73-11.28v-1.35q0-6.09-1.73-11.22-1.67-5.13-5.32-8.2-3.65-3.15-9.42-3.15-5.71 0-9.36 3.14-3.6 3.08-5.33 8.21-1.66 5.13-1.66 11.22zm-29.69 33.98h-15.9V35.28h15.9zm-56.67 1.28q-10.33 0-17.83-4.42-7.5-4.5-11.54-12.06-4.04-7.63-4.04-17.05v-2.63q0-10.84 4.1-18.85 4.11-8.08 11.23-12.5 7.18-4.43 16.22-4.43 10 0 16.6 4.36 6.6 4.3 9.88 12 3.27 7.62 3.27 17.69V104H495.2V92.53h37.96v-1.22q-.13-4.04-1.54-7.56-1.41-3.53-4.49-5.7-3.01-2.19-8.08-2.19-5.06 0-8.52 2.89-3.47 2.82-5.26 8.01-1.8 5.13-1.8 12.12v2.63q0 5.9 2.18 10.58t6.35 7.43q4.17 2.7 9.94 2.7 5.58 0 9.87-2.18 4.36-2.18 7.5-6.29l8.34 8.34q-3.27 4.93-9.88 8.97-6.54 3.98-16.8 3.98zM464.3 64.39h16.48l-23.98 69.37h-10.26l1.03-12.57zm-12.25 57 .77 12.37h-10.19l-24.17-69.37H435zm-65.88 13.65q-10.32 0-17.82-4.42-7.5-4.5-11.54-12.06-4.04-7.63-4.04-17.05v-2.63q0-10.84 4.1-18.85 4.1-8.08 11.22-12.5 7.18-4.43 16.22-4.43 10 0 16.6 4.36 6.61 4.3 9.88 12 3.27 7.62 3.27 17.69V104H360.4V92.53h37.95v-1.22q-.12-4.04-1.53-7.56-1.42-3.53-4.5-5.7-3-2.19-8.07-2.19t-8.53 2.89q-3.46 2.82-5.26 8.01-1.8 5.13-1.8 12.12v2.63q0 5.9 2.19 10.58 2.18 4.68 6.35 7.43 4.16 2.7 9.93 2.7 5.58 0 9.88-2.18 4.36-2.18 7.5-6.29l8.33 8.34q-3.27 4.93-9.87 8.97-6.54 3.98-16.8 3.98zm-107.64-1.28.12-13.27h19.75q8.6 0 14.36-3.72 5.77-3.72 8.72-10.65 2.95-6.98 2.95-16.67v-4.87q0-9.94-2.95-16.8-2.88-6.86-8.59-10.45-5.7-3.59-13.91-3.59h-20.84V40.41h20.84q12.5 0 21.93 5.51 9.48 5.52 14.8 15.45 5.33 9.94 5.33 23.34v4.74q0 13.47-5.32 23.4-5.33 9.94-14.94 15.46-9.56 5.45-22.38 5.45zm9.23 0h-16.54V40.4h16.54z"></path>
+        </svg>
+        <svg class="nav-global-icon nav-global-icon-dropdown-toggle" height="100px" width="100px" viewBox="0 0 1000 1000">
+          <path d="m 206.53824,376.41174 a 42,42 0 0 1 71,-29 l 221,220 220,-220 a 42,42 0 1 1 59,59 l -250,250 a 42,42 0 0 1 -59,0 l -250,-250 a 42,42 0 0 1 -12,-30 z"></path>
+        </svg>
+      </button>
+
+      <ul class="nav-global-nav-links nav-global-dropdown js-dropdown-menu" id="nav-global-nav-links">
+        <li>
+          <a href="https://code.blender.org/roadmap/">Roadmap</a>
+        </li>
+        <li>
+          <a href="https://projects.blender.org">Projects</a>
+        </li>
+        <li>
+          <a href="https://developer.blender.org/docs">Docs</a>
+        </li>
+        <li>
+          <a href="https://code.blender.org">Blog</a>
+        </li>
+        <li>
+          <a href="https://devtalk.blender.org" class="nav-global-link-active">Forum</a>
+        </li>
+        <li>
+          <a href="https://builder.blender.org">Builds</a>
+        </li>
+      </ul>
+
+      <ul class="nav-global-links-right">
+        <li>
+          <div class="nav-global-apps-dropdown-container">
+            <button class="js-dropdown-toggle" data-toggle-menu-id="nav-global-apps-menu">
+              <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                <path d="m 150.5,899 a 50,50 0 0 1 -49,-50 V 749 a 50,50 0 0 1 49,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 749 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 749 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m -598,-299 a 50,50 0 0 1 -49,-50 V 450 a 50,50 0 0 1 49,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 450 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 450 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m -598,-299 a 50,50 0 0 1 -49,-50 V 151 a 50,50 0 0 1 49,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 151 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z m 299,0 a 50,50 0 0 1 -50,-50 V 151 a 50,50 0 0 1 50,-50 h 100 a 50,50 0 0 1 50,50 v 100 a 50,50 0 0 1 -50,50 z"></path>
+              </svg>
+            </button>
+
+            <div class="nav-global-apps-menu nav-global-dropdown js-dropdown-menu" id="nav-global-apps-menu">
+              <h3>BLENDER.ORG</h3>
+              <ul>
+                <li>
+                  <a href="https://www.blender.org/download/" target="_blank">
+                    <figure>
+                      <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                        <path d="m 49.15424,599.52895 a 50.360431,50.360431 0 0 0 -49.16137168,50.36043 v 200.24266 c 0,81.53594 68.34629768,149.88226 149.88223168,149.88226 h 700.2498 c 81.53593,0 149.8822,-68.34632 149.8822,-149.88226 V 649.88938 a 50.360431,50.360431 0 1 0 -100.72083,0 v 200.24266 c 0,27.57834 -21.58304,49.16138 -49.16137,49.16138 H 149.8751 c -27.57833,0 -49.16137,-21.58304 -49.16137,-49.16138 V 649.88938 A 50.360431,50.360431 0 0 0 49.15424,599.52895 Z M 249.3969,350.12491 a 50.360431,50.360431 0 0 0 -34.77267,85.13311 l 250.60309,249.40404 a 50.360431,50.360431 0 0 0 70.74442,0 L 785.37577,435.25802 A 50.360431,50.360431 0 1 0 714.63136,364.51361 L 500,579.14497 285.36864,364.51361 A 50.360431,50.360431 0 0 0 249.3969,350.12491 Z M 498.80094,0 A 50.360431,50.360431 0 0 0 449.63957,50.360432 V 649.88938 a 50.360431,50.360431 0 1 0 100.72086,0 V 50.360432 A 50.360431,50.360431 0 0 0 498.80094,0 Z" style="stroke-width:1.19906"></path>
+                      </svg>
+                    </figure>
+                    <div>
+                      <h4>Download</h4>
+                      <p>Get the latest Blender, older versions, or experimental builds.</p>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://www.blender.org/download/releases/" target="_blank">
+                    <div>
+                      <h4>What's New</h4>
+                      <p>Stay up-to-date with the new features in the latest Blender releases.</p>
+                    </div>
+                  </a>
+                </li>
+              </ul>
+
+              <h3>RESOURCES</h3>
+              <ul>
+                <li>
+                  <a href="https://studio.blender.org/" target="_blank">
+                    <figure>
+                      <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                        <path d="m 146.70939,1.6802353 c -78.362959,0 -143.678322,64.2057377 -143.6783209,143.6570547 -7.2533835,268.45385 0,463.93349 0,709.63356 0,79.45132 65.3153619,143.65705 143.6783209,143.65705 266.17757,0.51388 460.32009,0 709.61228,0 79.45134,0 143.67832,-64.20573 143.67832,-143.65705 0.37471,-118.45983 0,-235.03162 0,-353.72203 0.017,-0.72264 0.017,-1.4456 0,-2.16825 0.43351,-118.60776 0,-235.80643 0,-353.74328 0,-79.451317 -64.22698,-143.6570547 -143.67832,-143.6570547 -241.21275,-1.18614431 -498.91438,-0.041532 -709.61228,0 z m 0,90.3436617 h 82.71228 V 228.07083 H 93.374735 v -82.73354 c 0,-30.47448 22.860165,-53.313393 53.334655,-53.313393 z m 173.05594,0 h 363.5004 c -5.81542,127.740813 0,236.658243 0,362.416273 h -363.5004 c 0.39671,-121.62159 0,-241.06277 0,-362.416273 z m 453.84406,0 h 82.71228 c 30.4745,0 53.33466,22.838913 53.33466,53.313393 v 82.73354 H 773.60939 Z M 93.374735,318.39324 H 229.42167 V 454.44017 H 93.374735 Z m 680.234655,0 H 909.65633 V 454.44017 H 773.60939 Z M 93.374735,545.86796 H 229.42167 V 681.91489 H 93.374735 Z m 226.390595,0 h 363.5004 c -5.81534,127.74773 0,236.67164 0,362.43753 h -363.5004 c 0.3967,-121.62867 0,-241.07685 0,-362.43753 z m 453.84406,0 H 909.65633 V 681.91489 H 773.60939 Z M 93.374735,772.25856 H 229.42167 v 136.04693 h -82.71228 c -30.47449,0 -53.334655,-22.86016 -53.334655,-53.33464 z m 680.234655,0 h 136.04694 v 82.71229 c 0,30.47448 -22.86016,53.33464 -53.33466,53.33464 h -82.71228 z" style="stroke-width:1.08838"></path>
+                      </svg>
+                    </figure>
+                    <div>
+                      <h4>Blender Studio</h4>
+                      <p>Access production assets and knowledge from the open movies.</p>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://docs.blender.org/manual/en/latest/" target="_blank">
+                    <div>
+                      <h4>Manual</h4>
+                      <p>Documentation on the usage and features in Blender.</p>
+                    </div>
+                  </a>
+                </li>
+              </ul>
+
+              <h3>DEVELOPMENT</h3>
+              <ul>
+                <li>
+                  <a href="https://code.blender.org/" target="_blank">
+                    <figure>
+                      <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                        <path d="m 683.36434,818.19976 a 45.841084,45.841084 0 0 1 -33.83509,-13.09745 45.841084,45.841084 0 0 1 0,-64.39581 L 890.74067,499.49508 649.52925,259.37512 a 45.841084,45.841084 0 0 1 0,-64.39582 45.841084,45.841084 0 0 1 64.39581,0 l 272.8636,272.8636 a 45.841084,45.841084 0 0 1 0,64.39581 l -272.8636,272.8636 a 45.841084,45.841084 0 0 1 -30.56072,13.09745 z m -363.45431,0 A 45.841084,45.841084 0 0 1 286.07494,805.10231 L 13.211339,532.23871 a 45.841084,45.841084 0 0 1 0,-64.39581 L 286.07494,194.9793 a 45.841084,45.841084 0 0 1 64.39581,0 45.841084,45.841084 0 0 1 0,64.39582 L 109.25933,499.49508 350.47075,740.7065 a 45.841084,45.841084 0 0 1 0,64.39581 45.841084,45.841084 0 0 1 -30.56072,13.09745 z" style="stroke-width:1.09145"></path>
+                      </svg>
+                    </figure>
+                    <div>
+                      <h4>Developers Blog</h4>
+                      <p>Latest development updates, by Blender developers.</p>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://wiki.blender.org/" target="_blank">
+                    <div>
+                      <h4>Documentation</h4>
+                      <p>Guidelines, release notes and development docs.</p>
+                    </div>
+                  </a>
+                </li>
+              </ul>
+
+              <ul>
+                <li>
+                  <a href="https://opendata.blender.org/" target="_blank">
+                    <figure>
+                      <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                        <path d="M 499.99424,0 A 55.30474,55.30474 0 0 0 444.6895,55.30474 V 944.69526 A 55.30474,55.30474 0 0 0 499.99424,1000 55.30474,55.30474 0 0 0 555.29898,944.69526 V 55.30474 A 55.30474,55.30474 0 0 0 499.99424,0 Z m 332.95711,332.95711 a 55.30474,55.30474 0 0 0 -55.30474,56.43341 V 944.69526 A 55.30474,55.30474 0 0 0 832.95135,1000 55.30474,55.30474 0 0 0 888.25609,944.69526 V 389.39052 A 55.30474,55.30474 0 0 0 832.95135,332.95711 Z M 167.03713,555.30474 a 55.30474,55.30474 0 0 0 -55.30474,55.30474 V 944.69526 A 55.30474,55.30474 0 0 0 167.03713,1000 55.30474,55.30474 0 0 0 222.34187,944.69526 V 610.60948 a 55.30474,55.30474 0 0 0 -55.30474,-55.30474 z" style="stroke-width:1.12867"></path>
+                      </svg>
+                    </figure>
+                    <div>
+                      <h4>Benchmark</h4>
+                      <p>A platform to collect and share results of the Blender Benchmark.</p>
+                    </div>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://conference.blender.org/" target="_blank">
+                    <div>
+                      <h4>Blender Conference</h4>
+                      <p>The yearly event that brings the community together.</p>
+                    </div>
+                  </a>
+                </li>
+              </ul>
+
+              <div class="nav-global-apps-menu-section-donate">
+                <h3>DONATE</h3>
+                <ul>
+                  <li>
+                    <a href="https://fund.blender.org/" target="_blank">
+                      <figure>
+                        <svg class="nav-global-icon" height="100px" width="100px" viewBox="0 0 1000 1000">
+                          <path d="M 273.67169,58.416076 C 201.59785,62.59427 135.79129,94.975269 86.697523,145.11359 37.603742,194.20736 4.1781939,260.01391 0,332.08775 -4.1781926,403.11704 22.980065,480.41362 86.697523,545.17562 l 45.960127,45.96013 339.47823,338.43367 a 43.871033,43.871033 0 0 0 61.62835,0 L 872.1979,591.13575 918.15804,545.17562 c 109.67766,-110.72213 109.67766,-290.38445 0,-400.06203 -110.72213,-110.722127 -290.38445,-110.722127 -400.06204,0 l -15.66822,14.62368 -15.66822,-14.62368 C 423.04211,80.351592 345.74553,53.193334 273.67169,58.416076 Z m 5.22274,86.697514 c 48.04922,-3.13365 98.18754,12.53458 146.23677,60.5838 l 47.00468,47.00468 a 43.871033,43.871033 0 0 0 61.62835,0 l 45.96013,-47.00468 c 76.25204,-76.25203 199.50874,-76.25203 276.80532,0 77.29658,77.29658 77.29658,200.5533 0,277.84988 L 810.56956,529.50739 502.42778,837.64917 194.286,529.50739 148.32588,483.54727 C 100.27665,434.45349 84.608431,384.31516 86.697523,336.26594 c 3.133646,-47.00467 26.113717,-95.0539 61.628357,-130.56855 35.51464,-35.51464 82.51932,-58.49471 130.56855,-60.5838 z" style="stroke-width:1.04455"></path>
+                        </svg>
+                      </figure>
+                      <div>
+                        <h4>Development Fund</h4>
+                        <p>Support core development with a monthly contribution.</p>
+                      </div>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.blender.org/about/donations/" target="_blank">
+                      <div>
+                        <h4>One-time Donations</h4>
+                        <p>Perform a single donation with more payment options available.</p>
+                      </div>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<script defer="" src="/theme-javascripts/26371d452d8dc98bf86ca8414628515e654d3d69.js?__ws=devtalk.blender.org" data-theme-id="6" nonce="LhKgiSXANhjBJnS78uAbtvys7"></script>
+
+
+    <header>
+  <a href="/">Developer Forum</a>
+</header>
+
+    <div id="main-outlet" class="wrap" role="main">
+        <div id="topic-title">
+    <h1>
+      <a href="/t/gpl-license-discussion-blender-forks-e-cycles-or-any-other-fork/15551">GPL license discussion &amp; Blender Forks (E-Cycles or any other fork)</a>
+    </h1>
+
+      <div class="topic-category" itemscope itemtype="http://schema.org/BreadcrumbList">
+          <span itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <a href="/c/other-topics/17" class="badge-wrapper bullet" itemprop="item">
+              <span class='badge-category-bg' style='background-color: #0E76BD'></span>
+              <span class='badge-category clear-badge'>
+                <span class='category-name' itemprop='name'>Archive</span>
+              </span>
+            </a>
+            <meta itemprop="position" content="1" />
+          </span>
+      </div>
+
+  </div>
+
+  
+
+    <div itemscope="itemscope" itemtype="http://schema.org/DiscussionForumPosting">
+      <meta itemprop='headline' content='GPL license discussion &amp; Blender Forks (E-Cycles or any other fork)'>
+      <link itemprop='url' href='https://devtalk.blender.org/t/gpl-license-discussion-blender-forks-e-cycles-or-any-other-fork/15551'>
+      <meta itemprop='datePublished' content='2020-09-27T13:17:26Z'>
+      <meta itemprop='keywords' content=''>
+          <meta itemprop='articleSection' content='Archive'>
+        <div itemprop='publisher' itemscope itemtype="http://schema.org/Organization">
+          <meta itemprop='name' content='Blender Foundation'>
+        </div>
+
+
+
+          <div id='post_1'  class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/xan2622'><span itemprop="name">xan2622</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/xan2622'>
+                
+              </span>
+
+                <link itemprop="mainEntityOfPage" href="https://devtalk.blender.org/t/gpl-license-discussion-blender-forks-e-cycles-or-any-other-fork/15551">
+
+
+              <span class="crawler-post-infos">
+                  <time  datetime='2020-09-27T13:17:26Z' class='post-time'>
+                    September 27, 2020,  1:17pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-28T19:04:39Z'>
+              <span itemprop="position">1</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Original message: <a href="https://devtalk.blender.org/t/cycles-requests/3729/87" class="inline-onebox">Cycles Requests - #87 by coder.kalyan</a></p>
+<aside class="quote no-group" data-username="coder.kalyan" data-post="87" data-topic="3729" data-full="true">
+<div class="title">
+<div class="quote-controls"></div>
+<img loading="lazy" alt="" width="24" height="24" src="https://devtalk.blender.org/letter_avatar_proxy/v4/letter/c/dfb087/48.png" class="avatar"><a href="https://devtalk.blender.org/t/cycles-requests/3729/87">Cycles Requests</a></div>
+<blockquote>
+<p>I’m not suggesting anything illegal here, but does anyone have any idea how E-Cycles is able to be SO MUCH FASTER on Nvidia cards than mainstream cycles is? The forum says “more efficient use of CUDA cores” but what does this mean? The magnitude of optimization integrated into regular cycles would be a lifesaver for me since I’m not in the position to spend on E-Cycles.</p>
+</blockquote>
+</aside>
+<p>There is nothing illegal or to be ashamed of about discussing about open-source softwares.<br>
+Both Blender and E-Cycles are released under the GPL license.</p>
+<p>This license allows everyone to legally reuse, modify, share and even (re)sell the source code of the softwares or addons (free or commercial) that are released under this licence.</p>
+<p><img src="https://devtalk.blender.org/images/emoji/twitter/link.png?v=12" title=":link:" class="emoji" alt=":link:" loading="lazy" width="20" height="20">  <a href="https://www.blender.org/about/license/" rel="noopener nofollow ugc">Sharing or selling Blender add-ons (Python scripts)</a></p>
+<p>BTW, that’s what <strong>bliblubli (mathieu)</strong>, the author of E-Cycles, did. He forked Blender, he has improved Cycles and he has been selling E-Cycles ever since.</p>
+<p>In theory, nothing prevents developers to reuse the source code from E-Cycles and implement it into Blender. But it seems that they prefer not to disturb Mathieu’s business, which is respectful for him.</p>
+<aside class="quote no-group quote-modified" data-username="lsscpp" data-post="88" data-topic="3729" data-full="true">
+<div class="title">
+<div class="quote-controls"></div>
+<img loading="lazy" alt="" width="24" height="24" src="https://devtalk.blender.org/user_avatar/devtalk.blender.org/lsscpp/48/471_2.png" class="avatar"><a href="https://devtalk.blender.org/t/cycles-requests/3729/88">Cycles Requests</a></div>
+<blockquote>
+<p>And btw he’s going to release the code to blender foundation when E-cycles will be 1 year old. Probably many of those optimizations, if not all, will end in master builds. You’ll just have to (as always <img src="https://devtalk.blender.org/images/emoji/twitter/slight_smile.png?v=12" title=":slight_smile:" class="emoji" alt=":slight_smile:" loading="lazy" width="20" height="20"> ) wait.</p>
+</blockquote>
+</aside>
+<p>It seems that Mathieu has changed his mind…</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="2" />
+                <span class='post-likes'>2 Likes</span>
+              </div>
+
+                <div class='crawler-linkback-list'>
+                    <div>
+                      <a href="https://devtalk.blender.org/t/monetization-of-upbge-game/16060/3">Monetization of upbge game</a>
+                    </div>
+                    <div>
+                      <a href="https://devtalk.blender.org/t/cycles-requests/3729/246">Cycles Requests</a>
+                    </div>
+                    <div>
+                      <a href="https://devtalk.blender.org/t/monetization-of-upbge-game/16060/26">Monetization of upbge game</a>
+                    </div>
+                    <div>
+                      <a href="https://devtalk.blender.org/t/monetization-of-upbge-game/16060/17">Monetization of upbge game</a>
+                    </div>
+                    <div>
+                      <a href="https://devtalk.blender.org/t/cycles-requests/3729/285">Cycles Requests</a>
+                    </div>
+                </div>
+
+            
+
+
+          </div>
+          <div id='post_2' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T16:20:10Z' class='post-time'>
+                    September 27, 2020,  4:20pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T16:21:05Z'>
+              <span itemprop="position">2</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>I’m curious about the E-Cycles code, I would like to take a look into it, I assume that since it’s GPL it’s public and anyone can ask for it, am I right?<br>
+As far as I know any user of the binary licensed under GPL can ask for the code, I tested it and now I’m curious about the code.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="3" />
+                <span class='post-likes'>3 Likes</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_4' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/Hadriscus'><span itemprop="name">Hadriscus</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/Hadriscus'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T17:11:40Z' class='post-time'>
+                    September 27, 2020,  5:11pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T17:11:40Z'>
+              <span itemprop="position">4</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>He does, from the point where he decides to release it.<br>
+<em>cf</em> <a href="https://www.gnu.org/licenses/gpl-faq.en.html#GPLRequireSourcePostedPublic">https://www.gnu.org/licenses/gpl-faq.en.html#GPLRequireSourcePostedPublic</a></p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="2" />
+                <span class='post-likes'>2 Likes</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_5' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T17:25:25Z' class='post-time'>
+                    September 27, 2020,  5:25pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T17:25:25Z'>
+              <span itemprop="position">5</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Since it’s GPL he has to provide the source code to any user of the binary, no matter of that user paid for it or not, and I tested it, hence I’m a user of the binary, and no, he cannot charge for the code, if he wants to charge for the code then it’s not open source but closed source, and he would be breaking the GPL</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="2" />
+                <span class='post-likes'>2 Likes</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_6' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/xan2622'><span itemprop="name">xan2622</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/xan2622'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T17:28:43Z' class='post-time'>
+                    September 27, 2020,  5:28pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T17:28:43Z'>
+              <span itemprop="position">6</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Interesting replies following this post : <a href="https://blenderartists.org/t/e-cycles-2x-faster-100-compatible-with-cycles/1139717/160" rel="nofollow noopener">https://blenderartists.org/t/e-cycles-2x-faster-100-compatible-with-cycles/1139717/160</a></p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_7' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+                <link itemprop="image" href="https://devtalk.blender.org/uploads/default/original/3X/2/4/2412a8715d79a25e80f7693e41825106dc90b11e.png">
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T17:32:39Z' class='post-time'>
+                    September 27, 2020,  5:32pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T17:32:39Z'>
+              <span itemprop="position">7</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>And this is a public place… or not??</p><aside class="onebox allowlistedgeneric" data-onebox-src="https://blendermarket.com/products/e-cycles">
+  <header class="source">
+      <img src="https://devtalk.blender.org/uploads/default/original/3X/a/4/a4f537e49d632975006301e6e42f8e6627251606.png" class="site-icon" data-dominant-color="454142" width="32" height="32">
+
+      <a href="https://blendermarket.com/products/e-cycles" target="_blank" rel="noopener nofollow ugc">Blender Market</a>
+  </header>
+
+  <article class="onebox-body">
+    <div class="aspect-image" style="--aspect-ratio:690/345;"><img src="https://devtalk.blender.org/uploads/default/optimized/3X/2/4/2412a8715d79a25e80f7693e41825106dc90b11e_2_690x345.png" class="thumbnail" data-dominant-color="5C362D" width="690" height="345"></div>
+
+<h3><a href="https://blendermarket.com/products/e-cycles" target="_blank" rel="noopener nofollow ugc">E-Cycles Render Engine</a></h3>
+
+  <p>The fastest and easiest photorealistic render engine for Blender. 100% compatible with the Cycles render engine, you can use all your materials and add-ons while rendering up to 8x faster at comparable quality. Features state of the art denoising...</p>
+
+  <p>
+    <span class="label1">Price: From $1.00</span>
+  </p>
+
+  </article>
+
+  <div class="onebox-metadata">
+    
+    
+  </div>
+
+  <div style="clear: both"></div>
+</aside>
+
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_8' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+                <link itemprop="image" href="https://devtalk.blender.org/uploads/default/original/3X/c/d/cd7f5fadb877ff82782c838186bc7feb4b1b20cd.png">
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T17:40:07Z' class='post-time'>
+                    September 27, 2020,  5:40pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T17:40:07Z'>
+              <span itemprop="position">8</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p><div class="lightbox-wrapper"><a class="lightbox" href="https://devtalk.blender.org/uploads/default/original/3X/c/d/cd7f5fadb877ff82782c838186bc7feb4b1b20cd.png" data-download-href="https://devtalk.blender.org/uploads/default/cd7f5fadb877ff82782c838186bc7feb4b1b20cd" title="imagen"><img src="https://devtalk.blender.org/uploads/default/optimized/3X/c/d/cd7f5fadb877ff82782c838186bc7feb4b1b20cd_2_690x149.png" alt="imagen" data-base62-sha1="tjUMghVo2wiUyZbkQs3iO7mweiV" width="690" height="149" srcset="https://devtalk.blender.org/uploads/default/optimized/3X/c/d/cd7f5fadb877ff82782c838186bc7feb4b1b20cd_2_690x149.png, https://devtalk.blender.org/uploads/default/optimized/3X/c/d/cd7f5fadb877ff82782c838186bc7feb4b1b20cd_2_1035x223.png 1.5x, https://devtalk.blender.org/uploads/default/original/3X/c/d/cd7f5fadb877ff82782c838186bc7feb4b1b20cd.png 2x" data-dominant-color="EBEEEB"><div class="meta"><svg class="fa d-icon d-icon-far-image svg-icon" aria-hidden="true"><use href="#far-image"></use></svg><span class="filename">imagen</span><span class="informations">1127×244 42.4 KB</span><svg class="fa d-icon d-icon-discourse-expand svg-icon" aria-hidden="true"><use href="#discourse-expand"></use></svg></div></a></div></p>
+<p>E-Cycles it’s a modified version of Blender, so even if a user is not an E-Cycles user, it has the right to ask for the code, since the original code was under GPL, and was not done by him</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="1" />
+                <span class='post-likes'>1 Like</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_9' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/Hadriscus'><span itemprop="name">Hadriscus</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/Hadriscus'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T18:10:54Z' class='post-time'>
+                    September 27, 2020,  6:10pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T18:10:54Z'>
+              <span itemprop="position">9</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Oh but if I remember correctly Cycles is licensed under Apache, isn’t it ?</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="1" />
+                <span class='post-likes'>1 Like</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_10' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T18:17:18Z' class='post-time'>
+                    September 27, 2020,  6:17pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T18:17:18Z'>
+              <span itemprop="position">10</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>GPL its a virus License you get something GPL, your code will be GPL, Blender its GPL (No Apache),so any thing that contains Blender must be GPL. Cycles its Apache , (Apache License v2) but E-Cycles its a blender branch…</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="1" />
+                <span class='post-likes'>1 Like</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_11' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/Hadriscus'><span itemprop="name">Hadriscus</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/Hadriscus'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T19:47:21Z' class='post-time'>
+                    September 27, 2020,  7:47pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T19:47:21Z'>
+              <span itemprop="position">11</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>I don’t know, Blender and Cycles are intertwined together. It’s not like he forked “Cycles standalone” after all. I’m going to refrain from making assumptions as I’m no licensing nerd, because that could go on forever.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_12' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+                <link itemprop="image" href="https://devtalk.blender.org/uploads/default/original/3X/9/1/9192b203af2287fb1093e1b0fb2e0bf8b06d8161.png">
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T20:01:35Z' class='post-time'>
+                    September 27, 2020,  8:01pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T20:01:35Z'>
+              <span itemprop="position">12</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Cycles Standalone = apache, Blender GPL , Blender+Cycles = GPL you want to use “Only” Cycles  in your code , yo can do what you want cause its Apache license, you want use Blender+Cycles , you are infected be GPL…<br>
+Why Blender can use Cycles??? cause Apache licensed let you do it. E-cycles only use Cycles ??? or a Cycles and Blender?</p>
+<aside class="onebox allowlistedgeneric" data-onebox-src="https://www.apache.org/foundation/license-faq.html">
+  <header class="source">
+      <img src="https://devtalk.blender.org/uploads/default/original/3X/0/c/0c95050f7071cab20a31a00045fa8f259e2764b4.png" class="site-icon" data-dominant-color="BF3543" width="32" height="32">
+
+      <a href="https://www.apache.org/foundation/license-faq.html" target="_blank" rel="noopener nofollow ugc">apache.org</a>
+  </header>
+
+  <article class="onebox-body">
+    
+
+<h3><a href="https://www.apache.org/foundation/license-faq.html" target="_blank" rel="noopener nofollow ugc">Apache Licensing and Distribution FAQ</a></h3>
+
+  <p>Home page of The Apache Software Foundation</p>
+
+
+  </article>
+
+  <div class="onebox-metadata">
+    
+    
+  </div>
+
+  <div style="clear: both"></div>
+</aside>
+
+<p><div class="lightbox-wrapper"><a class="lightbox" href="https://devtalk.blender.org/uploads/default/original/3X/9/1/9192b203af2287fb1093e1b0fb2e0bf8b06d8161.png" data-download-href="https://devtalk.blender.org/uploads/default/9192b203af2287fb1093e1b0fb2e0bf8b06d8161" title="imagen"><img src="https://devtalk.blender.org/uploads/default/optimized/3X/9/1/9192b203af2287fb1093e1b0fb2e0bf8b06d8161_2_690x113.png" alt="imagen" data-base62-sha1="kLNwEdShfDJ7cxSvNu2cRmoZYul" width="690" height="113" srcset="https://devtalk.blender.org/uploads/default/optimized/3X/9/1/9192b203af2287fb1093e1b0fb2e0bf8b06d8161_2_690x113.png, https://devtalk.blender.org/uploads/default/optimized/3X/9/1/9192b203af2287fb1093e1b0fb2e0bf8b06d8161_2_1035x169.png 1.5x, https://devtalk.blender.org/uploads/default/original/3X/9/1/9192b203af2287fb1093e1b0fb2e0bf8b06d8161.png 2x" data-dominant-color="E8EAED"><div class="meta"><svg class="fa d-icon d-icon-far-image svg-icon" aria-hidden="true"><use href="#far-image"></use></svg><span class="filename">imagen</span><span class="informations">1154×190 26.6 KB</span><svg class="fa d-icon d-icon-discourse-expand svg-icon" aria-hidden="true"><use href="#discourse-expand"></use></svg></div></a></div></p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_13' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/Hadriscus'><span itemprop="name">Hadriscus</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/Hadriscus'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T20:16:24Z' class='post-time'>
+                    September 27, 2020,  8:16pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T20:16:24Z'>
+              <span itemprop="position">13</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <aside class="quote no-group" data-username="SavMartin" data-post="12" data-topic="15551">
+<div class="title">
+<div class="quote-controls"></div>
+<img loading="lazy" alt="" width="24" height="24" src="https://devtalk.blender.org/user_avatar/devtalk.blender.org/savmartin/48/45514_2.png" class="avatar"> SavMartin:</div>
+<blockquote>
+<p>Blender+Cycles = GPL</p>
+</blockquote>
+</aside>
+<p>Are you entirely sure about this ? or are separately-licensed parts of the code still subject to the terms of each individual license when forked/changed ? (that’s what I would expect)</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="1" />
+                <span class='post-likes'>1 Like</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_14' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T20:20:46Z' class='post-time'>
+                    September 27, 2020,  8:20pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T20:20:46Z'>
+              <span itemprop="position">14</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>100% Sure, that’s why the GPL is the most used license in open source ,because once you use it you can never escape from it.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_15' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+                <link itemprop="image" href="https://devtalk.blender.org/uploads/default/original/3X/5/3/53f4bbc447b13ea2268399e1127bcba84cca04f1.png">
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T20:23:39Z' class='post-time'>
+                    September 27, 2020,  8:23pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T20:23:39Z'>
+              <span itemprop="position">15</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p><a href="http://www.gnu.org/licenses/gpl-faq.en.html#WhyUseGPL" class="onebox" target="_blank" rel="noopener nofollow ugc">http://www.gnu.org/licenses/gpl-faq.en.html#WhyUseGPL</a><br>
+<div class="lightbox-wrapper"><a class="lightbox" href="https://devtalk.blender.org/uploads/default/original/3X/5/3/53f4bbc447b13ea2268399e1127bcba84cca04f1.png" data-download-href="https://devtalk.blender.org/uploads/default/53f4bbc447b13ea2268399e1127bcba84cca04f1" title="imagen"><img src="https://devtalk.blender.org/uploads/default/optimized/3X/5/3/53f4bbc447b13ea2268399e1127bcba84cca04f1_2_690x103.png" alt="imagen" data-base62-sha1="bYHY57JBeK3ZEZynis9Cg6Cw74Z" width="690" height="103" srcset="https://devtalk.blender.org/uploads/default/optimized/3X/5/3/53f4bbc447b13ea2268399e1127bcba84cca04f1_2_690x103.png, https://devtalk.blender.org/uploads/default/optimized/3X/5/3/53f4bbc447b13ea2268399e1127bcba84cca04f1_2_1035x154.png 1.5x, https://devtalk.blender.org/uploads/default/original/3X/5/3/53f4bbc447b13ea2268399e1127bcba84cca04f1.png 2x" data-dominant-color="EDF1EF"><div class="meta"><svg class="fa d-icon d-icon-far-image svg-icon" aria-hidden="true"><use href="#far-image"></use></svg><span class="filename">imagen</span><span class="informations">1126×169 26.7 KB</span><svg class="fa d-icon d-icon-discourse-expand svg-icon" aria-hidden="true"><use href="#discourse-expand"></use></svg></div></a></div></p>
+<p><div class="lightbox-wrapper"><a class="lightbox" href="https://devtalk.blender.org/uploads/default/original/3X/3/1/3180970ab418721c1d25e1f1aa1752a6632d8a00.jpeg" data-download-href="https://devtalk.blender.org/uploads/default/3180970ab418721c1d25e1f1aa1752a6632d8a00" title="imagen"><img src="https://devtalk.blender.org/uploads/default/optimized/3X/3/1/3180970ab418721c1d25e1f1aa1752a6632d8a00_2_377x500.jpeg" alt="imagen" data-base62-sha1="73UTJgg3vF9NB8cHEvOdSMjkzIY" width="377" height="500" srcset="https://devtalk.blender.org/uploads/default/optimized/3X/3/1/3180970ab418721c1d25e1f1aa1752a6632d8a00_2_377x500.jpeg, https://devtalk.blender.org/uploads/default/optimized/3X/3/1/3180970ab418721c1d25e1f1aa1752a6632d8a00_2_565x750.jpeg 1.5x, https://devtalk.blender.org/uploads/default/original/3X/3/1/3180970ab418721c1d25e1f1aa1752a6632d8a00.jpeg 2x" data-dominant-color="AAACA4"><div class="meta"><svg class="fa d-icon d-icon-far-image svg-icon" aria-hidden="true"><use href="#far-image"></use></svg><span class="filename">imagen</span><span class="informations">588×779 206 KB</span><svg class="fa d-icon d-icon-discourse-expand svg-icon" aria-hidden="true"><use href="#discourse-expand"></use></svg></div></a></div></p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_16' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T20:27:55Z' class='post-time'>
+                    September 27, 2020,  8:27pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T20:27:55Z'>
+              <span itemprop="position">16</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>The key is to make it public</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_17' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/Hadriscus'><span itemprop="name">Hadriscus</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/Hadriscus'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T20:36:26Z' class='post-time'>
+                    September 27, 2020,  8:36pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T20:36:26Z'>
+              <span itemprop="position">17</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Alright I think I understand. So even Cycles, which is originally Apache, “becomes GPL” <em>if released alongside software that is GPL</em> (like Blender) ? So in this case, Mathieu is bound to release the source for his Cycles fork ?</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_18' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/DeepBlender'><span itemprop="name">DeepBlender</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/DeepBlender'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T20:55:59Z' class='post-time'>
+                    September 27, 2020,  8:55pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T20:55:59Z'>
+              <span itemprop="position">18</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>I don’t think this is the right place for a license discussion.</p>
+<p>And to clarify: Only users of the modified program (E-Cycles users) need to be given access to the modified source code. (I am not a lawyer though!)</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_19' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/Hadriscus'><span itemprop="name">Hadriscus</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/Hadriscus'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T21:14:27Z' class='post-time'>
+                    September 27, 2020,  9:14pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T21:14:27Z'>
+              <span itemprop="position">19</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Oh, sorry. Yes maybe this could use some clarifying from actual lawyers specialized in software.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="1" />
+                <span class='post-likes'>1 Like</span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_20' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T21:15:11Z' class='post-time'>
+                    September 27, 2020,  9:15pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T21:15:11Z'>
+              <span itemprop="position">20</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>After all this…<br>
+I’m curious about the E-Cycles code, I would like to take a look into it, I assume that since it’s GPL it’s public and anyone can ask for it, am I right?<br>
+As far as I know any user of the binary licensed under GPL can ask for the code, I tested it and now I’m curious about the code.<br>
+<a class="mention" href="/u/brecht">@brecht</a> , <a class="mention" href="/u/dfelinto">@dfelinto</a>,  <a class="mention" href="/u/mathieu">@mathieu</a>.</p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+          <div id='post_21' itemprop="comment" itemscope="itemscope" itemtype="http://schema.org/Comment" class='topic-body crawler-post'>
+            <div class='crawler-post-meta'>
+              <span class="creator" itemprop="author" itemscope="itemscope" itemtype="http://schema.org/Person">
+                <a rel='nofollow' href='https://devtalk.blender.org/u/SavMartin'><span itemprop="name">SavMartin</span></a>
+                  <meta itemprop='url' content='https://devtalk.blender.org/u/SavMartin'>
+                
+              </span>
+
+
+
+              <span class="crawler-post-infos">
+                  <time itemprop="datePublished" datetime='2020-09-27T21:20:05Z' class='post-time'>
+                    September 27, 2020,  9:20pm
+                  </time>
+                  <meta itemprop='dateModified' content='2020-09-27T21:20:05Z'>
+              <span itemprop="position">21</span>
+              </span>
+            </div>
+            <div class='post' itemprop="text">
+              <p>Just read, is very very clear, the copyright is respected as should be respected the GPL, any way not to respect the licenses in my country has a name and is piracy.<br>
+<a href="http://www.gnu.org/licenses/gpl-3.0.html" class="onebox" target="_blank" rel="nofollow noopener">http://www.gnu.org/licenses/gpl-3.0.html</a></p>
+            </div>
+
+              <div itemprop="interactionStatistic" itemscope="itemscope" itemtype="http://schema.org/InteractionCounter">
+                  <meta itemprop="interactionType" content="http://schema.org/LikeAction"/>
+                  <meta itemprop="userInteractionCount" content="0" />
+                <span class='post-likes'></span>
+              </div>
+
+
+            
+
+
+          </div>
+
+    </div>
+
+      <div role='navigation' itemscope itemtype='http://schema.org/SiteNavigationElement' class="topic-body crawler-post">
+            <span itemprop='name'><b><a rel="next" itemprop="url" href="/t/gpl-license-discussion-blender-forks-e-cycles-or-any-other-fork/15551?page=2">next page →</a></b></span>
+      </div>
+
+    
+
+
+
+
+    </div>
+    <footer class="container wrap">
+  <nav class='crawler-nav'>
+    <ul>
+      <li itemscope itemtype='http://schema.org/SiteNavigationElement'>
+        <span itemprop='name'>
+          <a href='/' itemprop="url">Home </a>
+        </span>
+      </li>
+      <li itemscope itemtype='http://schema.org/SiteNavigationElement'>
+        <span itemprop='name'>
+          <a href='/categories' itemprop="url">Categories </a>
+        </span>
+      </li>
+      <li itemscope itemtype='http://schema.org/SiteNavigationElement'>
+        <span itemprop='name'>
+          <a href='/guidelines' itemprop="url">Guidelines </a>
+        </span>
+      </li>
+        <li itemscope itemtype='http://schema.org/SiteNavigationElement'>
+          <span itemprop='name'>
+            <a href='/tos' itemprop="url">Terms of Service </a>
+          </span>
+        </li>
+        <li itemscope itemtype='http://schema.org/SiteNavigationElement'>
+          <span itemprop='name'>
+            <a href='/privacy' itemprop="url">Privacy Policy </a>
+          </span>
+        </li>
+    </ul>
+  </nav>
+  <p class='powered-by-link'>Powered by <a href="https://www.discourse.org">Discourse</a>, best viewed with JavaScript enabled</p>
+</footer>
+
+    
+    
+  <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" nonce="LhKgiSXANhjBJnS78uAbtvys7" data-cf-beacon='{"version":"2024.11.0","token":"d5f49e4e21684977a6be2ac49670f7b1","spa":2}' crossorigin="anonymous"></script>
+</body>
+  
+</html>
