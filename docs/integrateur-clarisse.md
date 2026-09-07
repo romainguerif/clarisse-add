@@ -1148,24 +1148,26 @@ alternées dans le temps**. Retirer le temporel divise son échantillonnage par 
 
 ## 8. La feuille de route
 
-**0. Mesurer le baseline.** Rendre l'**AOV d'indirect diffus seul** à 16, 64 et
-256 échantillons, et regarder comment le bruit descend. Une heure, et ça chiffre
-tout le reste. *(L'indirect est la faiblesse historique de Clarisse — c'est le
-point de départ du projet.)*
+**Le point de départ est acquis, pas à démontrer.** L'indirect est la faiblesse
+de Clarisse. Dix ans d'usage le disent ; ce document n'a pas à le remesurer, et
+le rendu coûte de l'argent. Ce qui suit part de là.
 
-**0 bis. Allumer l'échantillonnage adaptatif déjà présent — zéro ligne de C++.**
-Voir §2.5. Se fait dans le même rendu que l'étape 0, en variante. Si le gain est
-là, il recalibre tout ce qui suit, et il est acquis sans écrire un intégrateur.
+**0. Allumer l'échantillonnage adaptatif déjà présent — zéro ligne de C++.**
+Voir §2.5. Tout le mécanisme est écrit, y compris le filtrage de la carte de
+variance et la métrique perceptuelle ; un seul attribut à zéro le désactive.
+C'est le premier geste parce que c'est le seul qui ne demande rien.
+
 Piège documenté par Hyperion : sans clamp de l'estimation de variance, les
 fireflies aspirent tout le budget — d'où `refinement_variance_filter` et le mode
-`Contrast`.
+`Contrast`. Et la limite avouée de leur propre implémentation : un rendu à
+128 spp n'a que **trois** occasions de s'adapter, après 16, 32 et 64.
 
-**0 ter. Instrumenter la sélection de lumières native.** Sur une scène à
-quelques dizaines de milliers d'émetteurs, compter les rayons d'ombre par point
-d'ombrage. **Si le nombre croît avec le nombre de lumières**, la stratégie est
-la boucle par lumière, celle que Hyperion mesure **9,4× plus lente** que
-l'uniforme à 4,9 M de lumières — et l'étape 5 devient le plus gros gain
-disponible, chiffré et prouvé.
+**0 bis. Instrumenter la sélection de lumières native.** Compter les rayons
+d'ombre par point d'ombrage sur une scène à beaucoup d'émetteurs. **Si le nombre
+croît avec le nombre de lumières**, la stratégie est la boucle par lumière, celle
+que Hyperion mesure **9,4× plus lente** que l'uniforme à 4,9 M de lumières — et
+l'étape 5 devient le plus gros gain disponible. C'est de l'instrumentation, pas
+un banc d'essai : ça se lit dans un compteur, pas dans une série de rendus.
 
 **1. L'intégrateur miroir.** Reproduire le path tracer natif à l'identique,
 validé image par image. Sans lui, aucune comparaison n'est possible. Avis
@@ -1279,5 +1281,6 @@ Tout est permissif et lisible.
 - Aucun chiffre pour le light tree de Cycles ni pour l'adaptive light sampling de
   MoonRay.
 - Le comparatif de 3Delight date de 2016 et est publié par le vendeur.
-- La qualité réelle de l'intégrateur natif de Clarisse. **C'est l'inconnue
-  centrale, et l'étape 0 la lève.**
+
+Ce qui **n'est pas** une inconnue, et qu'il ne faut pas re-questionner : la
+faiblesse de Clarisse en indirect. C'est le constat qui fonde le projet.
