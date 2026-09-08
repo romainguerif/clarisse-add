@@ -55,13 +55,17 @@ VCVARS = (r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
 #
 # ix_ctx : CtxDraw, le trace 2D des outils interactifs dans le viewport.
 #
+# ix_app : AppObject et AppSelection. La selection courante vit dans la couche
+# application, pas dans le graphe d'objets -- un node qui veut lire ce que
+# l'utilisateur a selectionne doit y descendre.
+#
 # ix_resource : ResourceData, la base de tout ce qu'un module rend depuis
 # create_resource. PolyMesh s'en passe -- ix_poly reexporte ce qu'il faut --
 # mais ParticleCloud non : sa vtable reclame ResourceData::is_serializable, qui
 # ne vit que la.
 LIBS = ["ix_module", "ix_of", "ix_dso", "ix_core", "ix_gui", "ix_event",
         "ix_image", "ix_raytrace", "ix_poly", "ix_gmath", "ix_geometry", "ix_particle",
-        "ix_resource", "ix_ctx"]
+        "ix_resource", "ix_ctx", "ix_app"]
 
 # Les bibliotheques du systeme, que le linker trouve tout seul une fois
 # vcvarsall passe. opengl32 sert aux modules qui tracent dans le viewport :

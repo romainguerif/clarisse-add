@@ -361,6 +361,61 @@ public:
         return true;
     }
 
+    // Variante ou chaque portee pend comme un cable reel. Un cable tendu entre
+    // deux points ne suit jamais la corde : il decrit une chainette, et c'est
+    // cette difference-la qui fait lire « cable » plutot que « tige ».
+    //
+    // On la resout exactement plutot que de la simuler. Les outils du marche
+    // font tourner un solveur physique sur quelques centaines d'images, sans
+    // collision, et il faut le relancer a chaque deplacement ; ici c'est une
+    // equation scalaire, quatre iterations de Newton, reevaluee par le graphe
+    // comme n'importe quel autre attribut.
+    //
+    // `slack` est le mou : 0,05 veut dire cinq pour cent de longueur de cable
+    // en plus que la distance entre les deux points d'accroche. C'est un
+    // rapport, donc le reglage survit au deplacement d'un locator -- ce qui ne
+    // serait pas le cas d'une longueur absolue, ni du parametre `a` de la
+    // chainette, dont la valeur ne veut rien dire hors de sa portee.
+    bool
+    build_catenary(const CoreVector<GMathVec3d>& cv, const bool& closed,
+                   const double& slack, const GMathVec3d& gravity,
+                   unsigned int steps)
+    {
+        m_closed = closed;
+        if (steps < 2u) steps = 2u;
+
+        const unsigned int n = cv.get_count();
+        if (n < 2u) return false;
+
+        const GMathVec3d up = vnorm(vscale(gravity, -1.0));
+        const unsigned int span_count = closed ? n : n - 1u;
+
+        CoreVector<GMathVec3d> pts;
+        for (unsigned int s = 0; s < span_count; s++) {
+            const GMathVec3d& a = cv[s];
+            const GMathVec3d& b = cv[(s + 1u) % n];
+            sample_span(a, b, up, slack, steps, pts, s == 0u);
+        }
+        if (!closed) pts.add(cv[n - 1u]);
+
+        const unsigned int count = pts.get_count();
+        if (count < 2u) return false;
+
+        m_position.resize(count);
+        for (unsigned int i = 0; i < count; i++) m_position[i] = pts[i];
+
+        m_tangent.resize(count);
+        for (unsigned int i = 0; i < count; i++) {
+            const unsigned int prev = (i == 0u) ? (closed ? count - 1u : 0u) : i - 1u;
+            const unsigned int next = (i + 1u >= count) ? (closed ? 0u : count - 1u)
+                                                       : i + 1u;
+            m_tangent[i] = vnorm(vsub(m_position[next], m_position[prev]));
+        }
+
+        finalize();
+        return true;
+    }
+
     inline unsigned int get_sample_count() const { return m_position.get_count(); }
     inline const GMathVec3d& get_position(const unsigned int& i) const { return m_position[i]; }
     inline const GMathVec3d& get_tangent(const unsigned int& i) const { return m_tangent[i]; }
@@ -463,6 +518,85 @@ public:
     }
 
 private:
+    // Le parametre `a` d'une chainette qui relie deux appuis distants de `span`
+    // a l'horizontale et de `rise` a la verticale, avec `length` de cable.
+    //
+    // L'equation des deux appuis a hauteurs differentes se ramene a celle du
+    // cas de niveau en remplacant la longueur par sqrt(S^2 - h^2) : un seul
+    // solveur couvre les deux. En posant u = span/(2a), elle devient
+    // sinh(u)/u = r, dont la fonction est strictement croissante -- donc une
+    // racine et une seule. C'est cette forme qu'il faut resoudre : ecrite
+    // directement en `a`, elle a une racine parasite en zero ou Newton se perd.
+    static double
+    solve_catenary(const double& span, const double& rise, const double& length)
+    {
+        const double effective = length * length - rise * rise;
+        if (effective <= 0.0 || span <= 1e-9) return 0.0;
+
+        const double r = sqrt(effective) / span;
+        if (r <= 1.0 + 1e-9) return 0.0;   // cable tendu : pas de mou a repartir
+
+        // Le developpement sinh(u)/u = 1 + u^2/6 + ... donne une amorce tres
+        // bonne pour les mous usuels, de l'ordre de quelques pour cent.
+        double u = sqrt(6.0 * (r - 1.0));
+        if (u < 1e-6) u = 1e-6;
+
+        for (unsigned int i = 0; i < 40u; i++) {
+            const double sh = sinh(u);
+            const double ch = cosh(u);
+            const double f = sh / u - r;
+            if (f > -1e-12 && f < 1e-12) break;
+            const double df = (u * ch - sh) / (u * u);
+            if (df < 1e-12) break;
+            const double next = u - f / df;
+            u = (next > 1e-9) ? next : u * 0.5;
+        }
+        return span / (2.0 * u);
+    }
+
+    // Les echantillons d'une portee qui pend. `first` dit s'il faut poser aussi
+    // le point de depart : sur les portees suivantes il est deja la, pose par
+    // la precedente.
+    static void
+    sample_span(const GMathVec3d& a, const GMathVec3d& b, const GMathVec3d& up,
+                const double& slack, const unsigned int& steps,
+                CoreVector<GMathVec3d>& out, const bool& first)
+    {
+        const GMathVec3d delta = vsub(b, a);
+        const double rise = vdot(delta, up);
+        const GMathVec3d horizontal = vsub(delta, vscale(up, rise));
+        const double span = horizontal.get_length();
+        const double chord = delta.get_length();
+
+        const double length = chord * (1.0 + ((slack > 0.0) ? slack : 0.0));
+        const double param = (span > 1e-9) ? solve_catenary(span, rise, length) : 0.0;
+
+        if (param <= 0.0) {
+            // Portee tendue, ou deux appuis a la verticale l'un de l'autre : il
+            // n'existe alors aucun plan de chainette, on relie droit.
+            if (first) out.add(a);
+            for (unsigned int i = 1; i < steps; i++) {
+                out.add(vlerp(a, b, double(i) / double(steps)));
+            }
+            return;
+        }
+
+        const GMathVec3d e_x = vscale(horizontal, 1.0 / span);
+
+        // Le point bas n'est pas au milieu de la portee : il se decale vers
+        // l'appui le plus bas, d'autant plus que le denivele est grand.
+        const double m = atanh(rise / length);
+        const double x1 = param * m - span * 0.5;
+        const double y1 = param * cosh(x1 / param);
+
+        if (first) out.add(a);
+        for (unsigned int i = 1; i < steps; i++) {
+            const double x = x1 + span * double(i) / double(steps);
+            const double y = param * cosh(x / param);
+            out.add(vadd(a, vadd(vscale(e_x, x - x1), vscale(up, y - y1))));
+        }
+    }
+
     // Le repere et les longueurs cumulees, une fois les positions et les
     // tangentes en place. Commun aux deux facons de construire la courbe.
     void
@@ -535,7 +669,23 @@ build_from_object(OfObject& object, Path& path)
                        ? (unsigned int) steps_attr->get_long() : 8u;
 
     const OfAttr *interpolation = object.get_attribute("interpolation");
-    if (interpolation != 0 && interpolation->get_long() == 1) {
+    const long mode = (interpolation != 0) ? interpolation->get_long() : 0;
+
+    if (mode == 2) {
+        const OfAttr *slack_attr = object.get_attribute("slack");
+        const OfAttr *gravity_attr = object.get_attribute("gravity");
+        GMathVec3d gravity(0.0, -1.0, 0.0);
+        if (gravity_attr != 0) {
+            gravity = GMathVec3d(gravity_attr->get_double(0),
+                                 gravity_attr->get_double(1),
+                                 gravity_attr->get_double(2));
+        }
+        return path.build_catenary(cv, closed,
+                                   (slack_attr != 0) ? slack_attr->get_double() : 0.05,
+                                   gravity, steps);
+    }
+
+    if (mode == 1) {
         const OfAttr *bend = object.get_attribute("bend_radius");
         const double fallback = (bend != 0) ? bend->get_double() : 0.0;
 

@@ -61,7 +61,7 @@ protected:
         static const char *const names[] = {
             "control_points", "closed", "steps", "mode", "count", "spacing",
             "offset", "include_last", "normal_source", "lateral_offset",
-            "interpolation", "bend_radius"
+            "interpolation", "bend_radius", "slack", "gravity"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
 

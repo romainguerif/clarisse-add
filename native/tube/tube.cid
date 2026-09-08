@@ -30,6 +30,10 @@ class "GeometryTube" "GeometryPolymesh" {
             doc "Ajoute un point de controle au bout de la courbe, dans le prolongement du dernier segment."
         }
 
+        action "add_selected" {
+            doc "Ajoute a la courbe tous les items selectionnes dans la scene, dans l'ordre de selection. C'est le geste habituel : on pose ses locators ou on les selectionne, puis on clique ici."
+        }
+
         action "draw_points" {
             doc "Invoque la plume pour poser les points directement dans la vue."
         }
@@ -45,6 +49,7 @@ class "GeometryTube" "GeometryPolymesh" {
             doc "Lisse fait passer une courbe douce par les points. Coudes relie les points par des segments droits raccordes par des arcs, comme la tuyauterie."
             preset "Lisse" "0"
             preset "Coudes" "1"
+            preset "Cable qui pend" "2"
             value 0
         }
 
@@ -55,6 +60,22 @@ class "GeometryTube" "GeometryPolymesh" {
             numeric_range yes 0.0 1000000
             ui_range yes 0.0 5
             value 0.3
+        }
+
+        percentage "slack" {
+            output "geometry"
+            doc "Mou du cable, en fraction de la distance entre deux points d'accroche. 5 pour cent veut dire cinq pour cent de longueur en plus que la ligne droite. C'est un rapport, donc le reglage tient quand on deplace un point."
+            animatable yes
+            numeric_range yes 0.0 10
+            ui_range yes 0.0 0.5
+            value 0.05
+        }
+
+        double[3] "gravity" {
+            output "geometry"
+            doc "Direction vers laquelle le cable pend."
+            animatable yes
+            value 0.0 -1 0.0
         }
 
         long "steps" {

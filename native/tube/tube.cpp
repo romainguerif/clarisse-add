@@ -31,6 +31,10 @@
 #include <of_object_factory.h>
 #include <of_context.h>
 #include <of_item.h>
+#include <of_item_handle.h>
+
+#include <app_object.h>
+#include <app_selection.h>
 #include <of_attr.h>
 #include <of_class.h>
 #include <of_action.h>
@@ -70,7 +74,7 @@ protected:
 
         static const char *const names[] = {
             "point", "bend", "closed", "steps", "radius", "radius_profile",
-            "sides", "cap", "strands", "twist", "interpolation", "bend_radius"
+            "sides", "cap", "strands", "twist", "interpolation", "bend_radius", "slack", "gravity"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
 
@@ -364,6 +368,46 @@ on_add_point_add_point_action(const OfAction& action, OfObject& object, void *da
     if (bend != 0) {
         bend->set_value_count(count + 1u);
         bend->set_double(-1.0, count);
+    }
+    return 1;
+}
+
+static int
+on_add_selected_add_selected_action(const OfAction& action, OfObject& object,
+                                    void *data)
+{
+    OfAttr *points = object.get_attribute("point");
+    if (points == 0) return 0;
+
+    // AppObject derive de OfApp : la selection vit dans la couche application,
+    // pas dans le graphe d'objets, d'ou le passage par la factory puis le cast.
+    AppObject *app = CoreBaseObject::cast<AppObject>(
+        &object.get_factory().get_application());
+    if (app == 0) return 0;
+
+    AppSelection& selection = app->get_selection();
+    const unsigned int selected = selection.get_count();
+    if (selected == 0u) return 0;
+
+    OfAttr *bend = object.get_attribute("bend");
+    unsigned int row = points->get_value_count();
+
+    for (unsigned int i = 0; i < selected; i++) {
+        OfItem *item = selection.get_item(i).get_ptr();
+        if (item == 0 || !item->is_object()) continue;
+
+        OfObject *candidate = item->to_object();
+        // Se prendre soi-meme comme point de controle ferait une dependance
+        // circulaire, et Clarisse ne la signale pas toujours proprement.
+        if (candidate == 0 || candidate == &object) continue;
+
+        points->set_value_count(row + 1u);
+        points->set_object(candidate, row);
+        if (bend != 0) {
+            bend->set_value_count(row + 1u);
+            bend->set_double(-1.0, row);
+        }
+        row++;
     }
     return 1;
 }
