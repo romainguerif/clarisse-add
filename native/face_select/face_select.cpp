@@ -7,18 +7,27 @@
 // exactement quelles faces il veut, et ou aucune regle ne les decrira : c'est
 // meme le cas courant. Cet outil-la remplit sa table d'indices.
 //
-// Deux choix expliquent sa forme.
+// Quatre choses expliquent sa forme, et la premiere est celle qui manquait a la
+// premiere version.
 //
-// Il vit dans la barre d'outils, pas dans un node. Un outil enferme dans un
-// node ne sert que ce node ; celui-ci ecrit dans celui qu'on lui designe, et il
-// servira demain a tout ce qui aura besoin de faces -- une extrusion, un
-// materiau par face, un decoupage.
+// **Le pre-surlignage.** La face sous le curseur s'allume avant qu'on clique.
+// C'est le retour visuel qui rend une selection utilisable : sans lui on
+// designe a l'aveugle, et on ne sait meme pas si l'outil est vivant. C'est la
+// convention de Modo, et elle est la bonne -- on voit ce qu'on va prendre avant
+// de le prendre.
 //
-// Il lance ses rayons lui-meme, en force brute sur le maillage vise, plutot que
-// d'interroger la structure d'acceleration de Clarisse. Un clic, c'est un
-// rayon : meme sur un million de faces, la boucle tient en quelques
-// millisecondes, et on ne depend d'aucune API dont on n'aurait pas verifie le
-// comportement en dehors du rendu.
+// **Les faces choisies sont remplies, pas seulement cerclees**, et poussees
+// vers l'oeil par un decalage de profondeur. Un contour seul se perd dans le
+// maillage et clignote contre la surface qu'il epouse.
+//
+// **Les gestes sont ceux de tout le monde** : clic pour remplacer, Maj pour
+// ajouter, Ctrl pour retirer, glisser pour peindre.
+//
+// **Il lance ses rayons lui-meme**, en force brute sur le maillage vise, plutot
+// que d'interroger la structure d'acceleration de Clarisse : un clic est un
+// rayon, et on ne depend d'aucune API dont on n'aurait pas verifie le
+// comportement hors du rendu. Le maillage reste en cache entre deux evenements,
+// sans quoi le survol relirait toute la geometrie a chaque pixel parcouru.
 
 // windows.h avant GL/gl.h : l'en-tete OpenGL de Microsoft ne declare ni
 // WINGDIAPI ni APIENTRY, il les attend. Les deux gardes evitent au passage que
@@ -56,7 +65,10 @@
 #include <gmath_view_point.h>
 
 #include <core_array.h>
+#include <core_string.h>
 #include <core_vector.h>
+
+#include <stdio.h>
 
 #include <face_select.cma>
 
@@ -80,6 +92,22 @@ inline double
 vdot(const GMathVec3d& a, const GMathVec3d& b)
 {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+// Le nom demande s'il est libre, sinon le meme suivi d'un nombre. `add_object`
+// rend zero quand le nom est pris, et on incremente jusqu'a ce qu'il accepte.
+OfObject *
+add_unique(OfContext& context, const char *base, const char *class_name)
+{
+    CoreString name(base);
+    for (unsigned int i = 1; i < 100000u; i++) {
+        OfObject *created = context.add_object(name, class_name);
+        if (created != 0) return created;
+        char buffer[128];
+        snprintf(buffer, sizeof(buffer), "%s%u", base, i);
+        name = CoreString(buffer);
+    }
+    return 0;
 }
 
 // Moller-Trumbore. On garde le determinant signe pour savoir de quel cote on
@@ -116,26 +144,102 @@ ray_triangle(const GMathVec3d& origin, const GMathVec3d& direction,
 
 class FaceSelectModule : public ModuleTool {
 public:
-    FaceSelectModule() : ModuleTool(), m_painting(false), m_removing(false) {}
+    FaceSelectModule()
+        : ModuleTool(), m_source(0), m_hovered(-1),
+          m_painting(false), m_removing(false) {}
 
+    // Le maillage en cache. Le survol interroge la geometrie a chaque pixel
+    // parcouru : la relire a chaque fois rendrait l'outil inutilisable des le
+    // premier maillage serieux.
+    OfObject *m_source;
+    CoreVector<GMathVec3d> m_points;
+    CoreArray<unsigned int> m_face_indices;
+    CoreArray<unsigned int> m_face_sizes;
+    CoreArray<unsigned int> m_face_starts;
+
+    int m_hovered;
     bool m_painting;
     bool m_removing;
 
-    // Le maillage vise, ramene en coordonnees du monde. On le relit a chaque
-    // geste : l'objet peut avoir bouge, et une selection posee sur une position
-    // perimee tomberait a cote sans rien dire.
-    bool
-    read_mesh(CoreVector<GMathVec3d>& points,
-              CoreArray<unsigned int>& face_indices,
-              CoreArray<unsigned int>& face_sizes) const
+    // Le node de selection a remplir. Peut ne pas exister encore : l'outil sait
+    // en creer un au premier clic, comme la plume cree sa courbe.
+    OfObject *
+    get_select_node() const
     {
-        OfObject *select = get_target();
-        if (select == 0) return false;
+        OfObject *object = get_object();
+        if (object == 0) return 0;
+        OfAttr *attr = object->get_attribute("target");
+        if (attr == 0) return 0;
+        OfObject *named = attr->get_object();
+        if (named != 0 && named->get_attribute("index") != 0) return named;
+        return 0;
+    }
 
-        OfAttr *input = select->get_attribute("input_geometry");
-        if (input == 0) return false;
-        OfObject *source = input->get_object();
-        if (source == 0) return false;
+    // La geometrie contre laquelle on lance les rayons : soit l'entree du node
+    // de selection, soit -- si l'artiste a pointe directement un maillage -- ce
+    // maillage lui-meme.
+    OfObject *
+    get_mesh_source() const
+    {
+        OfObject *select = get_select_node();
+        if (select != 0) {
+            OfAttr *input = select->get_attribute("input_geometry");
+            return (input != 0) ? input->get_object() : 0;
+        }
+
+        OfObject *object = get_object();
+        if (object == 0) return 0;
+        OfAttr *attr = object->get_attribute("target");
+        if (attr == 0) return 0;
+        OfObject *named = attr->get_object();
+        if (named == 0) return 0;
+        return (named->get_module<ModuleGeometry>() != 0) ? named : 0;
+    }
+
+    // Cree le node de selection manquant et l'insere derriere le maillage.
+    // C'est ce qui permet de pointer une geometrie nue et de cliquer : demander
+    // a l'artiste de monter le graphe d'abord serait une friction pour rien.
+    OfObject *
+    create_select_node(OfObject& mesh)
+    {
+        OfObject *object = get_object();
+        if (object == 0) return 0;
+
+        OfContext& context = mesh.get_context();
+        OfObject *created = add_unique(context, "selection", "GeometrySelect");
+        if (created == 0) return 0;
+
+        OfAttr *input = created->get_attribute("input_geometry");
+        if (input != 0) input->set_object(&mesh);
+
+        // Sans ce mode, la table se remplirait sans que rien n'en sorte : le
+        // node ignore sa liste par defaut, et l'artiste ne verrait aucun effet.
+        OfAttr *mode = created->get_attribute("list_mode");
+        if (mode != 0) mode->set_long(1);
+
+        OfAttr *target = object->get_attribute("target");
+        if (target != 0) target->set_object(created);
+        return created;
+    }
+
+    // Relit le maillage si la source a change, ou si on le demande. Les debuts
+    // de face sont calcules ici une bonne fois : sans eux, surligner la n-ieme
+    // face demanderait de reparcourir la table d'indices depuis le debut.
+    bool
+    refresh(const bool& force)
+    {
+        OfObject *source = get_mesh_source();
+        if (source == 0) {
+            m_source = 0;
+            m_points.remove_all();
+            return false;
+        }
+        if (!force && source == m_source && m_points.get_count() > 0u) {
+            return true;
+        }
+
+        m_source = source;
+        m_points.remove_all();
 
         ModuleGeometry *module = source->get_module<ModuleGeometry>();
         if (module == 0) return false;
@@ -143,12 +247,11 @@ public:
         if (geometry == 0) return false;
         const PolyMesh *mesh = CoreBaseObject::cast<PolyMesh>(geometry);
         if (mesh == 0) return false;
-
         const GeometryPointCloud *cloud = mesh->get_point_cloud();
         if (cloud == 0) return false;
 
-        mesh->get_polygon_vertex_indices(face_indices);
-        mesh->get_polygon_vertex_count(face_sizes);
+        mesh->get_polygon_vertex_indices(m_face_indices);
+        mesh->get_polygon_vertex_count(m_face_sizes);
 
         ModuleSceneItem *item = source->get_module<ModuleSceneItem>();
         const GMathMatrix4x4d *matrix =
@@ -165,25 +268,16 @@ public:
                 GMathMatrix4x4d::multiply(transformed, world, *matrix);
                 world = transformed;
             }
-            points.add(world);
+            m_points.add(world);
         }
-        return points.get_count() > 0u;
-    }
 
-    OfObject *
-    get_target() const
-    {
-        OfObject *object = get_object();
-        if (object == 0) return 0;
-
-        OfAttr *attr = object->get_attribute("target");
-        if (attr != 0) {
-            OfObject *named = attr->get_object();
-            // On n'accepte qu'un node qui sait recevoir une liste de faces :
-            // pointer autre chose serait une erreur silencieuse.
-            if (named != 0 && named->get_attribute("index") != 0) return named;
+        m_face_starts.resize(m_face_sizes.get_count());
+        unsigned int cursor = 0u;
+        for (unsigned int f = 0; f < m_face_sizes.get_count(); f++) {
+            m_face_starts[f] = cursor;
+            cursor += m_face_sizes[f];
         }
-        return 0;
+        return m_points.get_count() > 0u;
     }
 
     static bool
@@ -228,13 +322,9 @@ public:
         return true;
     }
 
-    // La face sous le curseur, ou -1. Force brute : un clic est un rayon, et
-    // meme un million de faces se balaye en quelques millisecondes.
+    // La face sous le curseur, ou -1.
     int
     pick_face(const CtxTool& ctx, const int& px, const int& py,
-              const CoreVector<GMathVec3d>& points,
-              const CoreArray<unsigned int>& face_indices,
-              const CoreArray<unsigned int>& face_sizes,
               const bool& backfaces) const
     {
         GMathVec3d origin, direction;
@@ -242,24 +332,22 @@ public:
 
         int best = -1;
         double nearest = 1e30;
-        unsigned int cursor = 0u;
 
-        for (unsigned int f = 0; f < face_sizes.get_count(); f++) {
-            const unsigned int sides = face_sizes[f];
-            const unsigned int base = cursor;
-            cursor += sides;
+        for (unsigned int f = 0; f < m_face_sizes.get_count(); f++) {
+            const unsigned int sides = m_face_sizes[f];
+            const unsigned int base = m_face_starts[f];
             if (sides < 3u) continue;
 
             // Un eventail depuis le premier sommet : ca suffit pour un test
-            // d'intersection, meme sur une face gauche ou concave -- au pire on
-            // manque une sliver, jamais une face franche.
+            // d'intersection, meme sur une face gauche -- au pire on manque une
+            // sliver, jamais une face franche.
             for (unsigned int s = 1; s + 1u < sides; s++) {
                 double distance;
                 bool front;
                 if (!ray_triangle(origin, direction,
-                                  points[face_indices[base]],
-                                  points[face_indices[base + s]],
-                                  points[face_indices[base + s + 1u]],
+                                  m_points[m_face_indices[base]],
+                                  m_points[m_face_indices[base + s]],
+                                  m_points[m_face_indices[base + s + 1u]],
                                   distance, front)) {
                     continue;
                 }
@@ -270,12 +358,37 @@ public:
         return best;
     }
 
-    // Ajoute ou retire un indice dans la table du node vise.
-    void
-    toggle_face(OfObject& target, const unsigned int& face, const bool& remove)
+    static OfAttr *
+    list_attr(OfObject& target)
     {
         OfAttr *attr = target.get_attribute("index");
         if (attr == 0) attr = target.get_attribute("faces");
+        return attr;
+    }
+
+    static bool
+    is_selected(OfObject& target, const unsigned int& face)
+    {
+        OfAttr *attr = list_attr(target);
+        if (attr == 0) return false;
+        const unsigned int count = attr->get_value_count();
+        for (unsigned int i = 0; i < count; i++) {
+            if (attr->get_long(i) == long(face)) return true;
+        }
+        return false;
+    }
+
+    static void
+    clear_list(OfObject& target)
+    {
+        OfAttr *attr = list_attr(target);
+        if (attr != 0) attr->set_value_count(0u);
+    }
+
+    static void
+    set_face(OfObject& target, const unsigned int& face, const bool& remove)
+    {
+        OfAttr *attr = list_attr(target);
         if (attr == 0) return;
 
         const unsigned int count = attr->get_value_count();
@@ -298,6 +411,21 @@ public:
         if (found >= 0) return;
         attr->set_value_count(count + 1u);
         attr->set_long(long(face), count);
+    }
+
+    // Le contour d'une face, tel quel. Sert au remplissage comme au trace : une
+    // face de capitonnage peut avoir n'importe quel nombre de cotes.
+    void
+    emit_face(const unsigned int& face, const unsigned int& primitive) const
+    {
+        const unsigned int sides = m_face_sizes[face];
+        const unsigned int base = m_face_starts[face];
+        glBegin(primitive);
+        for (unsigned int s = 0; s < sides; s++) {
+            const GMathVec3d& p = m_points[m_face_indices[base + s]];
+            glVertex3d(p[0], p[1], p[2]);
+        }
+        glEnd();
     }
 };
 
@@ -347,17 +475,35 @@ IX_MODULE_CLBK::process_event(OfObject& object, CtxTool& ctx, const CtxToolEvent
     FaceSelectModule *module = object.get_module<FaceSelectModule>();
     if (module == 0) return 0;
 
-    OfObject *target = module->get_target();
-    if (target == 0) return 0;
+    const OfAttr *back = object.get_attribute("backfaces");
+    const bool backfaces = (back != 0) && back->get_bool();
+
+    // --- le survol ---------------------------------------------------------
+    //
+    // C'est ce qui manquait, et c'est lui qui rend l'outil utilisable : on voit
+    // ce qu'on va prendre avant de le prendre. Il ne consomme pas l'evenement,
+    // pour laisser la vue se comporter normalement.
+    if (evt.id == EVT_ID_MOUSE_MOVE) {
+        int face = -1;
+        if (module->refresh(false)) {
+            face = module->pick_face(ctx, ctx.gl.x, ctx.gl.y, backfaces);
+        }
+        if (face != module->m_hovered) {
+            module->m_hovered = face;
+            ctx.feedback.redraw = true;
+        }
+        return 0;
+    }
+
+    if (evt.id == EVT_ID_MOUSE_UP) {
+        const bool was = module->m_painting;
+        module->m_painting = false;
+        ctx.feedback.is_view_point_locked = false;
+        return was ? 1 : 0;
+    }
 
     const bool is_down = (evt.id == EVT_ID_MOUSE_DOWN);
     const bool is_drag = (evt.id == EVT_ID_MOUSE_DRAG);
-
-    if (evt.id == EVT_ID_MOUSE_UP) {
-        module->m_painting = false;
-        return module->m_painting ? 1 : 0;
-    }
-
     if (!is_down && !is_drag) return 0;
     if (is_drag && !module->m_painting) return 0;
     if (is_down && !evt.mouse.is_left_button()) return 0;
@@ -366,28 +512,45 @@ IX_MODULE_CLBK::process_event(OfObject& object, CtxTool& ctx, const CtxToolEvent
     const bool paint = (paint_attr == 0) || paint_attr->get_bool();
     if (is_drag && !paint) return 0;
 
-    if (is_down) {
-        // Ctrl retire, toujours. C'est le raccourci qu'on a dans les doigts, et
-        // il doit primer sur le reglage du node.
-        const OfAttr *mode = object.get_attribute("mode");
-        module->m_removing = (mode != 0 && mode->get_long() == 1);
-        if (evt.keyboard.is_modifier_ctrl()) module->m_removing = true;
-        module->m_painting = true;
-        ctx.feedback.is_view_point_locked = true;
+    OfObject *target = module->get_select_node();
+    if (target == 0) {
+        OfObject *mesh = module->get_mesh_source();
+        if (mesh == 0) return 0;
+        target = module->create_select_node(*mesh);
+        if (target == 0) return 0;
     }
 
-    CoreVector<GMathVec3d> points;
-    CoreArray<unsigned int> face_indices;
-    CoreArray<unsigned int> face_sizes;
-    if (!module->read_mesh(points, face_indices, face_sizes)) return 0;
+    if (is_down) {
+        // Les gestes de tout le monde : Maj ajoute, Ctrl retire, un clic seul
+        // remplace. Le reglage du node ne sert que de defaut.
+        const OfAttr *mode = object.get_attribute("mode");
+        module->m_removing = (mode != 0 && mode->get_long() == 1);
 
-    const OfAttr *back = object.get_attribute("backfaces");
-    const int face = module->pick_face(ctx, ctx.gl.x, ctx.gl.y, points,
-                                       face_indices, face_sizes,
-                                       (back != 0) && back->get_bool());
-    if (face < 0) return 1;
+        if (evt.keyboard.is_modifier_ctrl()) {
+            module->m_removing = true;
+        } else if (evt.keyboard.is_modifier_shift()) {
+            module->m_removing = false;
+        } else if (!module->m_removing) {
+            // Clic simple : on repart de zero, comme partout ailleurs.
+            FaceSelectModule::clear_list(*target);
+        }
 
-    module->toggle_face(*target, (unsigned int) face, module->m_removing);
+        module->m_painting = true;
+        ctx.feedback.is_view_point_locked = true;
+        // La geometrie a pu bouger ou etre reconstruite depuis le survol : on
+        // la relit avant d'agir, jamais avant de simplement survoler.
+        module->refresh(true);
+    }
+
+    const int face = module->pick_face(ctx, ctx.gl.x, ctx.gl.y, backfaces);
+    if (face < 0) {
+        ctx.feedback.redraw = true;
+        return 1;
+    }
+
+    FaceSelectModule::set_face(*target, (unsigned int) face,
+                               module->m_removing);
+    module->m_hovered = face;
     ctx.feedback.redraw = true;
     return 1;
 }
@@ -400,28 +563,7 @@ IX_MODULE_CLBK::draw_tool_3d(OfObject& object, CtxTool& ctx)
 
     const OfAttr *show = object.get_attribute("show_selection");
     if (show != 0 && !show->get_bool()) return;
-
-    OfObject *target = module->get_target();
-    if (target == 0) return;
-
-    OfAttr *list = target->get_attribute("index");
-    if (list == 0) list = target->get_attribute("faces");
-    if (list == 0 || list->get_value_count() == 0u) return;
-
-    CoreVector<GMathVec3d> points;
-    CoreArray<unsigned int> face_indices;
-    CoreArray<unsigned int> face_sizes;
-    if (!module->read_mesh(points, face_indices, face_sizes)) return;
-
-    // Les debuts de chaque face dans la table d'indices. On les calcule une
-    // fois : sans ca, surligner la n-ieme face demanderait de reparcourir tout
-    // le maillage depuis le debut.
-    CoreArray<unsigned int> starts(face_sizes.get_count());
-    unsigned int cursor = 0u;
-    for (unsigned int f = 0; f < face_sizes.get_count(); f++) {
-        starts[f] = cursor;
-        cursor += face_sizes[f];
-    }
+    if (!module->refresh(false)) return;
 
     double color[3] = { 1.0, 0.55, 0.1 };
     const OfAttr *color_attr = object.get_attribute("highlight_color");
@@ -429,22 +571,57 @@ IX_MODULE_CLBK::draw_tool_3d(OfObject& object, CtxTool& ctx)
         for (unsigned int i = 0; i < 3; i++) color[i] = color_attr->get_double(i);
     }
 
-    glDisable(GL_LIGHTING);
-    glColor3d(color[0], color[1], color[2]);
-    glLineWidth(2.0f);
+    // On sauve tout ce qu'on touche : laisser l'etat GL sale abimerait le reste
+    // du dessin du viewport, et le symptome serait incomprehensible.
+    glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT | GL_POLYGON_BIT
+                 | GL_LINE_BIT | GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-    const unsigned int rows = list->get_value_count();
-    for (unsigned int r = 0; r < rows; r++) {
-        const long face = list->get_long(r);
-        if (face < 0 || (unsigned long) face >= face_sizes.get_count()) continue;
-        const unsigned int sides = face_sizes[face];
-        const unsigned int base = starts[face];
-        glBegin(GL_LINE_LOOP);
-        for (unsigned int s = 0; s < sides; s++) {
-            const GMathVec3d& p = points[face_indices[base + s]];
-            glVertex3d(p[0], p[1], p[2]);
+    glDisable(GL_LIGHTING);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    // Le decalage de profondeur pousse le surlignage vers l'oeil. Sans lui il
+    // se battrait avec la surface qu'il recouvre et clignoterait.
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(-2.0f, -2.0f);
+
+    const unsigned int faces = module->m_face_sizes.get_count();
+    OfObject *target = module->get_select_node();
+    OfAttr *list = (target != 0) ? FaceSelectModule::list_attr(*target) : 0;
+
+    if (list != 0) {
+        const unsigned int rows = list->get_value_count();
+
+        glColor4d(color[0], color[1], color[2], 0.45);
+        for (unsigned int r = 0; r < rows; r++) {
+            const long face = list->get_long(r);
+            if (face < 0 || (unsigned long) face >= faces) continue;
+            module->emit_face((unsigned int) face, GL_POLYGON);
         }
-        glEnd();
+
+        glLineWidth(2.0f);
+        glColor4d(color[0], color[1], color[2], 1.0);
+        for (unsigned int r = 0; r < rows; r++) {
+            const long face = list->get_long(r);
+            if (face < 0 || (unsigned long) face >= faces) continue;
+            module->emit_face((unsigned int) face, GL_LINE_LOOP);
+        }
     }
-    glLineWidth(1.0f);
+
+    // La face survolee, plus claire et plus transparente : on doit la
+    // distinguer d'une face deja prise sans qu'elle lui vole la vedette.
+    if (module->m_hovered >= 0 && (unsigned int) module->m_hovered < faces) {
+        const bool already = (target != 0)
+            && FaceSelectModule::is_selected(*target,
+                                             (unsigned int) module->m_hovered);
+        glColor4d(1.0, already ? 1.0 : 0.95, already ? 1.0 : 0.7, 0.30);
+        module->emit_face((unsigned int) module->m_hovered, GL_POLYGON);
+
+        glLineWidth(1.5f);
+        glColor4d(1.0, 1.0, 1.0, 0.9);
+        module->emit_face((unsigned int) module->m_hovered, GL_LINE_LOOP);
+    }
+
+    glPopAttrib();
 }
