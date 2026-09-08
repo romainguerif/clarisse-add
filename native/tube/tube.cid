@@ -339,4 +339,59 @@ class "GeometryTube" "GeometryPolymesh" {
             value yes
         }
     }
+
+    attribute_group "beads" {
+        doc "Les gouttelettes le long du fil. Un fil de soie collante ne porte pas une pellicule uniforme : la colle se rassemble en chapelet, parce qu'un cylindre de liquide a plus de surface -- donc plus d'energie -- qu'une file de spheres de meme volume. C'est la meme instabilite qui coupe un filet d'eau en gouttes. Sert aussi bien aux grumeaux d'une fibre etiree qu'a la rosee sur un cable."
+
+        distance "bead_spacing" {
+            output "geometry"
+            doc "Distance entre deux perles, le long de la courbe. A zero, aucune perle. La mesure se fait sur la longueur reelle et non sur le parametre : deux tubes de longueurs differentes portent donc des gouttes de meme taille et de meme espacement."
+            animatable yes
+            ui_range yes 0.0 2
+            value 0.0
+        }
+
+        double "bead_size" {
+            output "geometry"
+            doc "De combien le rayon enfle a l'endroit d'une perle. A 1 il n'enfle pas. Le fil garde son epaisseur entre les gouttes : c'est le contraste entre les deux qui fait lire la colle."
+            animatable yes
+            numeric_range yes 1 50
+            ui_range yes 1 8
+            value 3
+        }
+
+        percentage "bead_width" {
+            output "geometry"
+            doc "Part de l'intervalle occupee par la goutte. Le reste est du fil nu, et c'est ce contraste qui la fait lire comme une goutte plutot que comme un renflement -- a 1 les bosses se rejoignent en pointe et le fil ressemble a un chapelet de fuseaux.\n\nA zero, la largeur est deduite pour que la goutte soit exactement ronde : sa longueur egale alors son diametre. C'est le reglage a laisser en place tant qu'on ne veut pas precisement autre chose, parce que la bonne valeur depend a la fois de l'espacement, de la taille et du rayon du fil."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.8
+            value 0.0
+        }
+
+        double "bead_sharpness" {
+            output "geometry"
+            doc "Galbe de la goutte. A un, c'est le profil exact d'une sphere que le fil traverse -- une vraie gouttelette. Au-dessus elle s'arrondit et s'aplatit du dessus ; en dessous elle s'effile en fuseau. La largeur, elle, se regle au-dessus."
+            animatable yes
+            numeric_range yes 0.1 8
+            ui_range yes 0.4 3
+            value 1
+        }
+
+        percentage "bead_variation" {
+            output "geometry"
+            doc "Irregularite de taille et de position des perles. A zero le chapelet est parfaitement regulier et se lit comme une decoration ; ce sont les irregularites qui font croire a de la matiere."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.8
+            value 0.35
+        }
+
+        long "bead_seed" {
+            output "geometry"
+            doc "Change le tirage des perles sans changer leur caractere."
+            numeric_range yes 0.0 1000000
+            value 0
+        }
+    }
 }

@@ -58,6 +58,77 @@
 
 using namespace curve_core;
 
+
+namespace {
+
+// Un tirage stable a partir d'un entier : la meme perle garde sa taille d'une
+// evaluation a l'autre, et d'une machine a l'autre.
+inline double
+bead_hash(const double& index, const unsigned int& seed)
+{
+    unsigned int h = (unsigned int)(long long)(index * 2654435761.0)
+                   ^ (seed * 2246822519u);
+    h ^= h >> 16;
+    h *= 0x85ebca6bu;
+    h ^= h >> 13;
+    h *= 0xc2b2ae35u;
+    h ^= h >> 16;
+    return double(h) / 4294967296.0;
+}
+
+// Le facteur de rayon du a la perle qui se trouve a cette abscisse. Les perles
+// sont posees le long de la courbe et non le long du parametre : deux tubes de
+// longueurs differentes doivent porter des gouttes de la meme taille et du meme
+// espacement, sans quoi le reglage ne veut rien dire.
+inline double
+bead_scale(const double& arc, const double& spacing, const double& size,
+           const double& width, const double& radius, const double& sharpness,
+           const double& variation, const unsigned int& seed)
+{
+    if (spacing <= 1e-9 || size <= 1.0) return 1.0;
+
+    // Largeur deduite : une goutte n'est ronde que si sa longueur egale son
+    // diametre. Le diametre vaut deux fois le renflement, soit deux fois le
+    // rayon multiplie par la taille moins un ; rapporte a l'espacement, ca
+    // donne la fraction cherchee.
+    double span = width;
+    if (span <= 1e-6) {
+        span = 2.0 * radius * (size - 1.0) / spacing;
+        if (span > 1.0) span = 1.0;
+    }
+
+    const double u = arc / spacing;
+    const double index = floor(u);
+    const double phase = u - index;
+
+    // Chaque perle a sa place et sa taille propres. Un chapelet parfaitement
+    // regulier se lit comme une decoration ; ce sont les irregularites qui font
+    // croire a de la matiere.
+    const double shift = (bead_hash(index, seed) - 0.5) * variation;
+    const double amount =
+        1.0 + (bead_hash(index + 104729.0, seed) - 0.5) * 2.0 * variation;
+    if (amount <= 0.0) return 1.0;
+
+    // La goutte n'occupe qu'une fraction de l'intervalle : le reste est du fil
+    // nu, et c'est ce contraste qui la fait lire comme une goutte plutot que
+    // comme un renflement. Sans cette largeur, deux bosses voisines se
+    // rejoignent en pointe et le fil ressemble a un chapelet de fuseaux.
+    double x = (phase - 0.5 - shift) / ((span > 1e-6) ? span : 1e-6);
+    if (x < -0.5 || x > 0.5) return 1.0;
+
+    // Le profil d'une sphere traversee par le fil : racine de un moins le
+    // carre. Il rejoint le fil avec une tangente verticale, ce qui donne une
+    // goutte ; un cosinus y arriverait en biais et donnerait un losange.
+    const double half = 2.0 * x;
+    double bump = 1.0 - half * half;
+    if (bump <= 0.0) return 1.0;
+    bump = pow(bump, 0.5 / ((sharpness > 1e-6) ? sharpness : 1e-6));
+
+    return 1.0 + (size - 1.0) * amount * bump;
+}
+
+} // namespace
+
 class TubeModule : public ModulePolymesh {
 public:
     TubeModule() : ModulePolymesh() {}
@@ -79,7 +150,9 @@ protected:
             "sides", "cap", "strands", "twist", "strand_gap", "strand_noise", "strand_sag", "strand_spread",
             "strand_spread_frequency", "wrap_radius", "wrap_turns",
             "wrap_variation", "wrap_variation_frequency", "wrap_sag", "wrap_seed",
-            "strand_noise_frequency", "interpolation", "bend_radius", "slack", "gravity", "trim_start", "trim_end"
+            "strand_noise_frequency", "interpolation", "bend_radius", "slack", "gravity", "trim_start", "trim_end",
+            "bead_size", "bead_spacing", "bead_width", "bead_sharpness",
+            "bead_variation", "bead_seed"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
 
@@ -131,6 +204,26 @@ private:
         const bool closed = object->get_attribute("closed")->get_bool();
         const bool cap = object->get_attribute("cap")->get_bool() && !closed;
         const OfAttr *profile = object->get_attribute("radius_profile");
+
+        // Les perles. Lues une fois : elles ne changent pas le long du tube.
+        const OfAttr *bead_size_attr = object->get_attribute("bead_size");
+        const OfAttr *bead_spacing_attr = object->get_attribute("bead_spacing");
+        const OfAttr *bead_width_attr = object->get_attribute("bead_width");
+        const OfAttr *bead_sharp_attr = object->get_attribute("bead_sharpness");
+        const OfAttr *bead_var_attr = object->get_attribute("bead_variation");
+        const OfAttr *bead_seed_attr = object->get_attribute("bead_seed");
+        const double bead_size =
+            (bead_size_attr != 0) ? bead_size_attr->get_double() : 1.0;
+        const double bead_spacing =
+            (bead_spacing_attr != 0) ? bead_spacing_attr->get_double() : 0.0;
+        const double bead_width =
+            (bead_width_attr != 0) ? bead_width_attr->get_double() : 0.45;
+        const double bead_sharpness =
+            (bead_sharp_attr != 0) ? bead_sharp_attr->get_double() : 1.0;
+        const double bead_variation =
+            (bead_var_attr != 0) ? bead_var_attr->get_double() : 0.35;
+        const unsigned int bead_seed = (bead_seed_attr != 0)
+            ? (unsigned int) bead_seed_attr->get_long() : 0u;
         const double radius = object->get_attribute("radius")->get_double();
         const double twist = object->get_attribute("twist")->get_double();
 
@@ -330,9 +423,16 @@ private:
                     ? vadd(centre, vadd(vscale(n, along_n), vscale(b, along_b)))
                     : centre;
 
+                // Chaque toron porte ses propres perles : sur un cable, les
+                // gouttes ne s'alignent pas d'un brin a l'autre.
+                const double bead =
+                    bead_scale(arc_here, bead_spacing, bead_size, bead_width,
+                               strand_radius * scale, bead_sharpness,
+                               bead_variation, bead_seed + strand * 7919u);
+
                 for (unsigned int s = 0; s < sides; s++) {
                     const double a = 2.0 * M_PI * double(s) / double(sides);
-                    const double rr = strand_radius * scale;
+                    const double rr = strand_radius * scale * bead;
                     const GMathVec3d p = vadd(axis,
                                               vadd(vscale(n, cos(a) * rr),
                                                    vscale(b, sin(a) * rr)));

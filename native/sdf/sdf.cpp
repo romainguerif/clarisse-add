@@ -426,7 +426,8 @@ protected:
         ModuleGeometry::module_constructor(object);
 
         static const char *const names[] = {
-            "item", "shape", "operation", "blend", "size", "rounding", "group",
+            "item", "shape", "operation", "blend",
+            "size_x", "size_y", "size_z", "rounding", "group",
             "uv_mode", "uv_scale",
             "max_steps", "step_scale", "precision", "padding"
         };
@@ -525,7 +526,9 @@ private:
         const OfAttr *shapes = object.get_attribute("shape");
         const OfAttr *operations = object.get_attribute("operation");
         const OfAttr *blends = object.get_attribute("blend");
-        const OfAttr *sizes = object.get_attribute("size");
+        const OfAttr *size_x = object.get_attribute("size_x");
+        const OfAttr *size_y = object.get_attribute("size_y");
+        const OfAttr *size_z = object.get_attribute("size_z");
         const OfAttr *roundings = object.get_attribute("rounding");
         const OfAttr *sources = object.get_attribute("group");
 
@@ -560,17 +563,16 @@ private:
                        ? blends->get_double(r) : 0.0;
             prim.rounding = (roundings != 0 && r < roundings->get_value_count())
                           ? roundings->get_double(r) : 0.0;
-            prim.size = GMathVec3d(1.0, 1.0, 1.0);
-            if (sizes != 0) {
-                // Une colonne a trois composantes s'indexe a la suite : la
-                // ligne r occupe les rangs 3r, 3r+1 et 3r+2.
-                const unsigned int base = r * 3u;
-                if (base + 2u < sizes->get_value_count()) {
-                    prim.size = GMathVec3d(sizes->get_double(base),
-                                           sizes->get_double(base + 1u),
-                                           sizes->get_double(base + 2u));
-                }
-            }
+            // Trois colonnes scalaires et non un vecteur : Clarisse ne sait
+            // pas afficher une colonne de type tableau dans son editeur, elle
+            // serait invisible pour l'artiste.
+            prim.size = GMathVec3d(
+                (size_x != 0 && r < size_x->get_value_count())
+                    ? size_x->get_double(r) : 1.0,
+                (size_y != 0 && r < size_y->get_value_count())
+                    ? size_y->get_double(r) : 1.0,
+                (size_z != 0 && r < size_z->get_value_count())
+                    ? size_z->get_double(r) : 1.0);
             out.push_back(prim);
         }
     }

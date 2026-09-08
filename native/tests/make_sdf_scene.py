@@ -45,7 +45,8 @@ rows = [
 # ignorees en silence.
 stack.set_value_count(len(rows))
 for column, per_row in (("shape", 1), ("operation", 1), ("blend", 1),
-                        ("rounding", 1), ("size", 3), ("group", 1)):
+                        ("rounding", 1), ("size_x", 1), ("size_y", 1),
+                        ("size_z", 1), ("group", 1)):
     attr = field.get_attribute(column)
     if attr is not None:
         attr.set_value_count(len(rows) * per_row)
@@ -57,8 +58,8 @@ for index, (name, position, rotation, shape, operation, blend, size,
     field.get_attribute("operation").set_long(operation, index)
     field.get_attribute("blend").set_double(blend, index)
     field.get_attribute("rounding").set_double(rounding, index)
-    for axis in range(3):
-        field.get_attribute("size").set_double(size[axis], index * 3 + axis)
+    for axis, column in enumerate(("size_x", "size_y", "size_z")):
+        field.get_attribute(column).set_double(size[axis], index)
 
 geometry = field.get_module().get_geometry()
 if geometry is None:

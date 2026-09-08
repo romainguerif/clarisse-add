@@ -49,11 +49,25 @@ class "GeometrySdf" "Geometry" {
                 value 0.0
             }
 
-            double[3] "size" {
+            double "size_x" {
                 output "geometry"
-                doc "Les dimensions, en unites locales. Leur sens depend de la forme : rayon pour une sphere (premiere valeur seule) ; demi-cotes pour une boite ; rayon, demi-hauteur pour un cylindre et une capsule ; rayon de base, demi-hauteur, rayon de sommet pour un cone ; grand rayon, petit rayon pour un tore. Le plan les ignore : c'est le plan Y du repere de l'objet."
+                doc "Premiere dimension : le rayon d'une sphere, d'un cylindre ou d'une capsule ; le demi-cote en X d'une boite ; le rayon de base d'un cone ; le grand rayon d'un tore. Le plan l'ignore.\n\nTrois colonnes separees et non un vecteur, parce que Clarisse ne sait pas afficher une colonne de type tableau dans l'editeur d'attributs -- elle serait invisible."
                 animatable yes
-                value 1 1 1
+                value 1
+            }
+
+            double "size_y" {
+                output "geometry"
+                doc "Deuxieme dimension : la demi-hauteur d'un cylindre, d'une capsule ou d'un cone ; le demi-cote en Y d'une boite ; le petit rayon d'un tore. La sphere et le plan l'ignorent."
+                animatable yes
+                value 1
+            }
+
+            double "size_z" {
+                output "geometry"
+                doc "Troisieme dimension : le demi-cote en Z d'une boite, et le rayon de sommet d'un cone -- a zero, le cone est plein. Les autres formes l'ignorent."
+                animatable yes
+                value 1
             }
 
             distance "rounding" {
