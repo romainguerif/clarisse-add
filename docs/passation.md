@@ -99,16 +99,17 @@ cours et un agent terminé y sont identiques. Pour l'état d'un agent, c'est
 
 ## 3. Ce qui est construit
 
-Addon shelf devenu addon C++. Quatre modules natifs dans `native/` :
-`bokeh`, `bokeh_camera`, `chroma`, `hello`, plus `common/` et `build.py`.
+Addon shelf devenu addon C++. Neuf modules natifs dans `native/` : l'optique
+(`bokeh`, `bokeh_camera`, `chroma`), le témoin `hello`, et les courbes
+(`tube`, `curve_points`, `curve_deform`, `pen`), plus `common/` et
+`build.py`.
 
 Chaîne de compilation : `.cid` → `cmagen.exe` → `.cma` → `.cpp` → `.dll`.
 
-**Contrainte structurante** : `cmagen` ne résout que les **classes de base
-abstraites**. `Texture`, `TextureSpatial`, `TextureOperator`, `Tool`,
-`Integrator`, `Layer`, `LayerScene`, `Renderer`, `UvSlot`, `Group`,
-`ShadingLayer` passent. `TextureTriplanar`, `TextureMapFile`, `Layer3d` et les
-quinze classes `Tool*` concrètes échouent.
+**Contrainte structurante** : `cmagen` déduit le nom du module de celui de la
+classe de base et le cherche dans `module/`. La liste des bases dérivables est
+donc **celle des 134 DLL de ce dossier** — et non celle des classes abstraites,
+comme on l'a cru jusqu'au 2026-09-08. Voir §0.
 
 ---
 
@@ -116,7 +117,7 @@ quinze classes `Tool*` concrètes échouent.
 
 | document | contenu |
 |---|---|
-| **`curves-clarisse.md`** | **Chantier en cours.** Le système de courbes de Clarisse (il s'appelle « Fur »), pourquoi on ne passe pas par lui, la preuve que le chemin polymesh se lie, l'état de `native/tube/` et le point ouvert. |
+| **`curves-clarisse.md`** | **Chantier en cours.** Le système de courbes de Clarisse (il s'appelle « Fur »), pourquoi on ne passe pas par lui, la preuve que le chemin polymesh se lie, l'état des quatre modules, les pièges d'API, et ce que dit l'état de l'art des générateurs de câbles. |
 | **`npr-clarisse.md`** | Le NPR : les quatre images cibles, les quatre axes, l'inventaire de ce que Clarisse a déjà (beaucoup), le dossier simulation d'encre, l'ordre de travail. |
 | **`sdk-clarisse.md`** (642 l.) | **La référence vivante.** Système de modules, contrainte cmagen, chargement sans action utilisateur, pièges à crash, langage CID, contrat `CtxKernelFilter` mesuré, accès aux AOV, générateur de rayons caméra, saveurs de licence, mensonges de l'API Python, invocation de `cnode`, recettes EXR. **À lire avant d'écrire du C++.** |
 | **`integrateur-clarisse.md`** (1288 l.) | Le gros dossier du soir. Voir §5. |
