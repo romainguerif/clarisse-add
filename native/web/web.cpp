@@ -55,6 +55,7 @@
 #include <cmath>
 
 #include <curve_core.h>
+#include <strand_sweep.h>
 
 #include <web.cma>
 
@@ -69,13 +70,6 @@ enum {
     GROUP_HUB    = 3,
     GROUP_SPIRAL = 4,
     GROUP_COUNT  = 5
-};
-
-// Un fil : une polyligne, sa soie, et son epaisseur propre.
-struct Thread {
-    CoreVector<GMathVec3d> points;
-    unsigned int group;
-    double radius;
 };
 
 // Un rayon, garde en polyligne plutot qu'en direction : c'est ce qui permet a
@@ -179,7 +173,7 @@ public:
     double anchor_scale;
     double spiral_scale;
 
-    CoreVector<Thread> threads;
+    CoreVector<strand::Strand> threads;
 
     void
     build()
@@ -263,7 +257,7 @@ private:
          const double& scale, const unsigned int& index)
     {
         if (points.get_count() < 2u) return;
-        Thread thread;
+        strand::Strand thread;
         thread.points = points;
         thread.group = group;
         thread.radius = thickness(scale, index);
@@ -925,131 +919,14 @@ private:
         unsigned int sides = (unsigned int) read_long(*object, "sides", 5);
         if (sides < 3u) sides = 3u;
 
-        return sweep(web.threads, sides);
-    }
+        CoreArray<CoreString> groups(GROUP_COUNT);
+        groups[GROUP_ANCHOR] = "amarrage";
+        groups[GROUP_FRAME]  = "cadre";
+        groups[GROUP_RADIUS] = "rayon";
+        groups[GROUP_HUB]    = "moyeu";
+        groups[GROUP_SPIRAL] = "spirale";
 
-    // Le balayage. Les fils n'ont pas tous le meme nombre de points -- la
-    // spirale en a des centaines la ou un fil d'amarrage en a six -- donc on
-    // compte d'abord, puis on alloue une fois.
-    static PolyMesh *
-    sweep(const CoreVector<Thread>& threads, const unsigned int& sides)
-    {
-        CoreVector<Path> paths;
-        CoreVector<unsigned int> rings;
-
-        unsigned int total_vertices = 0u;
-        unsigned int total_quads = 0u;
-
-        for (unsigned int i = 0; i < threads.get_count(); i++) {
-            Path path;
-            if (!path.build(threads[i].points, false, 1u)) continue;
-            const unsigned int count = path.get_sample_count();
-            if (count < 2u) continue;
-            paths.add(path);
-            rings.add(count);
-            total_vertices += count * sides;
-            total_quads += (count - 1u) * sides;
-        }
-        if (total_quads == 0u) return 0;
-
-        const unsigned int uv_cols = sides + 1u;
-        unsigned int total_uvs = 0u;
-        for (unsigned int i = 0; i < rings.get_count(); i++) {
-            total_uvs += rings[i] * uv_cols;
-        }
-
-        CoreArray<GMathVec3f> vertices(total_vertices);
-        CoreArray<GMathVec3f> velocities;
-        CoreArray<unsigned int> polygon_indices(total_quads * 4u);
-        CoreArray<unsigned int> polygon_vertex_count(total_quads);
-        CoreArray<unsigned int> polygon_shading_groups(total_quads);
-        CoreArray<GMathVec3f> uvs(total_uvs);
-        CoreArray<unsigned int> uv_indices(total_quads * 4u);
-
-        CoreArray<CoreString> shading_group_names(GROUP_COUNT);
-        shading_group_names[GROUP_ANCHOR] = "amarrage";
-        shading_group_names[GROUP_FRAME]  = "cadre";
-        shading_group_names[GROUP_RADIUS] = "rayon";
-        shading_group_names[GROUP_HUB]    = "moyeu";
-        shading_group_names[GROUP_SPIRAL] = "spirale";
-
-        unsigned int base = 0u;
-        unsigned int uv_base = 0u;
-        unsigned int corner = 0u;
-        unsigned int face = 0u;
-        unsigned int used = 0u;
-
-        for (unsigned int i = 0; i < threads.get_count(); i++) {
-            if (used >= paths.get_count()) break;
-            if (threads[i].points.get_count() < 2u) continue;
-
-            const Path& path = paths[used];
-            const unsigned int count = rings[used];
-            const double thread_radius = threads[i].radius;
-            const unsigned int group = threads[i].group;
-            used++;
-
-            for (unsigned int r = 0; r < count; r++) {
-                const GMathVec3d& centre = path.get_position(r);
-                const GMathVec3d& normal = path.get_normal(r);
-                const GMathVec3d binormal = path.get_binormal(r);
-
-                for (unsigned int s = 0; s < sides; s++) {
-                    const double angle = 2.0 * M_PI * double(s) / double(sides);
-                    const GMathVec3d p =
-                        vadd(centre,
-                             vadd(vscale(normal, cos(angle) * thread_radius),
-                                  vscale(binormal, sin(angle) * thread_radius)));
-                    vertices[base + r * sides + s] =
-                        GMathVec3f(float(p[0]), float(p[1]), float(p[2]));
-                }
-
-                const float v = float(r) / float(count - 1u);
-                for (unsigned int s = 0; s < uv_cols; s++) {
-                    uvs[uv_base + r * uv_cols + s] =
-                        GMathVec3f(float(s) / float(sides), v, 0.0f);
-                }
-            }
-
-            for (unsigned int r = 0; r + 1u < count; r++) {
-                for (unsigned int s = 0; s < sides; s++) {
-                    const unsigned int s1 = (s + 1u) % sides;
-                    polygon_indices[corner + 0u] = base + r * sides + s;
-                    polygon_indices[corner + 1u] = base + r * sides + s1;
-                    polygon_indices[corner + 2u] = base + (r + 1u) * sides + s1;
-                    polygon_indices[corner + 3u] = base + (r + 1u) * sides + s;
-
-                    uv_indices[corner + 0u] = uv_base + r * uv_cols + s;
-                    uv_indices[corner + 1u] = uv_base + r * uv_cols + s + 1u;
-                    uv_indices[corner + 2u] = uv_base + (r + 1u) * uv_cols + s + 1u;
-                    uv_indices[corner + 3u] = uv_base + (r + 1u) * uv_cols + s;
-
-                    polygon_vertex_count[face] = 4u;
-                    polygon_shading_groups[face] = group;
-                    face++;
-                    corner += 4u;
-                }
-            }
-
-            base += count * sides;
-            uv_base += count * uv_cols;
-        }
-
-        CoreArray<GeometryUvMap> uv_maps(1);
-        uv_maps[0].name = "uv";
-        uv_maps[0].vertices = uvs;
-        uv_maps[0].polygon_indices = uv_indices;
-
-        CoreArray<GeometryNormalMap> normal_maps;
-        CoreArray<GeometryColorMap> color_maps;
-
-        PolyMesh *mesh = new PolyMesh;
-        mesh->set(vertices, velocities,
-                  polygon_indices, polygon_vertex_count, polygon_shading_groups,
-                  shading_group_names,
-                  uv_maps, normal_maps, color_maps,
-                  true, 0);
-        return mesh;
+        return strand::sweep(web.threads, groups, sides);
     }
 };
 
