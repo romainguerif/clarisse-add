@@ -68,6 +68,100 @@ sans effort — ne pas les effacer.
 
 ---
 
+## 0 bis. Reprise du 2026-09-08 au soir — ce qui attend
+
+Journee longue. Quatre chantiers ont avance, quatre documents de recherche sont
+tombes, et il reste des fils precis. Ils sont ranges ici par ce qu'ils
+demandent, pas par sujet : c'est ce qui sert quand on rouvre.
+
+### Ce qui ne peut pas se faire sans Clarisse ouvert
+
+Trois choses attendent Romain, parce que `cnode` n'a pas de viewport et qu'on
+ne lance jamais `clarisse.exe` soi-meme.
+
+- **Essayer les deux outils de barre d'outils** : `ToolFaceSelect` et
+  `ToolCurvePen`, categorie *Create*. Aucun des deux n'a jamais ete manipule.
+  Il faut passer par le raccourci **« Clarisse iFX 5.0 SP14 (ClarisseAdd) »**
+  cree sur le bureau : les outils n'apparaissent que si les modules sont charges
+  **au demarrage du moteur**, par `-module_path`, et non a chaud par le script de
+  demarrage -- la barre d'outils est deja construite a ce moment-la. C'est la
+  cause, verifiee dans le journal de demarrage, pour laquelle rien n'etait
+  visible.
+- **La selection en orthographique.** Le test `native/tests/ray_roundtrip.cpp`
+  prouve la construction du rayon en perspective a 6e-15 pres ; l'orthographique
+  ne peut pas s'y verifier, faute de reference independante. Le correctif est
+  raisonne, pas mesure.
+- **La sonde `paint_gl`**, une demi-journee. Elle decide de tout l'apercu GPU du
+  chantier SDF. Voir `docs/sdf-clarisse.md` §7.4.
+
+### Le node SDF — ce qui reste, dans l'ordre
+
+`native/sdf/` existe, rend, et fait ce qu'il annonce : sept primitives, trois
+operations, raccord arrondi par ligne, pile ordonnee, groupes par reference.
+La feuille de route detaillee est `docs/sdf-clarisse.md` §9.1 ; ce qui suit est
+ce qui manque **a ce node-la**, maintenant qu'il existe.
+
+1. **Les UV.** L'attribut `uv_mode` a ete retire parce que le code ne le lisait
+   pas. Il reste `uv_scale`, qui agit. Une surface implicite n'a aucun depliage
+   naturel : la projection triplanaire est la reponse, et elle demande de porter
+   la position dans le fragment autrement que par la position normalisee dans la
+   boite.
+2. **Une matiere par forme.** Demande explicitement par Romain via le systeme de
+   calques. Il faut une primitive Clarisse par forme -- ce qui coute (§5.4 du
+   document) -- ou trouver comment faire varier le shading group au fragment.
+   C'est la question a trancher avant d'ecrire.
+3. **La polygonisation**, par dual contouring adaptatif depuis le champ
+   analytique. C'est elle qui permettra de poser un panneau de tissu sur une
+   forme CSG, de deplier des UV, d'exporter. Romain la veut de tres bonne
+   qualite, et c'est jouable : contrairement a MagicaCSG qui polygonise depuis
+   une grille de voxels, on interroge la formule exacte, donc les aretes vives
+   se reconstruisent au lieu d'etre rabotees. Sortie quad-dominante.
+4. **La retopologie**, elle, se delegue. Romain a raison : un remailleur
+   isotrope a flux d'aretes propre est des annees de recherche. Instant Meshes
+   est installe sur la machine. **En processus separe seulement** -- jamais lie,
+   la licence est a verifier avant de s'engager -- et sur un geste volontaire,
+   pas pendant l'evaluation de la geometrie.
+5. **Hierarchie de bornes** au-dela de quelques centaines de primitives, et
+   **bake vers grille ou VDB**. Ni l'un ni l'autre ne presse.
+
+### Le panneau de tissu
+
+Il marche et Romain en est content. Ce qui reste est de la qualite, pas de la
+mecanique : les plis sortent **reguliers** la ou les references sont
+desordonnees, parce qu'une membrane carree reguliere flambe en eventail
+regulier. Fluent y echappe en remaillant en triangles irreguliers avant de
+simuler ; `mesh_jitter` en est l'equivalent bon marche et n'a pas suffi. Manque
+aussi l'**auto-collision**, qui empilerait les plis au lieu de les laisser se
+traverser.
+
+### Le bokeh
+
+Les coutures sont corrigees et mesurees -- le saut d'une colonne a la suivante
+passe de cinquante-cinq fois le bruit de fond a un. Reste **le trou d'alpha
+derriere un premier plan flou**, et le diagnostic a ete corrige au passage : ce
+n'est pas le composite qui perd de l'alpha, c'est que le mur derriere la boite
+n'a jamais ete rendu. Deux correctifs plausibles ont ete ecrits, mesures et
+retires ; un avertissement dans le code evite de les re-tenter. Tout est chiffre
+dans `docs/bokeh-clarisse.md` §8.
+
+### Ce que Romain vise
+
+« Modeliser dans Clarisse de A a Z » : le CSG pour les volumes, les courbes pour
+les cables, le tissu pour les panneaux, et des rendus dans l'esprit de Paul
+Pepera -- machines a modules repetes, capsules et cylindres, raccords arrondis
+courts, panneaux capitonnes a l'echelle architecturale. Les trois chantiers
+convergent, ce qui est bon signe.
+
+Le risque principal a nommer, parce qu'il ne se voit pas dans les documents :
+**l'ergonomie**. Les mathematiques sont la partie facile. Clarisse n'a aucun
+outil de modelisation, et attraper une forme a la souris pour la deplacer en
+voyant le resultat en direct est ce qui coutera le plus cher. Le node SDF
+contourne le probleme pour l'instant en prenant la transformation d'un locator :
+l'outil de deplacement habituel de Clarisse fait le travail, et il n'y a pas de
+manipulateur a ecrire.
+
+---
+
 ## 1. Avec qui on travaille
 
 Romain Guerif, artiste VFX, **expert Clarisse depuis dix ans**. Il connaît le

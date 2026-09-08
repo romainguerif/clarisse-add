@@ -76,15 +76,6 @@ class "GeometrySdf" "Geometry" {
     attribute_group "surface" {
         doc "Ce que le rendu voit."
 
-        long "uv_mode" {
-            output "geometry"
-            doc "Comment les UV sont fabriques. Une surface implicite n'a aucun depliage naturel -- il n'y a pas de faces a plier -- donc on projette. Le triplanaire melange trois projections selon la normale et ne fait de couture nulle part : c'est le choix par defaut de tout le monde, et le seul qui tienne sur une forme quelconque."
-            preset "Triplanaire" "0"
-            preset "Planaire (XZ)" "1"
-            preset "Cylindrique" "2"
-            preset "Spherique" "3"
-            value 0
-        }
 
         distance "uv_scale" {
             output "geometry"
