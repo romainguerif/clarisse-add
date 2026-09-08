@@ -1,0 +1,209 @@
+class "GeometryFiberPull" "GeometryPolymesh" {
+    #version 0.1
+    category "/Geometry/Polymesh"
+    doc "Etire une nappe de fibres courtes, et laisse les cables apparaitre.\n\nC'est le node qui reproduit la fausse toile d'Halloween -- de l'ouate polyester qu'on ecarte entre ses mains. Il ne dessine pas le resultat : il simule le geste. Une nappe de fibres coupees en desordre, une traction selon un axe, et le reste suit tout seul.\n\nPourquoi ca marche : une nappe non tissee en traction ne s'allonge pas uniformement. Elle passe par une striction -- les fibres pivotent vers l'axe, la section s'appauvrit, donc la contrainte par fibre monte, donc d'autres glissent, et rien n'arrete l'emballement. Ce qui reste au fond de la striction, ce sont les fibres alignees sur la charge : c'est ca, le cable brillant de la photo. Il n'a pas ete pose la, c'est le residu d'une dechirure.\n\nMesure sur les references : trois echelles et non deux, une isotropie de 0,988 sur 1,000 -- les fibres ne sont PAS paralleles, ce qu'on prend pour du parallelisme est quelques faisceaux brillants sur un fond isotrope -- et une frisure periodique sur chaque brin. Le detail est dans docs/toile-clarisse.md."
+
+    attribute_group "nappe" {
+        doc "La nappe avant qu'on y touche : de l'ouate cardee, des fibres courtes posees a plat et en desordre."
+
+        distance "width" {
+            output "geometry"
+            doc "Largeur de la nappe AVANT etirage, selon l'axe de traction. Le resultat sera plus large de l'allongement demande."
+            animatable yes
+            numeric_range yes 1e-05 1000000
+            ui_range yes 0.05 2
+            value 0.3
+        }
+
+        distance "height" {
+            output "geometry"
+            doc "Hauteur de la nappe, perpendiculairement a la traction."
+            animatable yes
+            numeric_range yes 1e-05 1000000
+            ui_range yes 0.05 2
+            value 0.2
+        }
+
+        distance "thickness" {
+            output "geometry"
+            doc "Epaisseur de la nappe. C'est elle qui donne la profondeur en couches -- les brins lointains s'eteignent au lieu de flouter, et c'est ce qu'on voit sur la reference."
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 0.2
+            value 0.02
+        }
+
+        long "fibers" {
+            output "geometry"
+            doc "Nombre de fibres. Un sachet de cent grammes en contient de l'ordre de trois millions ; on n'en met evidemment pas autant. Quelques milliers suffisent a lire la matiere, et le cout monte lineairement."
+            numeric_range yes 1 2000000
+            ui_range yes 500 40000
+            value 4000
+        }
+
+        distance "fiber_length" {
+            output "geometry"
+            doc "Longueur de coupe des fibres. Les longueurs industrielles sont 32, 51 et 64 millimetres.\n\nC'est le parametre le plus structurant apres l'allongement : c'est lui qui fixe l'echelle du desordre, et l'onde d'epaisseur de l'etirage vaut quatre fois cette longueur."
+            animatable yes
+            numeric_range yes 1e-06 1000000
+            ui_range yes 0.005 0.15
+            value 0.045
+        }
+
+        percentage "length_variation" {
+            output "geometry"
+            doc "De combien la longueur varie d'une fibre a l'autre."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 0.25
+        }
+
+        percentage "planarity" {
+            output "geometry"
+            doc "A quel point les fibres restent dans le plan de la nappe. Une nappe cardee est fortement planaire ; a zero les fibres partent dans toutes les directions de l'espace et on obtient un feutre, pas une nappe."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 0.9
+        }
+
+        long "seed" {
+            output "geometry"
+            doc "Change toute la nappe d'un coup, sans changer son caractere."
+            numeric_range yes 0.0 1000000
+            value 0
+        }
+    }
+
+    attribute_group "frisure" {
+        doc "La frisure mecanique imposee en usine aux fibres de rembourrage. Elle explique qu'aucune fibre ne soit jamais rectiligne, et l'aspect moussu du fond -- elle se voit sur la reference et je l'avais ratee a la premiere lecture."
+
+        long "crimp" {
+            output "geometry"
+            doc "Nombre d'ondulations sur la longueur d'une fibre. Quatre a huit par centimetre en usine, soit une vingtaine sur un brin de cinquante millimetres."
+            numeric_range yes 0 500
+            ui_range yes 0 60
+            value 25
+        }
+
+        percentage "crimp_amplitude" {
+            output "geometry"
+            doc "Amplitude de la frisure, en fraction de la longueur de la fibre."
+            animatable yes
+            numeric_range yes 0.0 0.5
+            ui_range yes 0.0 0.05
+            value 0.01
+        }
+
+        long "fiber_steps" {
+            output "geometry"
+            doc "Nombre de segments par fibre. Il faut au moins deux segments par ondulation pour que la frisure se voie ; en dessous elle disparait au lieu de s'adoucir."
+            numeric_range yes 2 512
+            ui_range yes 8 64
+            value 16
+        }
+    }
+
+    attribute_group "etirage" {
+        doc "Le geste : ecarter les mains. Ce groupe ne decrit pas la forme du resultat, il decrit la traction -- la forme, c'est la striction qui la trouve."
+
+        percentage "stretch" {
+            output "geometry"
+            doc "Allongement total, en fraction de la largeur de depart. A 250 pour cent la nappe fait trois fois et demie sa largeur.\n\nLe geste reel demande d'ecarter les mains d'une a deux longueurs de brin, et le grammage tombe de quinze grammes au metre carre a cinq ou onze : c'est pour ca qu'on obtient un reseau ajoure et non un voile."
+            animatable yes
+            numeric_range yes 0.0 50
+            ui_range yes 0.0 6
+            value 2.5
+        }
+
+        double "localisation" {
+            output "geometry"
+            doc "A quel point la striction se concentre. C'est l'exposant qui relie la deformation locale a la densite locale : plus il est grand, plus une zone deja etiree attire l'etirement suivant.\n\nA zero la nappe s'allonge uniformement et il ne se passe rien d'interessant -- pas de trous, pas de cables. C'est ce reglage qui fait le motif."
+            animatable yes
+            numeric_range yes 0.0 8
+            ui_range yes 0.5 4
+            value 2.0
+        }
+
+        long "cells" {
+            output "geometry"
+            doc "Finesse du calcul de striction, en tranches le long de l'axe de traction. Plus de tranches donne des dechirures plus fines ; ca ne coute presque rien."
+            numeric_range yes 8 4096
+            ui_range yes 64 512
+            value 192
+        }
+
+        double "wave" {
+            output "geometry"
+            doc "Longueur d'onde du desordre initial, en multiples de la longueur de fibre. C'est lui qui decide OU la nappe cede.\n\nQuatre est la valeur mesuree : l'onde d'etirage d'un ruban textile a une periode de quatre longueurs de brin."
+            animatable yes
+            numeric_range yes 0.1 100
+            ui_range yes 1 12
+            value 4.0
+        }
+
+        percentage "wave_amplitude" {
+            output "geometry"
+            doc "Amplitude du desordre initial de densite. A zero la nappe est parfaitement homogene et cede n'importe ou -- donc partout a la fois, ce qui ne ressemble a rien."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.3
+            value 0.06
+        }
+
+        double "contraction" {
+            output "geometry"
+            doc "De combien la nappe se resserre lateralement la ou elle s'allonge -- l'effet Poisson. C'est lui qui rassemble les fibres survivantes en ruban plat au fond de la striction.\n\nLe cable de la reference n'est pas un cylindre : c'est un ruban de fibres serrees dont on distingue les brins, et sa brillance est leur somme. Il se fabrique ici."
+            animatable yes
+            numeric_range yes 0.0 3
+            ui_range yes 0.0 1.5
+            value 0.5
+        }
+
+        double "grip" {
+            output "geometry"
+            doc "Ce qui separe une fibre entrainee d'une fibre flottante.\n\nUne fibre bien alignee sur la traction est pincee aux deux bouts : elle s'etire. Une fibre perpendiculaire n'est tenue que par le frottement de ses voisines : elle est emportee en bloc d'un cote ou de l'autre. Cet exposant dit a quel point la distinction est franche -- a zero tout s'etire ensemble et il n'y a plus ni trous ni bords denses."
+            animatable yes
+            numeric_range yes 0.0 8
+            ui_range yes 0.0 4
+            value 2.0
+        }
+    }
+
+    attribute_group "fils" {
+        doc "L'epaisseur des brins, et les defauts d'epaisseur."
+
+        percentage "fiber_radius" {
+            output "geometry"
+            doc "Rayon d'une fibre, en fraction de la largeur de la nappe.\n\nUne fibre reelle fait douze a vingt-cinq microns, soit environ un douze-millieme de la nappe -- a l'ecran, elle est sous le pixel, exactement comme celle d'une vraie toile. Ce qu'on voit sur la photo fait cinq pixels : c'est la diffraction et le bloom, pas la fibre. La valeur d'usine est donc volontairement une quinzaine de fois trop grosse. C'est un reglage d'image."
+            animatable yes
+            numeric_range yes 1e-07 0.2
+            ui_range yes 0.0002 0.005
+            value 0.0007
+        }
+
+        percentage "radius_variation" {
+            output "geometry"
+            doc "De combien l'epaisseur varie d'une fibre a l'autre."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 0.35
+        }
+
+        percentage "slub" {
+            output "geometry"
+            doc "Les surepaisseurs. Un brin etire ne garde pas une section constante : il enfle de quarante-cinq a quatre cents pour cent par endroits.\n\nLa modulation est prise dans l'espace et non le long de chaque fibre, parce que l'onde d'etirage est une propriete de la nappe entiere : les brins voisins epaississent ensemble, ce qui fabrique des paquets clairs plutot qu'un bruit par fibre."
+            animatable yes
+            numeric_range yes 0.0 4
+            ui_range yes 0.0 1.5
+            value 0.6
+        }
+
+        long "sides" {
+            output "geometry"
+            doc "Nombre de cotes de la section d'une fibre. Trois suffisent : a cette finesse la section ne se voit pas, et chaque cote de plus coute un tiers du maillage."
+            numeric_range yes 3 64
+            ui_range yes 3 8
+            value 3
+        }
+    }
+}

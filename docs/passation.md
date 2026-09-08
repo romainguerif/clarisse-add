@@ -92,6 +92,8 @@ ete regarde a l'image.
 | `GeometrySelect` | **verifie par les nombres.** Selection de faces par regle -- texture, normale, aleatoire -- plus une liste explicite, sortie en shading group, chainable. |
 | `ToolFaceSelect` | **se charge, jamais manipule.** Outil de viewport : survol, clic, Maj, Ctrl, peinture. Deux bugs de pointage deja trouves et corriges *avant* tout essai, par un test d'aller-retour. |
 | `GeometrySdf` | **rendu.** Modelisation par champ de distance : sept primitives, trois operations, raccord arrondi par ligne, pile ordonnee, groupes. |
+| `GeometryWeb` | **rendu et mesure.** Toile orbitele, construite dans l'ordre de l'araignee. Trente-deux rayons comptes, angles 14,0 degres en haut contre 9,0 en bas, etendue bas/haut 1,40, pas a 3,93 pour cent contre 3,94 attendu, ouverture de la maille 1,75 en haut contre 1,06 en bas. Invariance d'echelle exacte a 1e-7 sur un facteur cent mille. Sonde : `tests/web_check.py`, scene : `tests/make_web_scene.py`. |
+| `GeometryFiberPull` | **declare seulement.** Le CID est ecrit, le .cpp reste a faire. Voir la section de reprise. |
 | `GeometryTube` | **rendu.** Gagne les gouttelettes -- le rayon enfle en chapelet, profil de sphere, largeur deduite pour que la goutte soit ronde. |
 | `ImageFilterBokeh`, `CameraBokeh` | **mesures.** Les coutures de tuile sont corrigees : le saut d'une colonne a la suivante passe de cinquante-cinq fois le bruit de fond a un. |
 
@@ -114,6 +116,51 @@ Trois choses, parce que `cnode` n'a pas de viewport et qu'on ne lance jamais
    6e-15 pres par `native/tests/ray_roundtrip.cpp`.
 3. **La sonde `paint_gl`**, une demi-journee. Elle decide de tout l'apercu GPU.
    Voir `sdf-clarisse.md` §7.4.
+
+### Ou on s'est arrete, et par quoi reprendre
+
+**Reprendre par `native/fiber_pull/`.** Le CID y est ecrit et documente, le
+`.cpp` **n'existe pas** -- `python build.py fiber_pull` echouera proprement en
+disant qu'il n'y a aucun source. C'est voulu : la declaration est en place pour
+ne pas se reperdre.
+
+**Pourquoi lui et pas autre chose.** Romain l'a dit sans detour : la toile
+orbitele est finie et il la garde, mais **ce ne sont pas ses references**. Ses
+deux images sont de la ouate polyester etiree, pas une toile tissee, et le node
+qui les rend est celui-la. `toile-clarisse.md` §3.5 le classait deja premier sur
+cinq -- « le seul vraiment nouveau, et c'est lui qui rend les references » -- et
+la toile orbitele quatrieme. J'ai fait le quatrieme d'abord. A ne pas refaire.
+
+**Le modele, decide et pret a ecrire** (tout vient de `toile-clarisse.md` §2) :
+
+1. semer des fibres courtes en desordre dans une dalle, isotropes dans le plan,
+   avec leur frisure periodique ;
+2. calculer la **striction** par un modele a une dimension le long de l'axe de
+   traction : quelques centaines de tranches, densite initiale bruitee a une
+   longueur d'onde de quatre longueurs de brin (mesure), puis iterer « la
+   tranche la moins dense s'etire le plus, donc devient moins dense ». C'est un
+   emballement, et c'est lui qui fabrique le motif -- personne ne dessine ou la
+   nappe cede ;
+3. **advecter** chaque fibre par cette carte, en melangeant deux transports
+   selon son alignement : une fibre alignee est pincee aux deux bouts et
+   s'etire point par point, une fibre perpendiculaire n'est tenue que par le
+   frottement et part en bloc d'un cote. C'est la distinction pincee/flottante
+   de l'etirage textile, et elle suffit a produire les trous, les bords denses
+   et les cables sans aucune regle de suppression ;
+4. contracter lateralement (Poisson) : c'est ce qui rassemble les survivantes en
+   **ruban plat**, qui est ce que la mesure dit du « cable » -- pas un cylindre ;
+5. balayer avec `common/strand_sweep.h`, en modulant le rayon par un bruit pris
+   **dans l'espace** et non le long de chaque fibre, parce que l'onde
+   d'epaisseur est une propriete de la nappe : les brins voisins epaississent
+   ensemble.
+
+**La sonde a ecrire est evidente, et c'est le meilleur du plan** : reprendre sur
+notre sortie exactement la mesure faite sur les images de Romain -- isotropie
+globale, et pic d'orientation par blocs de cent pixels. Les cibles sont
+publiees dans notre propre document : **isotropie 0,988**, pic local median
+**1,51x** le plat, p90 **2,56x**. On regle jusqu'a tomber dessus. C'est la
+premiere fois qu'on peut comparer une sortie a une reference par un nombre
+plutot qu'a l'oeil.
 
 ### Le chantier en cours : la toile d'araignee
 
