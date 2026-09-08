@@ -50,8 +50,16 @@ VCVARS = (r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
 # famille module_scene_item -> module_geometry -> module_polymesh.
 #
 # ix_geometry : GeometryUvMap, GeometryPointCloud, GeometryObject.
+#
+# ix_particle : ParticleCloud, pour les nodes qui produisent un nuage de points.
+#
+# ix_resource : ResourceData, la base de tout ce qu'un module rend depuis
+# create_resource. PolyMesh s'en passe -- ix_poly reexporte ce qu'il faut --
+# mais ParticleCloud non : sa vtable reclame ResourceData::is_serializable, qui
+# ne vit que la.
 LIBS = ["ix_module", "ix_of", "ix_dso", "ix_core", "ix_gui", "ix_event",
-        "ix_image", "ix_raytrace", "ix_poly", "ix_gmath", "ix_geometry"]
+        "ix_image", "ix_raytrace", "ix_poly", "ix_gmath", "ix_geometry", "ix_particle",
+        "ix_resource"]
 
 
 def includes():

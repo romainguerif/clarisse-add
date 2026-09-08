@@ -1,0 +1,48 @@
+class "DeformerCurve" "Deformer" {
+    #version 0.1
+    doc "Plie une geometrie le long d'une courbe passant par des points de controle -- le 'curve warp' des autres logiciels.\n\nChaque sommet est lu par sa coordonnee le long d'un axe : cette coordonnee devient une distance parcourue sur la courbe, et les deux autres coordonnees sont replacees dans le repere de la courbe a cette distance. Une geometrie allongee suit donc la courbe en gardant sa section.\n\nLa courbe remplace la ligne de l'axe passant par l'origine de l'objet : ce qui etait a un metre au-dessus de cette ligne reste a un metre au-dessus de la courbe."
+
+    attribute_group "curve" {
+        doc "La courbe suivie par la geometrie."
+
+        list<reference> "control_points" {
+            filter "SceneItem"
+            input "motion" "geometry" "motion_blur"
+            output "geometry"
+            doc "Les points de controle, dans l'ordre. N'importe quel item de scene fait l'affaire ; un locator est le choix naturel. Il en faut au moins deux."
+        }
+
+        bool "closed" {
+            output "geometry"
+            doc "Referme la courbe sur elle-meme. Une geometrie plus longue que la courbe boucle alors dessus au lieu de partir tout droit."
+            value no
+        }
+
+        long "steps" {
+            output "geometry"
+            doc "Nombre de subdivisions entre deux points de controle. C'est la finesse de l'echantillonnage : plus il y en a, plus la longueur mesuree et le repere sont justes dans les virages."
+            numeric_range yes 1 200
+            ui_range yes 1 32
+            value 8
+        }
+    }
+
+    attribute_group "mapping" {
+        doc "Comment la geometrie se pose sur la courbe."
+
+        long "axis" {
+            output "geometry"
+            doc "L'axe de la geometrie qui suit la courbe. Les deux autres axes forment la section transportee le long du chemin."
+            preset "X" "0"
+            preset "Y" "1"
+            preset "Z" "2"
+            value 0
+        }
+
+        bool "stretch" {
+            output "geometry"
+            doc "Etire la geometrie sur toute la longueur de la courbe. Decoche pour lui garder son echelle : elle part alors du debut de la courbe et s'arrete ou elle veut -- au-dela du dernier point, elle continue tout droit dans l'axe de la tangente finale."
+            value yes
+        }
+    }
+}

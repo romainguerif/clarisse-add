@@ -57,6 +57,22 @@ class "GeometryTube" "GeometryPolymesh" {
             value 12
         }
 
+        long "strands" {
+            output "geometry"
+            doc "Nombre de torons. 1 donne un tube simple, 3 une corde classique, davantage un cable."
+            numeric_range yes 1 32
+            ui_range yes 1 8
+            value 1
+        }
+
+        double "twist" {
+            output "geometry"
+            doc "Torsion des torons, en tours par unite de longueur. Sans effet sur un tube a un seul toron."
+            animatable yes
+            ui_range yes 0.0 4
+            value 0.5
+        }
+
         bool "cap" {
             output "geometry"
             doc "Ferme les deux extremites du tube."

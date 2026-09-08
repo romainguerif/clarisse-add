@@ -1,0 +1,96 @@
+class "GeometryCurvePoints" "GeometryParticle" {
+    #version 0.1
+    category "/Geometry/Particle"
+    doc "Repartit des points le long d'une courbe passant par des points de controle. Le Scatterer natif s'en sert comme support pour instancier : c'est la facon de poser des lampadaires sur un chemin, des pierres sur un sentier ou des rivets sur une arete."
+
+    attribute_group "curve" {
+        doc "La courbe suivie."
+
+        list<reference> "control_points" {
+            filter "SceneItem"
+            input "motion" "geometry" "motion_blur"
+            output "geometry"
+            doc "Les points de controle, dans l'ordre. Il en faut au moins deux."
+        }
+
+        bool "closed" {
+            output "geometry"
+            doc "Referme la courbe sur elle-meme."
+            value no
+        }
+
+        long "steps" {
+            output "geometry"
+            doc "Finesse de l'echantillonnage de la courbe. Sert a mesurer sa longueur, pas a placer les points."
+            numeric_range yes 1 200
+            ui_range yes 1 32
+            value 16
+        }
+    }
+
+    attribute_group "distribution" {
+        doc "Ou tombent les points."
+
+        long "mode" {
+            output "geometry"
+            doc "Nombre fixe repartit N points sur toute la longueur. Espacement en pose un tous les tant, et le compte depend de la longueur de la courbe."
+            preset "Nombre fixe" "0"
+            preset "Espacement" "1"
+            value 0
+        }
+
+        long "count" {
+            output "geometry"
+            doc "Nombre de points, en mode Nombre fixe."
+            animatable yes
+            numeric_range yes 1 1000000
+            ui_range yes 1 100
+            value 10
+        }
+
+        distance "spacing" {
+            output "geometry"
+            doc "Distance entre deux points, en mode Espacement."
+            animatable yes
+            numeric_range yes 1e-05 1000000
+            ui_range yes 0.01 10
+            value 1
+        }
+
+        percentage "offset" {
+            output "geometry"
+            doc "Decale tous les points le long de la courbe, en fraction de l'ecart entre deux."
+            animatable yes
+            numeric_range yes -1 1
+            value 0.0
+        }
+
+        bool "include_last" {
+            output "geometry"
+            doc "En mode Nombre fixe, poser le dernier point exactement au bout. Sans lui, les points sont repartis comme des intervalles et le bout reste libre."
+            value yes
+        }
+    }
+
+    attribute_group "orientation" {
+        doc "Ce que le Scatterer lira comme normale pour orienter les instances."
+
+        long "normal_source" {
+            output "geometry"
+            doc "Tangente aligne les instances sur la direction de la courbe. Normale et binormale donnent les deux axes perpendiculaires du repere a torsion minimale. Y monde garde les instances droites quoi que fasse la courbe."
+            preset "Tangente" "0"
+            preset "Normale" "1"
+            preset "Binormale" "2"
+            preset "Y monde" "3"
+            value 0
+        }
+
+        distance "lateral_offset" {
+            output "geometry"
+            doc "Ecarte les points de la courbe le long de la normale. Sert a poser quelque chose le long d'un bord plutot que dessus."
+            animatable yes
+            ui_range yes -10 10
+            value 0.0
+        }
+    }
+}
