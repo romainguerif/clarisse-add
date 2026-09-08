@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Le module temoin est-il charge ? Repond par oui ou par non, sans nuance.
+"""Le module est-il charge ? Repond par oui ou par non, sans nuance.
 
 Lance par cnode via -script, apres le chargement des modules.
+
+La classe a examiner arrive par la variable d'environnement CLARISSE_ADD_CLASS,
+que `run.py` remplit en lisant le CID du module. Elle etait ecrite en dur ici :
+`run.py web` interrogeait donc AddHello, trouvait hello.dll, et rapportait un
+echec sur un module parfaitement sain -- un faux signal, ce qui est pire qu'une
+absence de test.
 """
-CLASS = "AddHello"
+import os
+
+CLASS = os.environ.get("CLARISSE_ADD_CLASS", "AddHello")
 
 print("")
 print("=" * 60)

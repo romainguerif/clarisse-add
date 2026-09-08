@@ -690,6 +690,34 @@ selected.set_value_count(1); enabled.set_value_count(1)
 selected.set_string("depth", 0); enabled.set_bool(True, 0)
 ```
 
+### Lire un maillage depuis Python : ce qui passe et ce qui ne passe pas
+
+Utile dès qu'on écrit une sonde plutôt qu'un rendu. La règle est simple :
+**tout ce que le C++ renvoie par référence de sortie est inaccessible**, parce
+que SWIG attend alors un `CoreArray` qu'on ne sait pas fabriquer côté Python.
+
+| Appel | Verdict |
+|---|---|
+| `mesh.get_point_cloud().get_positions()` | **marche**. Rend un `GMathVec3fBasicArray` indexable, avec `len()`. C'est le bon accès pour lire tous les sommets d'un coup. |
+| `mesh.get_primitive_shading_group_name(i)` | **marche**, un entier suffit. Rend le nom, pas l'indice — parfait pour compter par soie. |
+| `mesh.get_primitive_shading_group_index(i)`, `get_primitive_polygon_id(i)` | **marchent** |
+| `mesh.get_vertex_count()`, `get_polygon_count()`, `get_primitive_count()` | **marchent** |
+| `mesh.compute_primitive_bbox(...)` | **non** : réclame une boîte de sortie, et la signature n'est pas `(id, bbox)` |
+| `mesh.get_polygon_shading_groups(...)`, `get_polygon_vertex_indices(...)`, `get_polygon_vertex_count(...)`, `get_shading_group_names(...)` | **non**, toutes pour la même raison |
+| `mesh.get_shading_group_count()`, `get_polygon_shading_group(i)` | **n'existent pas** |
+
+Les docstrings sont **toutes vides** : la signature ne se lit qu'en provoquant
+l'erreur, qui elle nomme les arguments manquants.
+
+Conséquence pratique : on ne peut pas associer un sommet à sa soie. Le
+contournement qui a marché pour `GeometryWeb` est de **construire la géométrie
+deux fois**, une fois complète et une fois avec le morceau qu'on veut isoler
+désactivé par un réglage ; la différence des deux tableaux de sommets est
+exactement ce morceau, puisque l'ordre d'émission est stable. Il faut alors que
+le réglage supprime vraiment le morceau et n'en laisse pas un reste — c'est
+pour ça que le node ne pose aucune spirale quand la zone libre avale la zone de
+capture, au lieu d'en poser deux tours.
+
 ---
 
 ## 13. Rendre en ligne de commande

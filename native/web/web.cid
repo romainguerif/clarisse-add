@@ -1,0 +1,300 @@
+class "GeometryWeb" "GeometryPolymesh" {
+    #version 0.1
+    category "/Geometry/Polymesh"
+    doc "Une toile d'araignee orbitele, construite dans l'ordre ou l'araignee la construit : ancrages, cadre, rayons du haut vers le bas, moyeu, puis la spirale de capture posee du bord vers le centre.\n\nToutes les valeurs d'usine viennent de mesures publiees et non d'un dessin -- trente-deux rayons, treize degres d'ecart en haut contre huit en bas, un pas de spirale qui croit vers le haut et reste constant vers le bas. Le detail et les sources sont dans docs/toile-orbitele.md.\n\nDeux choses a savoir avant de regler quoi que ce soit. La premiere : les fils sont droits, et c'est physiquement juste -- un fil de soie sec tendu sur un metre flechit d'un dixieme de millimetre. Ce qui courbe une toile, ce sont les charges, pas la gravite. La seconde : une toile parfaite est fausse. Le groupe des anomalies n'est pas une coquetterie, c'est ce qui separe une toile d'une rosace."
+
+    attribute_group "toile" {
+        doc "La taille et la forme d'ensemble."
+
+        distance "radius" {
+            output "geometry"
+            doc "Rayon de la toile, du moyeu au cadre. Mesure sur Araneus diadematus : sept centimetres en moyenne, de trois a dix. Le diametre suit la taille de l'araignee, pas le nombre de rayons."
+            animatable yes
+            numeric_range yes 1e-05 1000000
+            ui_range yes 0.01 2
+            value 0.07
+        }
+
+        percentage "aspect" {
+            output "geometry"
+            doc "Largeur rapportee a la hauteur. Une toile verticale est mesuree treize pour cent plus haute que large ; a cent pour cent elle est ronde, ce qui est le cas des toiles construites a l'horizontale."
+            animatable yes
+            numeric_range yes 0.1 3
+            ui_range yes 0.5 1.2
+            value 0.88
+        }
+
+        long "radii" {
+            output "geometry"
+            doc "Nombre de rayons. Trente-deux chez Araneus diadematus, vingt-six chez Zygiella, dix-huit chez Larinioides. Ce nombre ne depend pas de la taille de l'araignee -- il existe un minimum de stabilite, et les grosses especes epaississent leur soie au lieu d'ajouter des rayons."
+            numeric_range yes 3 512
+            ui_range yes 8 48
+            value 32
+        }
+
+        double "asymmetry" {
+            output "geometry"
+            doc "Rapport de la moitie basse a la moitie haute. Mesure entre 1,3 et 1,4 chez Araneus, jusqu'a 4,6 chez Nephila. La cause n'est pas la gravite mais la course : l'araignee descend deux fois plus vite qu'elle ne monte, donc elle place son moyeu haut et se donne plus de toile en dessous.\n\nA un, le moyeu est au centre geometrique."
+            animatable yes
+            numeric_range yes 0.2 6
+            ui_range yes 1 2
+            value 1.4
+        }
+
+        double "angle_asymmetry" {
+            output "geometry"
+            doc "Rapport de l'angle entre rayons en haut a celui d'en bas. Treize degres contre huit chez Araneus, soit environ 1,6.\n\nC'est un reglage independant du precedent, et il faut resister a l'envie de les lier : meme dans une toile parfaitement symetrique en hauteur, les angles restent plus serres en bas -- verifie chez quatre-vingt-douze araignees sur quatre-vingt-treize."
+            animatable yes
+            numeric_range yes 0.2 5
+            ui_range yes 1 2.5
+            value 1.57
+        }
+
+        percentage "depth" {
+            output "geometry"
+            doc "Ondulation hors du plan, en fraction du rayon. Une toile reelle n'est jamais plane : elle est tendue entre des points qui ne le sont pas. A zero elle est rigoureusement plate, et ca se voit."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.1
+            value 0.015
+        }
+
+        long "seed" {
+            output "geometry"
+            doc "Change toutes les irregularites d'un coup, sans changer leur caractere. Deux toiles de graines differentes sont deux toiles de la meme araignee, pas deux especes."
+            numeric_range yes 0.0 1000000
+            value 0
+        }
+    }
+
+    attribute_group "cadre" {
+        doc "Ce qui tient la toile : les fils d'amarrage et le polygone du cadre. C'est lui qui donne a la toile sa silhouette anguleuse -- une toile reelle n'est pas inscrite dans un cercle, ses rayons s'arretent sur des cordes."
+
+        long "anchors" {
+            output "geometry"
+            doc "Nombre de points d'amarrage. Le cadre est le polygone qui les relie, et les rayons s'arretent sur ses cotes."
+            numeric_range yes 3 64
+            ui_range yes 3 9
+            value 5
+        }
+
+        percentage "anchor_spread" {
+            output "geometry"
+            doc "De combien les ancrages s'ecartent d'une repartition reguliere. A zero le polygone est regulier, ce qui se lit immediatement comme une construction geometrique."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 0.35
+        }
+
+        percentage "frame_margin" {
+            output "geometry"
+            doc "De combien la toile deborde du rayon demande.\n\nLes ancrages sont poses de sorte que ce soit le milieu des cordes du cadre, et non ses sommets, qui touche l'enveloppe voulue -- les coins depassent donc nettement, comme sur les photos. Sans cette precaution le polygone rognerait les rayons de dix-neuf pour cent au milieu de chaque cote avec cinq ancrages, et sa propre anisotropie noierait l'asymetrie qu'on demande : mesure, un rapport haut/bas de 1,06 la ou on avait demande 1,40."
+            animatable yes
+            numeric_range yes 0.0 2
+            ui_range yes 0.0 0.5
+            value 0.12
+        }
+
+        percentage "anchor_length" {
+            output "geometry"
+            doc "Longueur des fils d'amarrage qui partent des ancrages vers l'exterieur, en fraction du rayon. A zero il n'y en a aucun. Ce sont les fils les plus tendus de la toile -- dix-sept fois la tension d'un rayon."
+            animatable yes
+            numeric_range yes 0.0 10
+            ui_range yes 0.0 1.5
+            value 0.4
+        }
+    }
+
+    attribute_group "moyeu" {
+        doc "Le centre, et l'anneau vide qui l'entoure."
+
+        percentage "hub" {
+            output "geometry"
+            doc "Rayon du moyeu, en fraction du rayon de la toile. Environ un dixieme. Ce qu'on y voit n'est pas une soie a part : c'est la partie interieure de la spirale auxiliaire, la seule que l'araignee ne mange pas."
+            animatable yes
+            numeric_range yes 0.0 0.9
+            ui_range yes 0.02 0.25
+            value 0.1
+        }
+
+        long "hub_turns" {
+            output "geometry"
+            doc "Nombre de tours de la spirale du moyeu."
+            numeric_range yes 0 100
+            ui_range yes 2 12
+            value 5
+        }
+
+        percentage "free_zone" {
+            output "geometry"
+            doc "Jusqu'ou s'etend l'anneau de rayons nus, sans aucune spirale, avant la premiere boucle collante. C'est par la que l'araignee passe d'une face a l'autre de sa toile sans se coller. Mesure entre dix et trente pour cent du rayon selon les modeles publies."
+            animatable yes
+            numeric_range yes 0.0 0.95
+            ui_range yes 0.1 0.45
+            value 0.3
+        }
+    }
+
+    attribute_group "spirale" {
+        doc "La spirale de capture. Un seul fil continu, pose du bord vers le centre."
+
+        percentage "spiral_pitch" {
+            output "geometry"
+            doc "Distance moyenne entre deux spires, en fraction du rayon de la toile. C'est elle qui fixe le nombre de tours : quatre pour cent en donnent dix-sept.\n\nLes deux toiles de reference des modeles par elements finis, toutes deux calees sur des toiles reelles, tiennent dix-huit et trente tours ; la valeur souvent citee de cinq virgule six millimetres, rapportee a un rayon de sept centimetres, n'en donnerait que huit. On a retenu la premiere source, qui decrit une toile precise plutot que deux moyennes d'especes differentes.\n\nExprime en fraction et non en millimetres pour que le reglage survive au changement d'echelle.\n\nA savoir : le pas moyen d'un secteur suit la longueur du rayon de ce secteur. Ce n'est pas un choix, c'est une consequence -- la spirale est un fil unique, elle fait le meme nombre de tours partout, donc les mailles sont plus grandes la ou le rayon est plus long."
+            animatable yes
+            numeric_range yes 0.002 0.5
+            ui_range yes 0.015 0.12
+            value 0.04
+        }
+
+        double "pitch_growth_top" {
+            output "geometry"
+            doc "De combien le pas s'elargit vers la peripherie, dans la moitie haute. La maille du haut s'ouvre du moyeu vers le bord.\n\nLa valeur d'usine n'est pas choisie : elle est deduite de la regression publiee sur Araneus, ou la hauteur de maille au nord vaut 1,43 plus 0,106 fois la largeur. Sur une toile de trente-deux rayons, ca fait une maille exterieure environ deux fois plus longue que l'interieure -- c'est ce que produit 0,9.\n\nCe reglage redistribue le long du rayon, il n'ajoute pas de tours : leur nombre est fixe par le pas."
+            animatable yes
+            numeric_range yes -2 6
+            ui_range yes 0.0 3
+            value 0.9
+        }
+
+        double "pitch_growth_bottom" {
+            output "geometry"
+            doc "La meme chose dans la moitie basse, ou la mesure dit tout autre chose : la meme regression y est NON SIGNIFICATIVE, et la hauteur de maille reste pratiquement constante sur toute la toile -- 2,86 plus 0,011 fois la largeur, soit sept pour cent d'ecart entre le moyeu et le bord. D'ou une valeur d'usine presque nulle.\n\nC'est le detail qui distingue une vraie toile d'une spirale d'Archimede, et il ne se devine pas : la premiere version du node moyennait cette croissance sur tout le tour et rendait les deux moities identiques -- 1,21 en haut contre 1,26 en bas la ou on demandait 2,03 contre 1,00."
+            animatable yes
+            numeric_range yes -2 6
+            ui_range yes -0.5 1
+            value 0.1
+        }
+
+        percentage "pitch_variation" {
+            output "geometry"
+            doc "De combien le pas varie d'un tour a l'autre. Trente pour cent mesures. Une spirale reguliere ne ressemble a rien de vivant."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 0.3
+        }
+
+        long "spiral_uturns" {
+            output "geometry"
+            doc "Nombre de demi-tours en epingle a cheveux dans la spirale. Onze en moyenne, et concentres sur le bord exterieur. Ce sont les coudes ou le fil rebrousse chemin au lieu de continuer son tour."
+            numeric_range yes 0 200
+            ui_range yes 0 25
+            value 11
+        }
+
+        double "free_sector" {
+            output "geometry"
+            doc "Ouverture, en degres, d'un secteur laisse sans spirale -- la signature de Zygiella x-notata, qui garde ce couloir pour rejoindre sa retraite. Un fil avertisseur le traverse. A zero, la spirale fait le tour complet."
+            animatable yes
+            numeric_range yes 0.0 180
+            ui_range yes 0.0 60
+            value 0.0
+        }
+
+        bool "auxiliary" {
+            output "geometry"
+            doc "Montre la spirale auxiliaire, celle que l'araignee pose du centre vers le bord et qu'elle mange ensuite en posant la collante. Dans une toile finie elle n'existe plus ; l'allumer donne une toile en cours de construction."
+            value no
+        }
+
+        long "auxiliary_turns" {
+            output "geometry"
+            doc "Nombre de tours de la spirale auxiliaire. Elle est logarithmique, contrairement a la spirale de capture qui est arithmetique -- deux lois differentes pour deux spirales, et c'est mesure."
+            numeric_range yes 1 100
+            ui_range yes 3 15
+            value 7
+        }
+    }
+
+    attribute_group "anomalies" {
+        doc "Le desordre de construction, sans lequel la toile reste une rosace.\n\nChez Zygiella on compte trente-cinq anomalies par toile : quatre-vingt-quatre pour cent des toiles ont au moins un rayon devie, quarante-cinq pour cent un rayon en Y, quinze pour cent un rayon qui ne part pas du centre. Ce sont des accidents de topologie, et c'est pour ca qu'un bruit ajoute apres coup ne les remplace pas."
+
+        long "deviated_radii" {
+            output "geometry"
+            doc "Nombre de rayons qui ne vont pas droit au cadre mais coudent en chemin. La spirale suit le coude, ce qui deforme la maille alentour -- c'est la que ca se voit."
+            numeric_range yes 0 512
+            ui_range yes 0 8
+            value 3
+        }
+
+        long "y_radii" {
+            output "geometry"
+            doc "Nombre de rayons qui se scindent en deux avant d'atteindre le cadre."
+            numeric_range yes 0 512
+            ui_range yes 0 6
+            value 2
+        }
+
+        long "extra_radii" {
+            output "geometry"
+            doc "Nombre de rayons surnumeraires, qui ne partent pas du moyeu mais s'accrochent en cours de route sur un rayon voisin."
+            numeric_range yes 0 512
+            ui_range yes 0 4
+            value 1
+        }
+
+        percentage "deviation" {
+            output "geometry"
+            doc "Amplitude du coude d'un rayon devie, en fraction de sa longueur. La mesure retient un ecart de plus de cinq degres a la droite."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.2
+            value 0.06
+        }
+    }
+
+    attribute_group "fils" {
+        doc "L'epaisseur des soies. Les rapports entre elles sont mesures ; leur valeur absolue ne l'est pas, parce qu'une soie reelle est invisible."
+
+        percentage "thread_radius" {
+            output "geometry"
+            doc "Rayon d'un rayon de la toile, en fraction du rayon de la toile.\n\nLa vraie valeur serait de l'ordre de trois millioniemes -- quatre microns pour une toile de quatorze centimetres. A cette finesse il ne reste rien a l'ecran, sauf en tres gros plan. La valeur d'usine est deliberement une cinquantaine de fois trop grosse : c'est un reglage d'image, pas de biologie."
+            animatable yes
+            numeric_range yes 1e-06 0.5
+            ui_range yes 0.0002 0.01
+            value 0.0015
+        }
+
+        percentage "radius_variation" {
+            output "geometry"
+            doc "De combien l'epaisseur varie d'un fil a l'autre. Quarante pour cent n'est pas exagere : le diametre mesure varie du simple au double dans une seule toile."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 0.4
+        }
+
+        double "frame_scale" {
+            output "geometry"
+            doc "Epaisseur du cadre rapportee a celle d'un rayon. Aucune source ne donne ce rapport ; ce qu'on sait, c'est que l'araignee epaissit son cadre en repassant dessus, et qu'on y observe trois a quatre brins contre deux pour un rayon."
+            animatable yes
+            numeric_range yes 0.05 20
+            ui_range yes 1 3
+            value 1.8
+        }
+
+        double "anchor_scale" {
+            output "geometry"
+            doc "Epaisseur des fils d'amarrage rapportee a celle d'un rayon."
+            animatable yes
+            numeric_range yes 0.05 20
+            ui_range yes 1 4
+            value 2.0
+        }
+
+        double "spiral_scale" {
+            output "geometry"
+            doc "Epaisseur de la spirale rapportee a celle d'un rayon. Le rapport mesure sur vingt-deux especes est de 1,43 en faveur du rayon, soit 0,7 dans ce sens -- et non les trois ou cinq fois qu'on lit souvent."
+            animatable yes
+            numeric_range yes 0.05 20
+            ui_range yes 0.3 1.5
+            value 0.7
+        }
+
+        long "sides" {
+            output "geometry"
+            doc "Nombre de cotes de la section d'un fil. Un fil de toile fait quelques pixels : cinq suffisent, et la difference avec seize ne se voit qu'au microscope alors qu'elle triple le maillage."
+            numeric_range yes 3 64
+            ui_range yes 3 12
+            value 5
+        }
+    }
+}

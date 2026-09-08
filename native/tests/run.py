@@ -37,11 +37,35 @@ NOISE = re.compile(r"OpenColorIO|ColorSpace|color space|OCIO|BuiltinTransform"
                    r"|at your own risk|WARNING")
 
 
+def declared_class(module):
+    """La classe que ce module declare, lue dans son CID.
+
+    Sans ca le test interrogerait toujours AddHello et rendrait un echec sur
+    n'importe quel autre module -- un faux signal."""
+    folder = os.path.join(NATIVE, module)
+    if not os.path.isdir(folder):
+        return None
+    for name in sorted(os.listdir(folder)):
+        if not name.endswith(".cid"):
+            continue
+        with open(os.path.join(folder, name)) as source:
+            found = re.search(r'^\s*class\s+"([^"]+)"', source.read(),
+                              re.MULTILINE)
+        if found:
+            return found.group(1)
+    return None
+
+
 def main(module):
     dll = os.path.join(NATIVE, "build", module + ".dll")
     if not os.path.isfile(dll):
         sys.exit("%s n'existe pas -- lancer d'abord : python build.py %s"
                  % (dll, module))
+
+    wanted = declared_class(module)
+    if wanted is None:
+        sys.exit("aucune classe declaree dans les CID de %s" % module)
+    print("  classe cherchee : %s" % wanted)
 
     command = [os.path.join(CLARISSE, "cnode.exe"),
                os.path.join(HERE, "empty.project"),
@@ -49,7 +73,10 @@ def main(module):
                os.path.join(NATIVE, "build"),
                "-script", os.path.join(HERE, "smoke.py")]
 
-    proc = subprocess.Popen(command, cwd=CLARISSE,
+    environment = dict(os.environ)
+    environment["CLARISSE_ADD_CLASS"] = wanted
+
+    proc = subprocess.Popen(command, cwd=CLARISSE, env=environment,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     raw = proc.communicate()[0].decode("mbcs", "replace")
 
