@@ -1,7 +1,12 @@
 # Passation — où en est ClarisseAdd
 
 Écrit le 2026-09-07, à la fin d'une session trop longue et deux fois compactée.
-Mis à jour le 2026-09-08. **À lire en premier dans une nouvelle session.**
+Mis à jour le 2026-09-08 au soir. **À lire en premier dans une nouvelle
+session, et à relire en entier après chaque compaction** — un résumé de ce
+document n'est pas ce document, et la journée du 8 en a produit deux.
+
+Le bilan le plus récent est la section 0 bis. Elle dit ce qui est vrai
+aujourd'hui ; les sections suivantes portent le contexte durable.
 
 ---
 
@@ -68,97 +73,156 @@ sans effort — ne pas les effacer.
 
 ---
 
-## 0 bis. Reprise du 2026-09-08 au soir — ce qui attend
+## 0 bis. Bilan du 2026-09-08 au soir
 
-Journee longue. Quatre chantiers ont avance, quatre documents de recherche sont
-tombes, et il reste des fils precis. Ils sont ranges ici par ce qu'ils
-demandent, pas par sujet : c'est ce qui sert quand on rouvre.
+> **Si tu lis ceci apres une compaction, relis-le en entier, et relis aussi les
+> documents qu'il cite plutot que leur resume.** Cette journee a ete longue et
+> deux fois compactee ; ce qui suit est ce qui reste vrai, pas ce dont on se
+> souvient. Chaque fois qu'un resume et un document se contredisent, c'est le
+> document qui a raison -- il a ete ecrit en regardant le code.
 
-### Ce qui ne peut pas se faire sans Clarisse ouvert
+### Ce qui a ete livre aujourd'hui
 
-Trois choses attendent Romain, parce que `cnode` n'a pas de viewport et qu'on
-ne lance jamais `clarisse.exe` soi-meme.
+Tout compile, tout se charge dans `cnode`, et tout ce qui est marque « rendu » a
+ete regarde a l'image.
 
-- **Essayer les deux outils de barre d'outils** : `ToolFaceSelect` et
-  `ToolCurvePen`, categorie *Create*. Aucun des deux n'a jamais ete manipule.
-  Il faut passer par le raccourci **« Clarisse iFX 5.0 SP14 (ClarisseAdd) »**
-  cree sur le bureau : les outils n'apparaissent que si les modules sont charges
-  **au demarrage du moteur**, par `-module_path`, et non a chaud par le script de
-  demarrage -- la barre d'outils est deja construite a ce moment-la. C'est la
-  cause, verifiee dans le journal de demarrage, pour laquelle rien n'etait
-  visible.
-- **La selection en orthographique.** Le test `native/tests/ray_roundtrip.cpp`
-  prouve la construction du rayon en perspective a 6e-15 pres ; l'orthographique
-  ne peut pas s'y verifier, faute de reference independante. Le correctif est
-  raisonne, pas mesure.
-- **La sonde `paint_gl`**, une demi-journee. Elle decide de tout l'apercu GPU du
-  chantier SDF. Voir `docs/sdf-clarisse.md` §7.4.
+| Node | Etat |
+|---|---|
+| `GeometryClothPanel` (ex `GeometryQuilt`) | **rendu.** Passe au modele des solveurs de production : force de pression, depart a plat, tissu agrandi, compression libre, vraie dynamique. Trente plis par coussin, invariant d'echelle verifie sur un facteur mille. |
+| `GeometrySelect` | **verifie par les nombres.** Selection de faces par regle -- texture, normale, aleatoire -- plus une liste explicite, sortie en shading group, chainable. |
+| `ToolFaceSelect` | **se charge, jamais manipule.** Outil de viewport : survol, clic, Maj, Ctrl, peinture. Deux bugs de pointage deja trouves et corriges *avant* tout essai, par un test d'aller-retour. |
+| `GeometrySdf` | **rendu.** Modelisation par champ de distance : sept primitives, trois operations, raccord arrondi par ligne, pile ordonnee, groupes. |
+| `GeometryTube` | **rendu.** Gagne les gouttelettes -- le rayon enfle en chapelet, profil de sphere, largeur deduite pour que la goutte soit ronde. |
+| `ImageFilterBokeh`, `CameraBokeh` | **mesures.** Les coutures de tuile sont corrigees : le saut d'une colonne a la suivante passe de cinquante-cinq fois le bruit de fond a un. |
 
-### Le node SDF — ce qui reste, dans l'ordre
+Quatre documents de recherche sont tombes le meme jour :
+`cloth-clarisse.md`, `bokeh-clarisse.md`, `csg-clarisse.md`, `fluent-audit.md`,
+`sdf-clarisse.md`. Ils portent les mesures ; ce fichier-ci ne porte que l'etat.
 
-`native/sdf/` existe, rend, et fait ce qu'il annonce : sept primitives, trois
-operations, raccord arrondi par ligne, pile ordonnee, groupes par reference.
-La feuille de route detaillee est `docs/sdf-clarisse.md` §9.1 ; ce qui suit est
-ce qui manque **a ce node-la**, maintenant qu'il existe.
+### Ce qui attend Romain, dans Clarisse ouvert
 
-1. **Les UV.** L'attribut `uv_mode` a ete retire parce que le code ne le lisait
-   pas. Il reste `uv_scale`, qui agit. Une surface implicite n'a aucun depliage
-   naturel : la projection triplanaire est la reponse, et elle demande de porter
-   la position dans le fragment autrement que par la position normalisee dans la
-   boite.
-2. **Une matiere par forme.** Demande explicitement par Romain via le systeme de
-   calques. Il faut une primitive Clarisse par forme -- ce qui coute (§5.4 du
-   document) -- ou trouver comment faire varier le shading group au fragment.
-   C'est la question a trancher avant d'ecrire.
-3. **La polygonisation**, par dual contouring adaptatif depuis le champ
-   analytique. C'est elle qui permettra de poser un panneau de tissu sur une
-   forme CSG, de deplier des UV, d'exporter. Romain la veut de tres bonne
-   qualite, et c'est jouable : contrairement a MagicaCSG qui polygonise depuis
-   une grille de voxels, on interroge la formule exacte, donc les aretes vives
-   se reconstruisent au lieu d'etre rabotees. Sortie quad-dominante.
-4. **La retopologie**, elle, se delegue. Romain a raison : un remailleur
-   isotrope a flux d'aretes propre est des annees de recherche. Instant Meshes
-   est installe sur la machine. **En processus separe seulement** -- jamais lie,
-   la licence est a verifier avant de s'engager -- et sur un geste volontaire,
-   pas pendant l'evaluation de la geometrie.
-5. **Hierarchie de bornes** au-dela de quelques centaines de primitives, et
-   **bake vers grille ou VDB**. Ni l'un ni l'autre ne presse.
+Trois choses, parce que `cnode` n'a pas de viewport et qu'on ne lance jamais
+`clarisse.exe` soi-meme.
 
-### Le panneau de tissu
+1. **Essayer `ToolFaceSelect` et `ToolCurvePen`**, categorie *Create*. Il faut le
+   raccourci **« Clarisse iFX 5.0 SP14 (ClarisseAdd) »** cree sur le bureau : un
+   outil arrive par `scan_modules` n'entre jamais dans une barre d'outils deja
+   construite. C'est verifie dans le journal de demarrage.
+2. **La selection en orthographique.** Le correctif est raisonne, pas mesure :
+   `project_point` de Clarisse est une projection perspective, il n'existe pas de
+   reference independante hors d'un viewport. La perspective, elle, est prouvee a
+   6e-15 pres par `native/tests/ray_roundtrip.cpp`.
+3. **La sonde `paint_gl`**, une demi-journee. Elle decide de tout l'apercu GPU.
+   Voir `sdf-clarisse.md` §7.4.
 
-Il marche et Romain en est content. Ce qui reste est de la qualite, pas de la
-mecanique : les plis sortent **reguliers** la ou les references sont
-desordonnees, parce qu'une membrane carree reguliere flambe en eventail
-regulier. Fluent y echappe en remaillant en triangles irreguliers avant de
-simuler ; `mesh_jitter` en est l'equivalent bon marche et n'a pas suffi. Manque
-aussi l'**auto-collision**, qui empilerait les plis au lieu de les laisser se
-traverser.
+### Le chantier en cours : la toile d'araignee
 
-### Le bokeh
+Romain veut des images d'art de toiles. **Un agent ecrivait
+`docs/toile-clarisse.md` au moment ou cette session s'est arretee** : si le
+fichier existe, il fait autorite sur ce qui suit ; s'il manque, la recherche est
+a relancer.
 
-Les coutures sont corrigees et mesurees -- le saut d'une colonne a la suivante
-passe de cinquante-cinq fois le bruit de fond a un. Reste **le trou d'alpha
-derriere un premier plan flou**, et le diagnostic a ete corrige au passage : ce
-n'est pas le composite qui perd de l'alpha, c'est que le mur derriere la boite
-n'a jamais ete rendu. Deux correctifs plausibles ont ete ecrits, mesures et
-retires ; un avertissement dans le code evite de les re-tenter. Tout est chiffre
-dans `docs/bokeh-clarisse.md` §8.
+Ce qui est deja decide, et qui ne changera pas :
 
-### Ce que Romain vise
+- **Ses references ne sont pas des toiles tissees.** C'est de la fibre etiree --
+  deux echelles nettement separees, quelques cables epais en longs arcs peu
+  profonds, et sous eux un voile de fibres tres fines, presque paralleles,
+  s'evasant en eventail. Des noeuds lumineux aux croisements, des grumeaux le
+  long des brins, et une profondeur faite de couches qui se perdent dans le noir.
+  Une araignee construit fil par fil avec un plan ; ca, c'est une masse de fibres
+  qu'on a tiree. Les deux se modelisent tres differemment.
+- **`GeometryWeb`**, deux modes : *orbitele* (cadre, moyeu, rayons, spirale a pas
+  variable) et *enchevetre*. La regle qui fait tout dans le second : **un fil peut
+  s'accrocher a un autre fil**, pas seulement a un ancrage. C'est de la que
+  viennent les V, les points de traction et l'aspect recursif.
+- **La relaxation reutilise `cloth_solver.h`.** Une toile est un reseau
+  masse-ressort, exactement ce que ce solveur sait faire : ancrages epingles,
+  fils en contraintes de distance, un peu de gravite -- et les tensions et les
+  coudes aux jonctions apparaissent au lieu d'etre dessines. C'est le deuxieme
+  client du solveur, et c'est ce qu'on annoncait en l'ecrivant.
+- **L'ancrage ne demande pas de nouveau node.** Verifie : Clarisse possede
+  `TextureCurvature` (les aretes saillantes) et `TextureOcclusion` (les recoins
+  abrites) -- exactement les deux criteres ou une araignee accroche. Avec le
+  scatterer natif et notre `GeometrySelect`, l'ancrage est deja exprimable.
+- **Question ouverte** : le voile de fibres fines doit-il etre nos tubes ou des
+  courbes natives ? `GeometryBundle` et `GeometryFur` existent ; il faut savoir
+  si l'un des deux accepte des courbes fournies par un module tiers.
+- **Sur le tube**, les perles sont faites. Restent le *clumping* des torons, les
+  fibres echappees, et l'attenuation aux extremites -- un fil casse s'affine, il
+  ne s'arrete pas net.
 
-« Modeliser dans Clarisse de A a Z » : le CSG pour les volumes, les courbes pour
-les cables, le tissu pour les panneaux, et des rendus dans l'esprit de Paul
-Pepera -- machines a modules repetes, capsules et cylindres, raccords arrondis
-courts, panneaux capitonnes a l'echelle architecturale. Les trois chantiers
-convergent, ce qui est bon signe.
+### Le node SDF : la suite
 
-Le risque principal a nommer, parce qu'il ne se voit pas dans les documents :
-**l'ergonomie**. Les mathematiques sont la partie facile. Clarisse n'a aucun
-outil de modelisation, et attraper une forme a la souris pour la deplacer en
-voyant le resultat en direct est ce qui coutera le plus cher. Le node SDF
-contourne le probleme pour l'instant en prenant la transformation d'un locator :
-l'outil de deplacement habituel de Clarisse fait le travail, et il n'y a pas de
-manipulateur a ecrire.
+Ordonnee, et detaillee dans `sdf-clarisse.md` §9.1.
+
+1. **Les UV** par projection triplanaire. L'attribut `uv_mode` a ete **retire**
+   parce que le code ne le lisait pas ; `uv_scale` agit.
+2. **Une matiere par forme**, demande explicitement. Question a trancher avant
+   d'ecrire : une primitive Clarisse par forme -- mesure a trois fois le cout --
+   ou un shading group variable au fragment.
+3. **La polygonisation** par dual contouring adaptatif depuis le champ
+   analytique. C'est elle qui permettra un panneau de tissu sur une forme CSG.
+   On peut faire mieux que MagicaCSG ici : il polygonise depuis une grille de
+   voxels, nous interrogeons la formule exacte, donc les aretes vives se
+   reconstruisent au lieu d'etre rabotees.
+4. **La retopologie se delegue.** Instant Meshes est installe. En **processus
+   separe seulement**, jamais lie, licence a verifier, et sur un geste
+   volontaire -- pas pendant l'evaluation de la geometrie.
+
+### Les pieges trouves aujourd'hui, a ne pas redecouvrir
+
+Ils ont tous coute du temps, et aucun ne se devine.
+
+- **Une colonne de table ne peut pas etre de type tableau.** Clarisse l'ecrit
+  dans son journal et l'attribut devient **invisible dans l'editeur**. Trois
+  colonnes scalaires a la place.
+- **Chaque colonne d'une table se dimensionne separement.** N'en dimensionner
+  qu'une laisse les autres a leur defaut, et les ecritures hors plage passent en
+  silence.
+- **`source` est un mot reserve** dans un CID.
+- **`GeometryMediumDescriptor` doit etre fourni a la main**, avec l'opacite a un.
+  A zero, rien ne s'affiche -- sans silhouette, sans alpha, sans message.
+- **`NOMINMAX` avant `windows.h`**, sinon `gmath_vec2.h` casse sur une erreur de
+  syntaxe qui ne parle de rien.
+- **`GMathViewPoint::get_eye_position`**, pas `get_translation`. Et en
+  orthographique l'etendue se mesure **a la distance de pivot**, pas a une unite.
+- **Les modificateurs clavier sont sur `keyboard`**, meme pendant un evenement
+  souris.
+- **`GMathVec3d v(double(x), ...)` est une declaration de fonction**, pas une
+  construction. `static_cast` leve l'ambiguite.
+- **Interroger un attribut absent ecrit un avertissement a chaque evaluation** :
+  demander la classe de l'objet d'abord.
+- **La barre d'outils est construite avant le script de demarrage** : un outil
+  n'y entre que si son module est charge par `-module_path`.
+
+### La methode qui a marche, et qu'il faut reprendre
+
+- **Ecrire une sonde qui mesure dans les donnees plutot que juger au rendu.**
+  C'est ce qui a debloque le tissu apres une demi-journee perdue, et c'est ce qui
+  a trouve les deux bugs de l'outil de selection avant meme qu'il soit essaye.
+  Le rendu coute cher et ne dit pas *de combien* on se trompe.
+- **Verifier plutot que supposer.** Les pixels noirs le long des coutures : lus
+  un par un, opaques, donc de la geometrie et pas un trou. Le rayon de l'outil :
+  un aller-retour arithmetique, exact en perspective, faux de cinq unites en
+  orthographique.
+- **Ne jamais declarer un reglage que le code ne lit pas.** Un curseur qui ne
+  fait rien est pire qu'un curseur absent : on le tourne, rien ne bouge, et on
+  cherche ailleurs. Deux ont ete retires aujourd'hui pour cette raison.
+
+### La direction, pour ne pas la perdre
+
+Romain veut **construire des scenes de A a Z dans Clarisse**. Pas tout, mais une
+bonne base : le CSG pour les volumes, les courbes pour les cables, le tissu pour
+les panneaux, la toile pour la matiere. Les trois chantiers convergent vers le
+meme genre d'image -- machines a modules repetes, capsules et cylindres,
+raccords arrondis courts, panneaux capitonnes.
+
+**Le risque principal n'est pas mathematique, il est ergonomique.** Clarisse n'a
+aucun outil de modelisation, et attraper une forme a la souris pour la deplacer
+en voyant le resultat en direct est ce qui coutera le plus cher. Le node SDF
+contourne le probleme en prenant la transformation d'un locator : l'outil de
+deplacement habituel fait le travail, et il n'y a pas de manipulateur a ecrire.
+C'est un contournement qui tient longtemps, pas une solution definitive.
 
 ---
 
