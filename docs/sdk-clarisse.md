@@ -62,10 +62,7 @@ class "Sonde" "<ClasseDeBase>" { ui_name "x" category "y" }
 puis `cmagen sonde.cid -module_path <install>/module`. S'il produit un `.cma`,
 la classe se dérive.
 
-### On ne peut dériver que des classes de base ABSTRAITES
-
-Résultat de sondes systématiques, et c'est une contrainte structurelle qu'il
-vaut mieux connaître avant de concevoir.
+### Une base est dérivable si un module porte son nom
 
 | Résolvent | Échouent |
 |---|---|
@@ -75,10 +72,23 @@ Autrement dit : **on ne dérive pas d'un nœud livré**, seulement d'une base. P
 question de partir de `TextureTriplanar` pour en faire une variante ; il faut
 repartir de `TextureSpatial`.
 
-La règle empirique est que les modules « base » se résolvent et les modules
-`*_builtin.dll` non — les noms sont pourtant bien présents dans les binaires.
-**La cause n'est pas établie** ; l'hypothèse d'une dépendance GL/GUI est
-réfutée, `texture.dll` important lui aussi `ix_gui.dll` tout en résolvant.
+**La cause est celle du piège d'entrée, appliquée une deuxième fois.** `cmagen`
+déduit le nom du module de celui de la classe de base — `snake_case(Classe).dll`
+— et le cherche dans `module/`. `Texture` → `texture.dll`, présent, résolu.
+`TextureTriplanar` → `texture_triplanar.dll`, qui n'existe pas : la classe vit
+dans `texture_builtin.dll`, et le nom déduit ne tombe sur rien. La liste des
+bases dérivables est donc mécaniquement **la liste des 134 DLL de `module/`**.
+La doc du SDK le dit d'ailleurs à demi-mot dans `declaring_modules.html` : les
+classes de module abstraites « must be stored in a module library that matches
+their name, for resolution purpose ».
+
+**Ce n'est pas une affaire d'abstraction**, contrairement à ce qui était écrit
+ici avant le 2026-09-08. `Group` et `ShadingLayer` n'ont pas `abstract yes` dans
+leur CID et se dérivent quand même, parce que `group.dll` et `shading_layer.dll`
+existent. Inversement `Layer3d` est bien abstraite et échoue, parce qu'elle est
+dans `layer_builtin.dll`. Se tromper de règle ici fait renoncer d'avance à des
+bases parfaitement dérivables — `GeometryFur`, `GeometryParticle`, `Deformer`,
+`SceneObjectTree` en sont.
 
 Contrôles négatifs qui prouvent que la sonde teste vraiment quelque chose : une
 base inexistante rend `failed to find declaration of base class`, et l'absence

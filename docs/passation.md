@@ -1,7 +1,43 @@
 # Passation — où en est ClarisseAdd
 
 Écrit le 2026-09-07, à la fin d'une session trop longue et deux fois compactée.
-**À lire en premier dans une nouvelle session.**
+Mis à jour le 2026-09-08. **À lire en premier dans une nouvelle session.**
+
+---
+
+## 0. Ce qui a changé le 2026-09-08 — la priorité n'est plus l'intégrateur
+
+Romain : « avant de faire le moteur de rendu, on va faire quelques petits trucs
+plus simples, à commencer par le système de curves ». L'intégrateur (§5) et le
+débruiteur (§6) restent valables mais passent derrière.
+
+Deux chantiers ouverts, chacun avec son document :
+
+- **`curves-clarisse.md`** — des tubes, cordes, câbles et branches posés à la
+  main, vus de près, sur lesquels on puisse scatter. **Du code existe déjà** :
+  `native/tube/` compile, se charge et produit un maillage juste. Un point reste
+  ouvert, l'invalidation de la ressource.
+- **`npr-clarisse.md`** — une boîte à outils NPR pour beaucoup de styles, à
+  partir de quatre couvertures de romans données comme cibles. Aucun code, mais
+  l'inventaire est fait et il change la donne : `SubPixelFilterOutline` existe
+  déjà et fait les quatre types de contours.
+
+**Une correction importante est tombée ce jour-là**, et elle vaut pour tout le
+projet : la règle « on ne dérive que des classes abstraites » est **fausse**.
+Ce qui compte est qu'un module porte le nom de la classe
+(`snake_case(Classe).dll` dans `module/`). `sdk-clarisse.md` est corrigé. Ça
+ouvre `GeometryFur`, `GeometryParticle`, `GeometryVolume`, `SceneObjectTree`,
+`Deformer`, `Locator`, `Displacement` — sondés et vérifiés.
+
+Deuxième correction, à porter dans `J:\Clarisse-SDK\RECONSTRUCTION.md` : les 19
+en-têtes de `module/` réputés bloqués échouaient sur `gmath_transform.icc`, pas
+sur `geometry_sample.icc`, et **les corps inline perdus d'une classe marquée
+`X_EXPORT` sont récupérables depuis la DLL à l'édition de liens**. Le passif
+réel des 29 stubs est donc bien plus petit qu'annoncé.
+
+Enfin : **209 Mo de PDF de recherche** (aquarelle, encre, NPR) sont dans
+`J:\Clarisse-SDK\papers\`, hors dépôt. Ils ne sont pas retrouvables en ligne
+sans effort — ne pas les effacer.
 
 ---
 
@@ -78,6 +114,8 @@ quinze classes `Tool*` concrètes échouent.
 
 | document | contenu |
 |---|---|
+| **`curves-clarisse.md`** | **Chantier en cours.** Le système de courbes de Clarisse (il s'appelle « Fur »), pourquoi on ne passe pas par lui, la preuve que le chemin polymesh se lie, l'état de `native/tube/` et le point ouvert. |
+| **`npr-clarisse.md`** | Le NPR : les quatre images cibles, les quatre axes, l'inventaire de ce que Clarisse a déjà (beaucoup), le dossier simulation d'encre, l'ordre de travail. |
 | **`sdk-clarisse.md`** (642 l.) | **La référence vivante.** Système de modules, contrainte cmagen, chargement sans action utilisateur, pièges à crash, langage CID, contrat `CtxKernelFilter` mesuré, accès aux AOV, générateur de rayons caméra, saveurs de licence, mensonges de l'API Python, invocation de `cnode`, recettes EXR. **À lire avant d'écrire du C++.** |
 | **`integrateur-clarisse.md`** (1288 l.) | Le gros dossier du soir. Voir §5. |
 | **`optique-etat.md`** (397 l.) | État des trois nœuds d'optique, inventaire des paramètres, les deux chemins de flou, et quatre défauts trouvés en le rédigeant. |
