@@ -203,33 +203,34 @@ reste à trouver. En attendant, *Draw Points* crée la plume et la vise ; il res
 
 ### Le bruit, et le faisceau qui ne se traverse pas
 
-Le bruit fractal est ce qui separe une courbe mathematique d'un cable pose a la
-main. Trois precautions le rendent utilisable :
+Le bruit fractal est ce qui sépare une courbe mathématique d'un câble posé à la
+main. Trois précautions le rendent utilisable :
 
-- **il est projete dans le plan normal.** Une composante le long de la courbe
-  allongerait et raccourcirait le cable, ce qui ferait deriver les UV et le
-  pavage des modules poses dessus ;
-- **sa frequence se compte en unites monde**, pas en parametre de courbe : sinon
-  un cable deux fois plus long aurait des ondulations deux fois plus larges,
-  alors que c'est la meme matiere ;
-- **il s'eteint aux extremites** sur une largeur reglable, parce qu'un cable
-  branche ne bouge pas la ou il est accroche.
+- **il est projeté dans le plan normal.** Une composante le long de la courbe
+  allongerait et raccourcirait le câble, ce qui ferait dériver les UV et le
+  pavage des modules posés dessus ;
+- **sa fréquence se compte en unités monde**, pas en paramètre de courbe : sinon
+  un câble deux fois plus long aurait des ondulations deux fois plus larges,
+  alors que c'est la même matière ;
+- **il s'éteint aux extrémités** sur une largeur réglable, parce qu'un câble
+  branché ne bouge pas là où il est accroché.
 
-Plus un biais de gravite, qui tire l'ondulation vers le bas — un cable
-s'affaisse plus qu'il ne se souleve.
+Plus un biais de gravité, qui tire l'ondulation vers le bas — un câble s'affaisse
+plus qu'il ne se soulève.
 
-**Le faisceau garantit la non-interpenetration par construction, sans aucune
-detection de collision.** Sans jeu, les torons se touchent exactement : leur
-rayon vaut  avec , et la distance entre deux centres
-voisins vaut exactement deux fois ce rayon.  les fait maigrir sans
-deplacer leurs centres, ce qui libere une marge egale a . Si
-l'ondulation propre a chaque toron est bornee par cette marge, deux voisins qui
-viennent l'un vers l'autre au maximum s'effleurent sans jamais se penetrer.
+**Le faisceau garantit la non-interpénétration par construction, sans aucune
+détection de collision.** Sans jeu, les torons se touchent exactement : leur
+rayon vaut `R·s/(1+s)` avec `s = sin(π/N)`, et la distance entre deux centres
+voisins vaut exactement le double. `strand_gap` les fait maigrir **sans déplacer
+leurs centres**, ce qui libère une marge égale à `rayon × jeu`. Si l'ondulation
+propre à chaque toron est bornée par cette marge, deux voisins qui viennent l'un
+vers l'autre au maximum s'effleurent sans jamais se pénétrer. Rien à détecter,
+rien à itérer.
 
-Un detail qui compte : c'est la **norme** du deplacement qu'il faut borner, pas
-chaque composante separement. Borner les deux axes du plan de section
-laisserait passer un facteur racine de deux dans les diagonales — et c'est
-justement la que deux torons voisins se rejoignent.
+Un détail qui compte : c'est la **norme** du déplacement qu'il faut borner, pas
+chaque composante séparément. Borner les deux axes du plan de section laisserait
+passer un facteur √2 dans les diagonales — et c'est justement là que deux torons
+voisins se rejoignent.
 
 ### Les embouts
 
