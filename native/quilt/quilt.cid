@@ -1,0 +1,136 @@
+class "GeometryQuilt" "GeometryPolymesh" {
+    #version 0.2
+    category "/Geometry/Polymesh"
+    doc "Transforme chaque polygone d'un maillage en coussin capitonne. La forme n'est pas dessinee mais simulee : une membrane cousue sur le contour du polygone, a qui on donne plus de matiere qu'il n'en faut, et qu'une pression interne pousse vers l'exterieur. Les bourrelets et les plis naissent de ce surplus, comme sur un vrai coussin. Marche sur n'importe quel maillage, plan ou courbe."
+
+    attribute_group "input" {
+        doc "Le maillage a capitonner."
+
+        reference "input_geometry" {
+            filter "Geometry"
+            input "shading_variable" "motion" "geometry" "motion_blur"
+            output "geometry"
+            dirtiness_pass_through yes
+            doc "Le maillage dont chaque polygone devient un coussin. Sa topologie dessine le capitonnage : des quads reguliers donnent un matelas, une sphere facettee donne la boule a coussins."
+        }
+
+        string "shading_group" {
+            output "geometry"
+            doc "Ne capitonner que les polygones de ce shading group. Laisse vide, tout le maillage y passe. C'est la seule selection de faces que Clarisse sache retenir -- elle vient de l'amont, du DCC ou de l'Alembic, et elle survit a tout."
+            value ""
+        }
+
+        long "resolution" {
+            output "geometry"
+            doc "Nombre de subdivisions par coussin. C'est ce qui borne la finesse des plis : un pli ne peut pas etre plus etroit qu'une maille. C'est donc un reglage de style autant que de qualite."
+            numeric_range yes 3 64
+            ui_range yes 6 20
+            value 10
+        }
+    }
+
+    attribute_group "cushion" {
+        doc "La forme du coussin."
+
+        percentage "seam" {
+            output "geometry"
+            doc "Largeur du sillon de couture, en fraction du coussin."
+            animatable yes
+            numeric_range yes 0.0 0.49
+            ui_range yes 0.0 0.3
+            value 0.12
+        }
+
+        distance "seam_depth" {
+            output "geometry"
+            doc "De combien la couture s'enfonce sous la surface d'origine."
+            animatable yes
+            ui_range yes 0.0 0.2
+            value 0.02
+        }
+
+        percentage "slack" {
+            output "geometry"
+            doc "Surplus de matiere dans la membrane, en fraction. C'est le reglage central : sans surplus, la membrane est deja tendue a plat et la pression ne peut que l'etirer, ce qui donne une bosse lisse. Avec du surplus, la matiere en trop doit aller quelque part -- et elle se plisse."
+            animatable yes
+            numeric_range yes 0.0 2
+            ui_range yes 0.0 0.6
+            value 0.18
+        }
+
+        percentage "puff_relative" {
+            output "geometry"
+            doc "Volume vise, en fraction du rayon du coussin. Proportionnel a la taille de la face, donc un meme reglage tient sur un matelas de six metres comme sur une sphere aux faces centimetriques."
+            animatable yes
+            numeric_range yes 0.0 10
+            ui_range yes 0.0 1
+            value 0.35
+        }
+
+        percentage "pressure" {
+            output "geometry"
+            doc "Multiplie le volume vise. Au-dela de 1 le coussin est surgonfle et se tend ; en dessous il se degonfle et pend."
+            animatable yes
+            numeric_range yes 0.0 10
+            ui_range yes 0.2 3
+            value 1
+        }
+    }
+
+    attribute_group "material" {
+        doc "Le comportement du tissu. Ce sont des complaisances : plus la valeur est grande, plus la membrane cede."
+
+        double "stiffness" {
+            output "geometry"
+            doc "Complaisance en tension. A zero la membrane est inextensible et tout le surplus part en plis ; en montant, elle s'etire au lieu de se plisser."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.01
+            value 0.0
+        }
+
+        double "bend_stiffness" {
+            output "geometry"
+            doc "Complaisance en flexion. C'est elle qui decide de la taille des plis : une membrane raide fait peu de grands plis, une membrane souple beaucoup de petits."
+            animatable yes
+            numeric_range yes 0.0 1000
+            ui_range yes 0.0 5
+            value 0.4
+        }
+
+        double[3] "gravity" {
+            output "geometry"
+            doc "Direction vers laquelle la membrane retombe. Rompt la symetrie du coussin et donne un dessus different d'un dessous."
+            animatable yes
+            value 0.0 -1 0.0
+        }
+    }
+
+    attribute_group "solver" {
+        doc "La resolution. Ces reglages changent la precision, pas la forme visee."
+
+        long "iterations" {
+            output "geometry"
+            doc "Nombre de passes de relaxation. Le solveur converge vers un equilibre bien defini, donc monter ce nombre affine la forme sans la changer -- contrairement a un solveur en positions ordinaire, ou la raideur depend du budget."
+            numeric_range yes 1 5000
+            ui_range yes 20 400
+            value 120
+        }
+
+        percentage "jitter" {
+            output "geometry"
+            doc "Bruit initial hors du plan, en fraction du coussin. Il est indispensable et non cosmetique : une membrane parfaitement plane est une configuration exactement stationnaire du solveur -- toutes les corrections y sont coplanaires -- et resterait plate quelle que soit la pression. Ce bruit choisit de quel cote elle flambe."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.05
+            value 0.006
+        }
+
+        long "seed" {
+            output "geometry"
+            doc "Change le motif des plis sans changer leur caractere."
+            numeric_range yes 0.0 1000000
+            value 0
+        }
+    }
+}
