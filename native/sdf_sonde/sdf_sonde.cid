@@ -1,0 +1,63 @@
+class "GeometrySdfSonde" "Geometry" {
+    #version 0.1
+    category "/Geometry"
+    doc "Sonde de faisabilite. Elle repond a une question que la sonde CSG ne posait pas : Clarisse accepte-t-il un champ de distance signee resolu par SPHERE TRACING, avec melange doux, dans intersect_primitive ? La sonde CSG resolvait des equations du second degre ; celle-ci marche. Le node compte ses iterations et ecrit ses statistiques dans un fichier a la fin du rendu. A jeter une fois la reponse ecrite."
+
+    attribute_group "champ" {
+        long "blob_count" {
+            output "geometry"
+            doc "Nombre de primitives du champ."
+            numeric_range yes 1 512
+            ui_range yes 1 256
+            value 64
+        }
+
+        double "blend" {
+            output "geometry"
+            doc "Rayon du melange doux (smin polynomial). 0 = union dure."
+            numeric_range yes 0.0 4.0
+            ui_range yes 0.0 1.0
+            value 0.25
+        }
+
+        long "mode" {
+            output "geometry"
+            doc "Comment la surface est resolue."
+            preset "Sphere tracing du champ" "0"
+            preset "Intersection analytique (union dure de spheres)" "1"
+            value 0
+        }
+
+        bool "split_primitives" {
+            output "geometry"
+            doc "Exposer une primitive Clarisse par blob (le BVH du moteur elague alors le champ) au lieu d'une seule primitive globale."
+            value yes
+        }
+    }
+
+    attribute_group "marche" {
+        double "step_scale" {
+            output "geometry"
+            doc "Facteur applique au pas. 1 = pas plein. En dessous de 1 on paie des iterations ; au dessus on troue les objets."
+            numeric_range yes 0.01 2.0
+            ui_range yes 0.1 1.5
+            value 1.0
+        }
+
+        long "max_iterations" {
+            output "geometry"
+            doc "Plafond d'iterations par rayon. Quand il mord, la surface manque : c'est l'origine des bandes."
+            numeric_range yes 1 4096
+            ui_range yes 16 512
+            value 128
+        }
+
+        double "epsilon" {
+            output "geometry"
+            doc "Seuil d'arret de la marche, en unites de scene."
+            numeric_range yes 1e-7 1.0
+            ui_range yes 1e-5 0.01
+            value 0.0001
+        }
+    }
+}

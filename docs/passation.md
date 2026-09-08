@@ -11,7 +11,7 @@ Romain : « avant de faire le moteur de rendu, on va faire quelques petits trucs
 plus simples, à commencer par le système de curves ». L'intégrateur (§5) et le
 débruiteur (§6) restent valables mais passent derrière.
 
-Trois chantiers ouverts, chacun avec son document :
+Quatre chantiers ouverts, chacun avec son document :
 
 - **`curves-clarisse.md`** — des tubes, cordes, câbles et branches posés à la
   main, vus de près, sur lesquels on puisse scatter. **Quatre modules livrés et
@@ -37,6 +37,17 @@ Trois chantiers ouverts, chacun avec son document :
   contrainte métrique impossible ne produit pas « un peu de tension », elle
   produit un artefact ; ce qu'on veut obtenir géométriquement doit être mis dans
   la forme de repos.
+
+- **`sdf-clarisse.md`** — la suite de `csg-clarisse.md` : le sphere tracing d'un
+  champ de distance **mélangé** rend dans Clarisse, sonde à l'appui, et coûte
+  2,5 fois l'intersection analytique. Contient la réponse mesurée à la question
+  du GPU. Trois acquis qui se reposeront ailleurs : **Clarisse appelle
+  `intersect_primitive` avec 1,41 rayon en moyenne** — donc aucun lancement de
+  noyau GPU par rayon n'est envisageable, jamais ; **`ix_glutils.lib` réexporte
+  GLEW en entier jusqu'à OpenGL 4.6, compute shaders compris**, vérifié à
+  l'édition de liens, donc il y a un chemin GPU dans le viewport sans CUDA ; et
+  **OptiX ne sert pas qu'au débruiteur — le 3D View est un raytracer OptiX
+  complet**, avec ses PTX d'intersection implicite précompilés et fermés.
 
 **Une correction importante est tombée ce jour-là**, et elle vaut pour tout le
 projet : la règle « on ne dérive que des classes abstraites » est **fausse**.
@@ -133,7 +144,8 @@ comme on l'a cru jusqu'au 2026-09-08. Voir §0.
 |---|---|
 | **`curves-clarisse.md`** | **Chantier en cours.** Le système de courbes de Clarisse (il s'appelle « Fur »), pourquoi on ne passe pas par lui, la preuve que le chemin polymesh se lie, l'état des quatre modules, les pièges d'API, et ce que dit l'état de l'art des générateurs de câbles. |
 | **`npr-clarisse.md`** | Le NPR : les quatre images cibles, les quatre axes, l'inventaire de ce que Clarisse a déjà (beaucoup), le dossier simulation d'encre, l'ordre de travail. |
-| **`csg-clarisse.md`** | **Étude de faisabilité du CSG**, écrite le 2026-09-08. Clarisse n'a aucun booléen — vérifié sur les 359 classes. Mais `GeometryObject` est une interface ouverte qui ne mentionne jamais un polygone : la sonde `native/csg_sonde/` rend trois booléens analytiques sans un seul sommet, et le scatterer les instancie. Quatre voies comparées, une recommandation, et une sonde d'une demi-journée qui décide de tout le reste. |
+| **`csg-clarisse.md`** | **Étude de faisabilité du CSG**, écrite le 2026-09-08. Clarisse n'a aucun booléen — vérifié sur les 359 classes. Mais `GeometryObject` est une interface ouverte qui ne mentionne jamais un polygone : la sonde `native/csg_sonde/` rend trois booléens analytiques sans un seul sommet, et le scatterer les instancie. Quatre voies comparées, une recommandation, et une sonde d'une demi-journée qui décide de tout le reste. **Deux points sont corrigés par `sdf-clarisse.md` : le découpage en une primitive par feuille, et « aucun moteur de production ne fait ça ».** |
+| **`sdf-clarisse.md`** | **MagicaCSG, les champs de distance, et la question du GPU**, écrit le 2026-09-08. Le sphere tracing avec mélange doux **rend dans Clarisse** — sonde, images et chiffres. L'état de l'art (MagicaCSG discrétise, comme Dreams, comme tout le monde) et les mesures GPU/CPU sur cette machine. **Réponse au GPU : pas de noyau par rayon (mesuré, 1,41 rayon par appel contre 20 µs de latence), mais `ix_glutils.lib` réexporte GLEW jusqu'à GL 4.6 avec les compute shaders — vérifié à l'édition de liens.** |
 | **`sdk-clarisse.md`** (642 l.) | **La référence vivante.** Système de modules, contrainte cmagen, chargement sans action utilisateur, pièges à crash, langage CID, contrat `CtxKernelFilter` mesuré, accès aux AOV, générateur de rayons caméra, saveurs de licence, mensonges de l'API Python, invocation de `cnode`, recettes EXR. **À lire avant d'écrire du C++.** |
 | **`integrateur-clarisse.md`** (1288 l.) | Le gros dossier du soir. Voir §5. |
 | **`optique-etat.md`** (397 l.) | État des trois nœuds d'optique, inventaire des paramètres, les deux chemins de flou, et quatre défauts trouvés en le rédigeant. |
