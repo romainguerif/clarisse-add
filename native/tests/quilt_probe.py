@@ -15,23 +15,27 @@ Le coussin est un quad unique de deux unites de cote, horizontal, donc la
 hauteur est simplement la coordonnee Y.
 """
 
-BASE = dict(resolution=32, levels=3, iterations=300,
-            puff_relative=0.32, shoulder=2.5,
+BASE = dict(resolution=64, levels=4, iterations=320,
+            puff_relative=0.33, shoulder=2.6, squareness=5.0,
             pressure=1.0, pressure_softness=0.005,
-            seam=0.10, seam_depth=0.09,
-            wrinkles=0.14, wrinkle_reach=0.45, corner_gather=0.12,
+            seam=0.07, seam_depth=0.03,
+            seam_gather=0.32, seam_wrinkle_scale=0.045,
+            wrinkles=0.08, wrinkle_reach=0.75, corner_gather=0.06,
             stretch=0.02, shear_stiffness=4.0,
-            wrinkle_scale=0.18, wrinkle_size=0.0,
+            wrinkle_scale=0.10, wrinkle_size=0.0,
             stuffing=1.2, gravity_strength=0.0,
-            jitter=0.006, smoothing=0, smoothing_amount=0.25, seed=1)
+            jitter=0.008, smoothing=0, smoothing_amount=0.25, seed=1)
 
 VARIANTS = [
-    ("mplat 0.06", dict(seam=0.06)),
-    ("mplat 0.10", dict()),
-    ("mplat 0.16", dict(seam=0.16)),
-    ("epaule 4.0", dict(shoulder=4.0)),
-    ("portee 0.8", dict(wrinkle_reach=0.8)),
+    ("s.04 ouate 1", dict(wrinkles=0.04, stuffing=1.0)),
+    ("s.04 ouate 3", dict(wrinkles=0.04, stuffing=3.0)),
+    ("s.08 ouate 3", dict(wrinkles=0.08, stuffing=3.0)),
+    ("s.08 ouate 8", dict(wrinkles=0.08, stuffing=8.0)),
+    ("s.12 ouate 8", dict(wrinkles=0.12, stuffing=8.0)),
+    ("s.08 ouate 8 pli .07", dict(wrinkles=0.08, stuffing=8.0,
+                                  wrinkle_scale=0.07)),
 ]
+
 
 RAMP = "@%#*+=-:. "   # negatif -> positif
 
@@ -127,19 +131,21 @@ def probe(label, values):
     peak = max(abs(v) for v in lap) or 1.0
     middle = [lap[(side // 2) * side + i] for i in range(1, side - 1)]
     diagonal = [lap[k * side + k] for k in range(1, side - 1)]
-    ring = [lap[(side // 5) * side + i] for i in range(1, side - 1)]
+    ring = [lap[max(1, int(side * 0.04)) * side + i] for i in range(1, side - 1)]
 
     print("")
     print("[%+.4f] %-22s h %.3f r %.3f p %d/%d/%d"
           % (over, label, max(height), relief,
              crossings(middle), crossings(diagonal), crossings(ring)))
-    for j in range(side):
-        row = ""
-        for i in range(side):
-            t = 0.5 + 0.5 * lap[j * side + i] / peak
-            index = int(t * (len(RAMP) - 1) + 0.5)
-            row += RAMP[max(0, min(len(RAMP) - 1, index))] * 2
-        print("  |" + row + "|")
+    if side <= 34:
+        step = 1 if side <= 22 else 2
+        for j in range(0, side, step):
+            row = ""
+            for i in range(0, side, step):
+                t = 0.5 + 0.5 * lap[j * side + i] / peak
+                index = int(t * (len(RAMP) - 1) + 0.5)
+                row += RAMP[max(0, min(len(RAMP) - 1, index))] * 2
+            print("  |" + row + "|")
 
 
 print("")

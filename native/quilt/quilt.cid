@@ -120,6 +120,28 @@ class "GeometryQuilt" "GeometryPolymesh" {
 
     }
 
+    attribute_group "seam" {
+        doc "La couture. C'est elle qui porte le detail : sur un vrai panneau capitonne, le dessus est lisse et tendu, et tout le tissu en trop est ramasse le long de la couture ou il se fronce en une corde de plis tres fins."
+
+        percentage "seam_gather" {
+            output "geometry"
+            doc "Surplus de tissu fronce dans le mplat de couture. C'est le detail le plus caracteristique des panneaux cousus, et celui qu'on voit en premier de pres. Le rembourrage y est ignore -- il n'y en a pas sous une couture -- donc ce tissu est libre de se chiffonner."
+            animatable yes
+            numeric_range yes 0.0 2
+            ui_range yes 0.0 0.8
+            value 0.3
+        }
+
+        percentage "seam_wrinkle_scale" {
+            output "geometry"
+            doc "Largeur des plis du fronce, en fraction du coussin. Beaucoup plus fine que celle des plis du coussin : c'est ce qui fait la difference entre une couture et un bourrelet. Un pli ne peut pas etre plus etroit que quatre mailles, donc descendre ici demande de monter la resolution -- a 0.05 il faut au moins 80 subdivisions."
+            animatable yes
+            numeric_range yes 0.01 1
+            ui_range yes 0.03 0.2
+            value 0.07
+        }
+    }
+
     attribute_group "fabric" {
         doc "Le tissu : combien il y en a, et comment il se comporte."
 
@@ -154,9 +176,9 @@ class "GeometryQuilt" "GeometryPolymesh" {
             output "geometry"
             doc "Fermete du rembourrage. A zero le coussin est une enveloppe vide sous pression : un ballon, qui conserve son volume mais pas sa forme -- donnez-lui du tissu en trop et il se deforme en une seule grosse bosse au lieu de se plisser. Au-dessus, une ouate rappelle le tissu vers la forme visee, et c'est elle qui donne aux plis une largeur definie : c'est la fondation elastique de la loi de Cerda, sans laquelle la longueur d'onde part a l'infini."
             animatable yes
-            numeric_range yes 0.0 10
-            ui_range yes 0.0 2
-            value 1
+            numeric_range yes 0.0 50
+            ui_range yes 0.0 8
+            value 3
         }
 
         double "stretch" {

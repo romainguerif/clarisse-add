@@ -75,8 +75,10 @@ struct Settings {
     unsigned int smoothing;
     double smoothing_amount;
 
-    double seam;            // largeur de la bande tendue, en fraction du coussin
-    double seam_depth;      // enfoncement du sillon, en fraction du rayon
+    double seam;            // largeur du mplat de couture, en fraction du coussin
+    double seam_depth;      // enfoncement du sillon, en fraction de la maille
+    double seam_gather;     // surplus fronce dans le mplat
+    double seam_wrinkle;    // largeur des plis du fronce, en fraction du coussin
 
     double puff;            // hauteur visee, en fraction du rayon
     double shoulder;        // exposant du profil : haut = dessus plat, flancs raides
@@ -235,6 +237,18 @@ add_triangle(cloth::Solver& solver, const unsigned int& a,
 //
 // Zero au bord, ou le tissu est meme legerement retreci : les plis y meurent et
 // la bordure reste nette, comme sur les references.
+// Un, sur le coussin ; zero, au ras de la couture. Trois choses s'y accrochent
+// -- le surplus, la raideur, et le rembourrage -- parce que ce sont trois
+// facons de dire la meme chose : sous la couture, le tissu n'est plus tendu sur
+// quoi que ce soit.
+inline double
+seam_band(const Settings& settings, const double& u, const double& v)
+{
+    const double du = 2.0 * ((u < 0.5) ? u : 1.0 - u);
+    const double dv = 2.0 * ((v < 0.5) ? v : 1.0 - v);
+    return smoothstep01(settings.seam * 2.0, (du < dv) ? du : dv);
+}
+
 double
 surplus_at(const Settings& settings, const double& u, const double& v)
 {
@@ -268,7 +282,11 @@ surplus_at(const Settings& settings, const double& u, const double& v)
         const double cv = 1.0 - smoothstep01(radius, dv);
         corner = settings.corner_gather * cu * cv;
     }
-    return 1.0 + (extra + corner) * band;
+    // Le fronce de couture est maximal au ras du contour et s'eteint des qu'on
+    // quitte le mplat ; le surplus du coussin fait l'inverse. Les deux ne se
+    // rencontrent pas, ce qui est bien ce que montrent les references : une
+    // corde de plis fins le long de la couture, un dessus lisse.
+    return 1.0 + settings.seam_gather * (1.0 - band) + (extra + corner) * band;
 }
 
 // La membrane d'un patch, resolue a la resolution `n`, dans le repere
@@ -278,6 +296,7 @@ surplus_at(const Settings& settings, const double& u, const double& v)
 void
 solve_patch(const LocalPatch& patch, const Settings& settings,
             const double& bend_alpha, const double& wrinkle,
+            const double& seam_alpha, const double& seam_wrinkle,
             const unsigned int& level, const unsigned int& n,
             const unsigned int& seed, CoreArray<GMathVec3d>& grid)
 {
@@ -299,7 +318,7 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
                      vscale(patch.normal,
                             settings.puff
                             * cushion_bump(u, v, settings.shoulder,
-                                           settings.seam * 2.0,
+                                           settings.seam * 0.8,
                                            settings.squareness))));
             solver.inverse_mass.add((i == 0u || j == 0u || i == n || j == n)
                                     ? 0.0 : 1.0);
@@ -350,14 +369,23 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
     // couter de l'energie de flexion, seulement a ce qui s'en ecarte. Cela
     // laisse la raideur ne gouverner qu'une chose, la largeur des plis, ce qui
     // est exactement ce qu'on veut pouvoir regler.
+    // La raideur n'est pas la meme partout. Dans le mplat de couture le tissu
+    // est libre et se fronce menu ; sur le coussin il est tendu sur son
+    // rembourrage et ne fait que de larges ondulations. Une seule valeur pour
+    // les deux donnerait soit un dessus grumeleux, soit une couture lisse.
     for (unsigned int j = 1; j + 1u < side; j++) {
+        const double v = double(j) / double(n);
         for (unsigned int i = 1; i + 1u < side; i++) {
+            const double u = double(i) / double(n);
+            const double mix = seam_band(settings, u, v);
+            const double alpha = seam_alpha + (bend_alpha - seam_alpha) * mix;
+
             solver.add_bend(grid_index(i, j, n), grid_index(i + 1u, j, n),
                             grid_index(i, j - 1u, n), grid_index(i, j + 1u, n),
-                            bend_alpha);
+                            alpha);
             solver.add_bend(grid_index(i, j, n), grid_index(i, j + 1u, n),
                             grid_index(i - 1u, j, n), grid_index(i + 1u, j, n),
-                            bend_alpha);
+                            alpha);
         }
     }
 
@@ -405,14 +433,20 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
     // moins fort, et le rembourrage reste le meme a toute resolution.
     if (settings.stuffing > 1e-6) {
         const double alpha = double(n * n) / (400.0 * settings.stuffing);
-        for (unsigned int k = 0; k < count; k++) {
-            if (solver.inverse_mass[k] <= 0.0) continue;
-            cloth::Anchor anchor;
-            anchor.index = k;
-            anchor.target = solver.positions[k];
-            anchor.compliance = alpha;
-            anchor.lambda = 0.0;
-            solver.anchors.add(anchor);
+        for (unsigned int j = 1; j + 1u < side; j++) {
+            const double v = double(j) / double(n);
+            for (unsigned int i = 1; i + 1u < side; i++) {
+                const double u = double(i) / double(n);
+                cloth::Anchor anchor;
+                anchor.index = grid_index(i, j, n);
+                anchor.target = solver.positions[anchor.index];
+                // Sous la couture il n'y a pas de rembourrage : le tissu y est
+                // libre de se chiffonner, et c'est justement ce qu'on veut.
+                anchor.compliance =
+                    alpha * (1.0 + 3.0 * (1.0 - seam_band(settings, u, v)));
+                anchor.lambda = 0.0;
+                solver.anchors.add(anchor);
+            }
         }
     }
 
@@ -439,7 +473,6 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
     //
     // Sa frequence est celle des plis voulus, pas une frequence arbitraire : on
     // seme directement le mode qu'on veut voir flamber.
-    const double frequency = 1.0 / ((wrinkle > 1e-6) ? wrinkle : 1e-6);
     const double amount = settings.jitter * (warm ? 0.5 : 1.0);
     for (unsigned int j = 1; j + 1u < side; j++) {
         const double v = double(j) / double(n);
@@ -448,12 +481,26 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
             const unsigned int here = grid_index(i, j, n);
             if (warm) solver.positions[here] = grid[here];
 
+            // La frequence du bruit suit la largeur de pli attendue a cet
+            // endroit : fine sous la couture, large sur le coussin. On seme
+            // ainsi exactement le mode qu'on veut voir flamber, la ou on le
+            // veut.
+            const double mix = seam_band(settings, u, v);
+            double wave = seam_wrinkle + (wrinkle - seam_wrinkle) * mix;
+            if (wave < 1e-6) wave = 1e-6;
+            const double frequency = 1.0 / wave;
+
             const double edge = 4.0 * u * (1.0 - u) * v * (1.0 - v);
-            const double noise = perlin(u * frequency, v * frequency,
-                                        double(level) * 3.7, seed);
+            const double fade = 0.25 + 0.75 * edge;
+            // Trois octaves : la premiere pose la largeur des plis, les deux
+            // autres cassent la regularite. Avec une seule frequence, le fronce
+            // sort tresse et on lit la periode.
+            const double noise =
+                fbm(GMathVec3d(u, v, double(level) * 3.7), frequency,
+                    3u, 0.5, seed);
             solver.positions[here] =
                 vadd(solver.positions[here],
-                     vscale(patch.normal, edge * amount * noise));
+                     vscale(patch.normal, fade * amount * noise));
         }
     }
 
@@ -541,7 +588,7 @@ protected:
         static const char *const names[] = {
             "input_geometry", "shading_group",
             "resolution", "max_resolution", "levels", "detail",
-            "seam", "seam_depth",
+            "seam", "seam_depth", "seam_gather", "seam_wrinkle_scale",
             "puff_relative", "shoulder", "squareness",
             "pressure", "pressure_softness",
             "wrinkles", "corner_gather", "wrinkle_reach", "stuffing",
@@ -722,6 +769,8 @@ private:
             read_double(object, "smoothing_amount", 0.3);
         settings.seam = read_double(object, "seam", 0.06);
         settings.seam_depth = read_double(object, "seam_depth", 0.06);
+        settings.seam_gather = read_double(object, "seam_gather", 0.30);
+        settings.seam_wrinkle = read_double(object, "seam_wrinkle_scale", 0.07);
         settings.puff = read_double(object, "puff_relative", 0.30);
         settings.shoulder = read_double(object, "shoulder", 2.5);
         settings.squareness = read_double(object, "squareness", 4.0);
@@ -731,7 +780,7 @@ private:
         settings.wrinkles = read_double(object, "wrinkles", 0.10);
         settings.corner_gather = read_double(object, "corner_gather", 0.08);
         settings.wrinkle_reach = read_double(object, "wrinkle_reach", 0.5);
-        settings.stuffing = read_double(object, "stuffing", 1.0);
+        settings.stuffing = read_double(object, "stuffing", 3.0);
         settings.stretch = read_double(object, "stretch", 0.02);
         settings.shear = read_double(object, "shear_stiffness", 4.0);
         settings.wrinkle_scale = read_double(object, "wrinkle_scale", 0.28);
@@ -1057,8 +1106,14 @@ private:
             const double cell_area = local.area / double(n * n);
             const double square = lambda * lambda;
 
+            double seam_wave = settings.seam_wrinkle;
+            if (seam_wave < floor_lambda) seam_wave = floor_lambda;
+            const double seam_square = seam_wave * seam_wave;
+
             solve_patch(local, settings, 0.6 * cell_area / (square * square),
-                        lambda, level, n, seed, grid);
+                        lambda,
+                        0.6 * cell_area / (seam_square * seam_square),
+                        seam_wave, level, n, seed, grid);
             previous = n;
         }
 

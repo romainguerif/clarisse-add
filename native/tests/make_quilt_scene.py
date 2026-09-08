@@ -38,16 +38,16 @@ ix.cmds.SetValues([str(grid) + ".translate"], ["-4.0", "0.0", "0.0"])
 ix.cmds.SetValues([str(grid) + ".unseen_by_camera"], ["1"])
 
 matelas = quilt("matelas", grid,
-                resolution=32, levels=3, iterations=300,
-                puff_relative=0.34, shoulder=3.0, squareness=4.0,
+                resolution=64, levels=4, iterations=320,
+                puff_relative=0.33, shoulder=2.6, squareness=5.0,
                 pressure=1.0, pressure_softness=0.005,
-                seam=0.05, seam_depth=0.06,
-                wrinkles=0.13, wrinkle_reach=0.8,
-                corner_gather=0.16, stuffing=1.3,
+                seam=0.07, seam_depth=0.03,
+                seam_gather=0.32, seam_wrinkle_scale=0.045,
+                wrinkles=0.08, wrinkle_reach=0.75, corner_gather=0.06,
                 stretch=0.02, shear_stiffness=4.0,
-                wrinkle_scale=0.15, wrinkle_size=0.0,
+                wrinkle_scale=0.10, wrinkle_size=0.0, stuffing=4.0,
                 gravity_strength=0.05, gravity_y=-1.0,
-                jitter=0.006, smoothing=1, smoothing_amount=0.2)
+                jitter=0.008, smoothing=0, smoothing_amount=0.2)
 
 # Une sphere : triangles et pentagones, orientations quelconques. Ce qu'on
 # regarde ici, ce sont les aretes partagees : le contour est enfonce le long des
@@ -61,15 +61,16 @@ ix.cmds.SetValues([str(sphere) + ".translate"], ["-0.6", "0.0", "-3.2"])
 ix.cmds.SetValues([str(sphere) + ".unseen_by_camera"], ["1"])
 
 boule = quilt("boule", sphere,
-              resolution=16, levels=3, iterations=200,
+              resolution=32, levels=3, iterations=220,
               puff_relative=0.32, shoulder=3.0, squareness=4.0,
               pressure=1.0, pressure_softness=0.005,
-              seam=0.07, seam_depth=0.05,
-              wrinkles=0.09, wrinkle_reach=0.5, corner_gather=0.10, stuffing=1.1,
+              seam=0.08, seam_depth=0.03,
+              seam_gather=0.30, seam_wrinkle_scale=0.07,
+              wrinkles=0.09, wrinkle_reach=0.7, corner_gather=0.06,
               stretch=0.02, shear_stiffness=4.0,
-              wrinkle_scale=0.30,
+              wrinkle_scale=0.14, stuffing=4.0,
               gravity_strength=0.04,
-              jitter=0.006, smoothing=1, smoothing_amount=0.25)
+              jitter=0.008, smoothing=0, smoothing_amount=0.2)
 
 material = ix.cmds.CreateObject("mat", "MaterialPhysicalStandard", "Global", "project:/")
 ix.cmds.SetValues([str(material) + ".diffuse_front_color"], ["0.55", "0.56", "0.6"])
@@ -79,15 +80,15 @@ for node in (matelas, boule):
 
 light = ix.cmds.CreateObject("key", "LightPhysicalDistant", "Global", "project:/")
 ix.cmds.SetValues([str(light) + ".rotate"], ["-38.0", "35.0", "0.0"])
-ix.cmds.SetValues([str(light) + ".intensity"], ["3.0"])
+ix.cmds.SetValues([str(light) + ".intensity"], ["2.2"])
 ambient = ix.cmds.CreateObject("fill", "LightPhysicalAmbient", "Global", "project:/")
-ix.cmds.SetValues([str(ambient) + ".intensity"], ["0.4"])
+ix.cmds.SetValues([str(ambient) + ".intensity"], ["1.1"])
 
 # Cadrage serre : deux coussins et demi dans la largeur. C'est a cette echelle
 # que sont les references, donc c'est a cette echelle qu'il faut juger.
 camera = ix.cmds.CreateObject("cam", "CameraPerspective", "Global", "project:/")
-ix.cmds.SetValues([str(camera) + ".translate"], ["-3.2", "3.2", "4.0"])
-ix.cmds.SetValues([str(camera) + ".rotate"], ["-34.0", "0.0", "0.0"])
+ix.cmds.SetValues([str(camera) + ".translate"], ["-4.3", "1.9", "1.9"])
+ix.cmds.SetValues([str(camera) + ".rotate"], ["-40.0", "0.0", "0.0"])
 
 renderer = ix.cmds.CreateObject("renderer", "RendererRaytracer", "Global", "project:/")
 

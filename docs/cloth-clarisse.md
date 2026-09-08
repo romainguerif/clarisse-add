@@ -209,6 +209,90 @@ sort trop propre.
 
 ---
 
+## 5 bis. Ce que la subdivision fait, et ce qu'elle ne fait pas
+
+Question posée, et elle vaut d'être tranchée par la mesure : est-ce la
+subdivision qui fait le détail ?
+
+Sonde, tout le reste égal, un seul coussin :
+
+| résolution | hauteur | relief | plis |
+|---|---|---|---|
+| 12 | 0.360 | 0.181 | 2 |
+| 20 | 0.352 | 0.157 | 2 |
+| 32 | 0.349 | 0.204 | 2 |
+| 48 | 0.345 | 0.180 | 2 |
+| 64 | 0.347 | 0.200 | 4 |
+
+**Rien ne bouge.** C'est le résultat qu'on voulait — c'est la promesse faite en
+normalisant les compliances par l'aire de maille (§4.3), et elle tient de 12 à
+64 : la matière est la même, donc la forme aussi. Un réglage de qualité ne
+change pas la forme visée.
+
+Mais ça veut dire aussi que **subdivider n'ajoute aucun détail**. La résolution
+ne fait que lever un plafond : un pli ne peut pas être plus étroit que quatre
+mailles, donc il faut 64 subdivisions pour porter un pli large comme un
+seizième du coussin. En dessous du plafond, monter la résolution ne fait
+qu'affiner le rendu d'un pli déjà décidé ailleurs.
+
+Ce qui décide de la finesse, ce sont deux réglages, et la mesure les sépare
+nettement :
+
+| fermeté du rembourrage | plis sur le coussin |
+|---|---|
+| 1 | 3 |
+| 3 | 6 |
+| 8 | 10, et ça sature |
+
+C'est la loi de Cerda qui parle : la longueur d'onde va en `(B/K)^¼`, donc une
+fondation plus raide fait des plis plus fins. `wrinkle_scale` agit sur `B`,
+`stuffing` sur `K`, et **c'est `stuffing` qui a le bras de levier utile** — on
+avait passé des heures sur `wrinkle_scale` avec une ouate à 1, où il ne pouvait
+rien.
+
+Troisième effet, à connaître : passé un certain surplus, l'amplitude prend le
+dessus et le tissu se replie en deux ou trois grands plis quelle que soit la
+raideur demandée. Beaucoup de matière en trop ne fait pas beaucoup de plis fins,
+elle en fait peu et des gros. Le couple qui marche est **peu de surplus, ouate
+ferme**.
+
+La marche à suivre est donc : régler la finesse avec `stuffing`, la largeur avec
+`wrinkle_scale`, l'amplitude avec `wrinkles` — et ne monter `resolution` que
+lorsque les plis butent contre les quatre mailles.
+
+---
+
+## 5 ter. Le fronce de couture, qui est tout le sujet
+
+Les références montrent une chose que la première version prenait à l'envers :
+**le dessus du coussin est lisse et tendu, et tout le tissu en trop est ramassé
+dans une bande étroite le long de la couture**, où il se fronce en une corde de
+plis très fins. Quelques plis en partent en éventail vers le coussin et meurent
+avant le sommet. C'est ce fronce qui fait lire « tissu cousu » plutôt que
+« vinyle gonflé », et c'est le premier détail qu'on voit de près.
+
+Trois choses changent dans cette bande, et ce sont trois façons de dire la même
+chose — sous une couture, le tissu n'est plus tendu sur quoi que ce soit :
+
+- il y a du surplus (`seam_gather`), au lieu qu'il n'y en ait pas ;
+- la flexion y est beaucoup plus souple (`seam_wrinkle_scale`), donc les plis y
+  sont beaucoup plus fins que sur le coussin ;
+- le rembourrage y est presque absent, donc rien ne rappelle le tissu vers sa
+  forme.
+
+Aucune contradiction avec §4.6 : **rallonger** les longueurs au repos près d'un
+bord épinglé est sans danger — c'est du tissu en trop, il se chiffonne. C'est
+les **raccourcir** qui tirait sur ce qui ne peut pas céder.
+
+Deux détails qui ont coûté un rendu chacun. Le mplat du patron ne doit pas avoir
+la même largeur que la bande de fronce, sinon tout le tissu froncé se retrouve à
+plat au fond de la rainure, invisible ; il vaut quarante pour cent de la bande,
+et le fronce remonte sur le flanc où il attrape la lumière. Et l'amorçage doit
+être en octaves : à une seule fréquence, le fronce sort tressé et on lit la
+période.
+
+---
+
 ## 6. L'échelle du monde
 
 Tout se résout dans un repère normalisé, centré sur le coussin et divisé par son
@@ -246,10 +330,12 @@ Pour obtenir des plis :
 |---|---|
 | `wrinkles` | surplus de matière — sans lui, aucun pli |
 | `wrinkle_scale` | largeur des plis, en fraction du coussin |
-| `stuffing` | fermeté du rembourrage — à zéro, un ballon, donc un seul pli |
+| `stuffing` | fermeté du rembourrage — c'est lui qui fait le **nombre** de plis |
 | `pressure_softness` | à monter si le coussin sort trop propre |
 | `wrinkle_reach` | jusqu'où les plis remontent depuis la couture |
 | `corner_gather` | le fronçage des coins, d'où partent les plis en étoile |
+| `seam_gather` | le tissu ramassé le long de la couture — le détail qui fait tissu |
+| `seam_wrinkle_scale` | la finesse de ce fronce, bien plus fine que les plis du coussin |
 
 Qualité :
 
