@@ -1,0 +1,40 @@
+class "ToolCurvePen" "Tool" {
+    #version 0.1
+    category "Draw"
+    doc "Pose des points de courbe directement dans la vue, comme une plume. Chaque clic cree un locator et l'ajoute a la courbe visee ; on peut ensuite attraper un point pour le deplacer. La geometrie se reconstruit a chaque geste."
+
+    attribute_group "pen" {
+        reference "target" {
+            filter "SceneItem"
+            doc "La courbe a editer : un tube, un nuage de points, tout node portant des points de controle. Laisser vide pour que le premier clic en cree une."
+        }
+
+        long "plane" {
+            doc "Le plan sur lequel tombent les clics, quand ils ne rencontrent rien."
+            preset "Sol (XZ)" "0"
+            preset "Face (XY)" "1"
+            preset "Profil (YZ)" "2"
+            preset "Face a la vue" "3"
+            value 0
+        }
+
+        distance "plane_offset" {
+            doc "Decale le plan de construction le long de sa normale."
+            animatable yes
+            ui_range yes -100 100
+            value 0.0
+        }
+
+        long "handle_size" {
+            doc "Taille des poignees a l'ecran, en pixels."
+            numeric_range yes 2 40
+            ui_range yes 3 15
+            value 6
+        }
+
+        bool "create_tube" {
+            doc "Quand l'outil cree une courbe, lui adjoindre un tube visible. Sinon il ne pose que les locators."
+            value yes
+        }
+    }
+}

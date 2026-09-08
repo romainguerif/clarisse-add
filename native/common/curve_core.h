@@ -225,23 +225,117 @@ public:
             m_tangent[r] = vnorm(catmull_rom_tangent(p0, p1, p2, p3, u));
         }
 
-        // Amorce du repere : n'importe quelle direction non colineaire a la
-        // tangente fera l'affaire, le transport se charge du reste.
-        GMathVec3d seed(0.0, 0.0, 1.0);
-        if (fabs(vdot(m_tangent[0], seed)) > 0.9) seed = GMathVec3d(1.0, 0.0, 0.0);
-        m_normal[0] = vnorm(vcross(vcross(m_tangent[0], seed), m_tangent[0]));
-        for (unsigned int r = 0; r + 1u < count; r++) {
-            m_normal[r + 1u] = transport(m_position[r], m_position[r + 1u],
-                                         m_tangent[r], m_tangent[r + 1u],
-                                         m_normal[r]);
+        finalize();
+        return true;
+    }
+
+    // Variante en segments droits raccordes par des arcs, comme la tuyauterie
+    // industrielle : un tuyau n'est pas une spline, c'est une suite de droites
+    // et de coudes normalises. `radius` est le rayon du coude, `arc_steps` sa
+    // finesse ; les portions droites ne portent que leurs deux extremites,
+    // puisqu'il n'y a rien a y decrire.
+    bool
+    build_beveled(const CoreVector<GMathVec3d>& cv, const bool& closed,
+                  const double& radius, unsigned int arc_steps)
+    {
+        m_closed = closed;
+        if (arc_steps < 1u) arc_steps = 1u;
+
+        const unsigned int n = cv.get_count();
+        if (n < 2u) return false;
+
+        // Le retrait d'un coin depend de son angle : d = r / tan(alpha/2), ou
+        // alpha est l'angle entre les deux branches. On le borne ensuite a un
+        // peu moins de la moitie de chaque segment voisin, sinon deux coudes
+        // proches se mangent l'un l'autre et la courbe se replie.
+        CoreVector<GMathVec3d> pts;
+
+        const unsigned int first = closed ? 0u : 1u;
+        const unsigned int last = closed ? n : n - 1u;
+
+        if (!closed) pts.add(cv[0]);
+
+        for (unsigned int i = first; i < last; i++) {
+            const GMathVec3d& corner = cv[i % n];
+            const GMathVec3d& before = cv[(i + n - 1u) % n];
+            const GMathVec3d& after = cv[(i + 1u) % n];
+
+            const GMathVec3d in = vsub(before, corner);
+            const GMathVec3d out = vsub(after, corner);
+            const double in_len = in.get_length();
+            const double out_len = out.get_length();
+            if (in_len < 1e-9 || out_len < 1e-9) { pts.add(corner); continue; }
+
+            const GMathVec3d u = vscale(in, 1.0 / in_len);
+            const GMathVec3d w = vscale(out, 1.0 / out_len);
+
+            double cosine = vdot(u, w);
+            if (cosine > 1.0) cosine = 1.0;
+            if (cosine < -1.0) cosine = -1.0;
+            const double alpha = acos(cosine);
+
+            // Coin plat ou replie sur lui-meme : aucun arc a construire.
+            if (alpha < 1e-4 || alpha > M_PI - 1e-4 || radius <= 1e-9) {
+                pts.add(corner);
+                continue;
+            }
+
+            double d = radius / tan(alpha * 0.5);
+            const double limit = 0.49 * ((in_len < out_len) ? in_len : out_len);
+            if (d > limit) d = limit;
+            const double r = d * tan(alpha * 0.5);
+
+            const GMathVec3d a = vadd(corner, vscale(u, d));
+            const GMathVec3d b = vadd(corner, vscale(w, d));
+
+            // Centre sur la bissectrice, a la distance qui rend l'arc tangent
+            // aux deux branches.
+            const GMathVec3d bisector = vnorm(vadd(u, w));
+            const double half = alpha * 0.5;
+            const double sine = sin(half);
+            if (sine < 1e-9) { pts.add(corner); continue; }
+            const GMathVec3d centre = vadd(corner, vscale(bisector, r / sine));
+
+            const GMathVec3d ra = vsub(a, centre);
+            const GMathVec3d rb = vsub(b, centre);
+            const double arc_radius = ra.get_length();
+            const GMathVec3d axis = vnorm(vcross(ra, rb));
+
+            double span = vdot(vnorm(ra), vnorm(rb));
+            if (span > 1.0) span = 1.0;
+            if (span < -1.0) span = -1.0;
+            const double sweep = acos(span);
+
+            const GMathVec3d e0 = vnorm(ra);
+            const GMathVec3d e1 = vnorm(vcross(axis, e0));
+
+            for (unsigned int s = 0; s <= arc_steps; s++) {
+                const double angle = sweep * double(s) / double(arc_steps);
+                pts.add(vadd(centre, vscale(vadd(vscale(e0, cos(angle)),
+                                                 vscale(e1, sin(angle))),
+                                            arc_radius)));
+            }
         }
 
-        m_arc[0] = 0.0;
-        for (unsigned int r = 1; r < count; r++) {
-            m_arc[r] = m_arc[r - 1u]
-                     + vsub(m_position[r], m_position[r - 1u]).get_length();
+        if (!closed) pts.add(cv[n - 1u]);
+
+        const unsigned int count = pts.get_count();
+        if (count < 2u) return false;
+
+        m_position.resize(count);
+        for (unsigned int i = 0; i < count; i++) m_position[i] = pts[i];
+
+        // Tangentes par differences centrees : sur une polyligne, c'est la
+        // seule definition qui ne saute pas aux jonctions droite/arc.
+        m_tangent.resize(count);
+        for (unsigned int i = 0; i < count; i++) {
+            const unsigned int prev = (i == 0u) ? (closed ? count - 1u : 0u) : i - 1u;
+            const unsigned int next = (i + 1u >= count) ? (closed ? 0u : count - 1u)
+                                                       : i + 1u;
+            m_tangent[i] = vnorm(vsub(m_position[next], m_position[prev]));
         }
-        m_length = m_arc[count - 1u];
+
+        finalize();
         return true;
     }
 
@@ -328,6 +422,35 @@ public:
     }
 
 private:
+    // Le repere et les longueurs cumulees, une fois les positions et les
+    // tangentes en place. Commun aux deux facons de construire la courbe.
+    void
+    finalize()
+    {
+        const unsigned int count = m_position.get_count();
+        m_normal.resize(count);
+        m_arc.resize(count);
+        if (count == 0u) { m_length = 0.0; return; }
+
+        // Amorce du repere : n'importe quelle direction non colineaire a la
+        // tangente fera l'affaire, le transport se charge du reste.
+        GMathVec3d seed(0.0, 0.0, 1.0);
+        if (fabs(vdot(m_tangent[0], seed)) > 0.9) seed = GMathVec3d(1.0, 0.0, 0.0);
+        m_normal[0] = vnorm(vcross(vcross(m_tangent[0], seed), m_tangent[0]));
+        for (unsigned int r = 0; r + 1u < count; r++) {
+            m_normal[r + 1u] = transport(m_position[r], m_position[r + 1u],
+                                         m_tangent[r], m_tangent[r + 1u],
+                                         m_normal[r]);
+        }
+
+        m_arc[0] = 0.0;
+        for (unsigned int r = 1; r < count; r++) {
+            m_arc[r] = m_arc[r - 1u]
+                     + vsub(m_position[r], m_position[r - 1u]).get_length();
+        }
+        m_length = m_arc[count - 1u];
+    }
+
     CoreArray<GMathVec3d> m_position;
     CoreArray<GMathVec3d> m_tangent;
     CoreArray<GMathVec3d> m_normal;
@@ -335,6 +458,33 @@ private:
     double m_length;
     bool m_closed;
 };
+
+// Construit la courbe depuis les attributs que tous les nodes de courbe
+// partagent : control_points, closed, steps, et le couple interpolation /
+// bend_radius quand il est present. Passer par ici garantit qu'un tube, un
+// nuage de points et un deformeur poses sur les memes locators suivent
+// exactement le meme trace -- ce qui n'irait pas de soi si chacun relisait les
+// attributs a sa facon.
+inline bool
+build_from_object(OfObject& object, Path& path)
+{
+    CoreVector<GMathVec3d> cv;
+    if (!gather_control_points(object, "control_points", cv)) return false;
+
+    const OfAttr *closed_attr = object.get_attribute("closed");
+    const OfAttr *steps_attr = object.get_attribute("steps");
+    const bool closed = (closed_attr != 0) ? closed_attr->get_bool() : false;
+    unsigned int steps = (steps_attr != 0)
+                       ? (unsigned int) steps_attr->get_long() : 8u;
+
+    const OfAttr *interpolation = object.get_attribute("interpolation");
+    if (interpolation != 0 && interpolation->get_long() == 1) {
+        const OfAttr *bend = object.get_attribute("bend_radius");
+        return path.build_beveled(cv, closed,
+                                  (bend != 0) ? bend->get_double() : 0.0, steps);
+    }
+    return path.build(cv, closed, steps);
+}
 
 } // namespace curve_core
 

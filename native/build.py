@@ -53,13 +53,20 @@ VCVARS = (r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
 #
 # ix_particle : ParticleCloud, pour les nodes qui produisent un nuage de points.
 #
+# ix_ctx : CtxDraw, le trace 2D des outils interactifs dans le viewport.
+#
 # ix_resource : ResourceData, la base de tout ce qu'un module rend depuis
 # create_resource. PolyMesh s'en passe -- ix_poly reexporte ce qu'il faut --
 # mais ParticleCloud non : sa vtable reclame ResourceData::is_serializable, qui
 # ne vit que la.
 LIBS = ["ix_module", "ix_of", "ix_dso", "ix_core", "ix_gui", "ix_event",
         "ix_image", "ix_raytrace", "ix_poly", "ix_gmath", "ix_geometry", "ix_particle",
-        "ix_resource"]
+        "ix_resource", "ix_ctx"]
+
+# Les bibliotheques du systeme, que le linker trouve tout seul une fois
+# vcvarsall passe. opengl32 sert aux modules qui tracent dans le viewport :
+# le contexte GL est celui de l'hote, mais les appels doivent bien se resoudre.
+SYSTEM_LIBS = ["opengl32.lib"]
 
 
 def includes():
@@ -116,6 +123,7 @@ def build(module):
     shared = os.path.join(HERE, "common")
     inc = " ".join('/I"%s"' % p for p in includes() + [shared, src])
     lib = " ".join('"%s"' % os.path.join(SDK, "lib", l + ".lib") for l in LIBS)
+    lib += " " + " ".join(SYSTEM_LIBS)
     sources = " ".join('"%s"' % os.path.join(src, c) for c in cpps)
     dll = os.path.join(out, module + ".dll")
 

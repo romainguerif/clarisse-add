@@ -65,7 +65,7 @@ protected:
 
         static const char *const names[] = {
             "control_points", "closed", "steps", "radius", "radius_profile",
-            "sides", "cap", "strands", "twist"
+            "sides", "cap", "strands", "twist", "interpolation", "bend_radius"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
 
@@ -114,23 +114,19 @@ private:
         OfObject *object = get_object();
         if (object == 0) return 0;
 
-        CoreVector<GMathVec3d> cv;
-        if (!gather_control_points(*object, "control_points", cv)) return 0;
-
         const bool closed = object->get_attribute("closed")->get_bool();
         const bool cap = object->get_attribute("cap")->get_bool() && !closed;
         const OfAttr *profile = object->get_attribute("radius_profile");
         const double radius = object->get_attribute("radius")->get_double();
         const double twist = object->get_attribute("twist")->get_double();
 
-        unsigned int steps = (unsigned int) object->get_attribute("steps")->get_long();
         unsigned int sides = (unsigned int) object->get_attribute("sides")->get_long();
         unsigned int strands = (unsigned int) object->get_attribute("strands")->get_long();
         if (sides < 3u) sides = 3u;
         if (strands < 1u) strands = 1u;
 
         Path path;
-        if (!path.build(cv, closed, steps)) return 0;
+        if (!build_from_object(*object, path)) return 0;
 
         const unsigned int rings = path.get_sample_count();
         if (rings < 2u) return 0;

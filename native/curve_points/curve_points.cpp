@@ -60,7 +60,8 @@ protected:
 
         static const char *const names[] = {
             "control_points", "closed", "steps", "mode", "count", "spacing",
-            "offset", "include_last", "normal_source", "lateral_offset"
+            "offset", "include_last", "normal_source", "lateral_offset",
+            "interpolation", "bend_radius"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
 
@@ -104,15 +105,10 @@ private:
         OfObject *object = get_object();
         if (object == 0) return 0;
 
-        CoreVector<GMathVec3d> cv;
-        if (!gather_control_points(*object, "control_points", cv)) return 0;
-
         const bool closed = object->get_attribute("closed")->get_bool();
-        const unsigned int steps =
-            (unsigned int) object->get_attribute("steps")->get_long();
 
         Path path;
-        if (!path.build(cv, closed, steps)) return 0;
+        if (!build_from_object(*object, path)) return 0;
 
         const double length = path.get_length();
         if (length <= 1e-9) return 0;

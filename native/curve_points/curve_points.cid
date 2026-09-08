@@ -19,6 +19,23 @@ class "GeometryCurvePoints" "GeometryParticle" {
             value no
         }
 
+        long "interpolation" {
+            output "geometry"
+            doc "Lisse fait passer une courbe douce par les points. Coudes relie les points par des segments droits raccordes par des arcs, comme la tuyauterie."
+            preset "Lisse" "0"
+            preset "Coudes" "1"
+            value 0
+        }
+
+        distance "bend_radius" {
+            output "geometry"
+            doc "Rayon des coudes. Il est reduit automatiquement quand le segment est trop court pour le contenir."
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 5
+            value 0.3
+        }
+
         long "steps" {
             output "geometry"
             doc "Finesse de l'echantillonnage de la courbe. Sert a mesurer sa longueur, pas a placer les points."
