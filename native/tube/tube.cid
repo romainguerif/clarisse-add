@@ -6,11 +6,32 @@ class "GeometryTube" "GeometryPolymesh" {
     attribute_group "curve" {
         doc "La courbe suivie par le tube."
 
-        list<reference> "control_points" {
-            filter "SceneItem"
-            input "motion" "geometry" "motion_blur"
-            output "geometry"
-            doc "Les points de controle, dans l'ordre. N'importe quel item de scene fait l'affaire ; un locator est le choix naturel. Il en faut au moins deux."
+        table "control_points" {
+            doc "Les points de controle, dans l'ordre, avec leurs reglages propres. N'importe quel item de scene fait l'affaire ; un locator est le choix naturel. Il en faut au moins deux."
+            main_column "point"
+            toggle_rows yes
+            reorder_rows yes
+
+            reference "point" {
+                filter "SceneItem"
+                input "motion" "geometry" "motion_blur"
+                output "geometry"
+                doc "L'item dont la position sert de point de controle."
+            }
+
+            distance "bend" {
+                output "geometry"
+                doc "Rayon du coude a ce point precis. Une valeur negative reprend le rayon global du groupe Curve, ce qui permet de ne regler que les quelques coins qui le meritent."
+                value -1
+            }
+        }
+
+        action "add_point" {
+            doc "Ajoute un point de controle au bout de la courbe, dans le prolongement du dernier segment."
+        }
+
+        action "draw_points" {
+            doc "Invoque la plume pour poser les points directement dans la vue."
         }
 
         bool "closed" {

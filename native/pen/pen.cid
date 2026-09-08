@@ -1,6 +1,7 @@
 class "ToolCurvePen" "Tool" {
     #version 0.1
-    category "Draw"
+    category "Create"
+    ui_weight 46
     doc "Pose des points de courbe directement dans la vue, comme une plume. Chaque clic cree un locator et l'ajoute a la courbe visee ; on peut ensuite attraper un point pour le deplacer. La geometrie se reconstruit a chaque geste."
 
     attribute_group "pen" {

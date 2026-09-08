@@ -155,13 +155,29 @@ transport(const GMathVec3d& x0, const GMathVec3d& x1,
     return vnorm(vsub(rL, vscale(v2, 2.0 * vdot(v2, rL) / c2)));
 }
 
-// Les positions monde d'une liste de points de controle, dans l'ordre.
-// L'attribut vise est un `list<reference>` filtre sur SceneItem.
+// L'attribut qui porte les points de controle, sous l'une ou l'autre de ses
+// deux formes. Une table CID aplatit ses colonnes en attributs a part entiere :
+// une table nommee control_points avec une colonne point donne un attribut
+// `point`, pas `control_points`. Les nodes qui n'ont besoin que d'une suite de
+// positions gardent la liste simple ; ceux qui portent des reglages par point
+// passent a la table. Chercher les deux evite d'avoir a les convertir tous en
+// meme temps.
+inline OfAttr *
+get_points_attr(OfObject& object)
+{
+    OfAttr *attr = object.get_attribute("point");
+    if (attr != 0) return attr;
+    return object.get_attribute("control_points");
+}
+
+// Les positions monde des points de controle, dans l'ordre.
 inline bool
 gather_control_points(OfObject& object, const char *attr_name,
                       CoreVector<GMathVec3d>& points)
 {
-    OfAttr *attr = object.get_attribute(attr_name);
+    OfAttr *attr = (attr_name != 0 && attr_name[0] != '\0')
+                 ? object.get_attribute(attr_name) : 0;
+    if (attr == 0) attr = get_points_attr(object);
     if (attr == 0) return false;
 
     const unsigned int count = attr->get_value_count();
@@ -236,7 +252,8 @@ public:
     // puisqu'il n'y a rien a y decrire.
     bool
     build_beveled(const CoreVector<GMathVec3d>& cv, const bool& closed,
-                  const double& radius, unsigned int arc_steps)
+                  const CoreVector<double>& radii, const double& fallback,
+                  unsigned int arc_steps)
     {
         m_closed = closed;
         if (arc_steps < 1u) arc_steps = 1u;
@@ -273,6 +290,11 @@ public:
             if (cosine > 1.0) cosine = 1.0;
             if (cosine < -1.0) cosine = -1.0;
             const double alpha = acos(cosine);
+
+            // Le rayon propre a ce coin, s'il en a un.
+            const unsigned int corner_index = i % n;
+            const double radius = (corner_index < radii.get_count())
+                                ? radii[corner_index] : fallback;
 
             // Coin plat ou replie sur lui-meme : aucun arc a construire.
             if (alpha < 1e-4 || alpha > M_PI - 1e-4 || radius <= 1e-9) {
@@ -367,8 +389,27 @@ public:
             return;
         }
 
-        if (distance <= 0.0) distance = 0.0;
-        if (distance >= m_length) distance = m_length;
+        if (m_closed) {
+            // Sur une boucle, une distance qui deborde revient au debut plutot
+            // que de se coincer au bout.
+            distance = fmod(distance, m_length);
+            if (distance < 0.0) distance += m_length;
+        } else {
+            if (distance <= 0.0) distance = 0.0;
+            if (distance >= m_length) distance = m_length;
+        }
+
+        // Le segment de couture d'une courbe fermee n'est pas dans la table :
+        // il va du dernier echantillon au premier, et se traite a part.
+        if (m_closed && distance > m_arc[count - 1u]) {
+            const double span = m_length - m_arc[count - 1u];
+            const double t = (span > 1e-12) ? (distance - m_arc[count - 1u]) / span : 0.0;
+            position = vlerp(m_position[count - 1u], m_position[0], t);
+            tangent = vnorm(vlerp(m_tangent[count - 1u], m_tangent[0], t));
+            normal = vnorm(vlerp(m_normal[count - 1u], m_normal[0], t));
+            normal = vnorm(vcross(vcross(tangent, normal), tangent));
+            return;
+        }
 
         // Recherche dichotomique du segment qui contient cette distance.
         unsigned int lo = 0u, hi = count - 1u;
@@ -432,11 +473,18 @@ private:
         m_arc.resize(count);
         if (count == 0u) { m_length = 0.0; return; }
 
-        // Amorce du repere : n'importe quelle direction non colineaire a la
-        // tangente fera l'affaire, le transport se charge du reste.
-        GMathVec3d seed(0.0, 0.0, 1.0);
-        if (fabs(vdot(m_tangent[0], seed)) > 0.9) seed = GMathVec3d(1.0, 0.0, 0.0);
-        m_normal[0] = vnorm(vcross(vcross(m_tangent[0], seed), m_tangent[0]));
+        // Amorce du repere. N'importe quelle direction non colineaire a la
+        // tangente conviendrait au transport, mais pas a l'utilisateur : une
+        // amorce arbitraire fait sortir la section tournee d'un quart de tour
+        // sur une courbe droite, ce qui ne se voit pas sur un tube -- il est de
+        // revolution -- mais saute aux yeux sur un profil non circulaire ou une
+        // geometrie deformee. On projette donc le Y du monde sur le plan
+        // perpendiculaire a la tangente, et on ne bascule sur Z que si la
+        // courbe part justement a la verticale.
+        GMathVec3d up(0.0, 1.0, 0.0);
+        if (fabs(vdot(m_tangent[0], up)) > 0.999) up = GMathVec3d(0.0, 0.0, 1.0);
+        m_normal[0] = vnorm(vsub(up, vscale(m_tangent[0], vdot(m_tangent[0], up))));
+
         for (unsigned int r = 0; r + 1u < count; r++) {
             m_normal[r + 1u] = transport(m_position[r], m_position[r + 1u],
                                          m_tangent[r], m_tangent[r + 1u],
@@ -449,6 +497,15 @@ private:
                      + vsub(m_position[r], m_position[r - 1u]).get_length();
         }
         m_length = m_arc[count - 1u];
+
+        // Une courbe fermee ne repete pas son premier point : le segment de
+        // couture, du dernier echantillon au premier, existe bel et bien mais
+        // ne figure dans aucun intervalle. Sans cette ligne, get_length() le
+        // perd et tout ce qui se repartit par longueur -- points distribues,
+        // module repete, deformation -- se tasse d'autant.
+        if (m_closed && count >= 2u) {
+            m_length += vsub(m_position[0], m_position[count - 1u]).get_length();
+        }
     }
 
     CoreArray<GMathVec3d> m_position;
@@ -469,7 +526,7 @@ inline bool
 build_from_object(OfObject& object, Path& path)
 {
     CoreVector<GMathVec3d> cv;
-    if (!gather_control_points(object, "control_points", cv)) return false;
+    if (!gather_control_points(object, 0, cv)) return false;
 
     const OfAttr *closed_attr = object.get_attribute("closed");
     const OfAttr *steps_attr = object.get_attribute("steps");
@@ -480,8 +537,22 @@ build_from_object(OfObject& object, Path& path)
     const OfAttr *interpolation = object.get_attribute("interpolation");
     if (interpolation != 0 && interpolation->get_long() == 1) {
         const OfAttr *bend = object.get_attribute("bend_radius");
-        return path.build_beveled(cv, closed,
-                                  (bend != 0) ? bend->get_double() : 0.0, steps);
+        const double fallback = (bend != 0) ? bend->get_double() : 0.0;
+
+        // Le rayon peut etre repris point par point, quand le node porte la
+        // colonne. Une valeur negative veut dire « comme le reglage global » --
+        // c'est ce qui permet de ne toucher qu'aux deux ou trois coins qui le
+        // meritent sans avoir a remplir toute la colonne.
+        CoreVector<double> radii;
+        OfAttr *per_point = object.get_attribute("bend");
+        if (per_point != 0) {
+            const unsigned int count = per_point->get_value_count();
+            for (unsigned int i = 0; i < count; i++) {
+                const double value = per_point->get_double(i);
+                radii.add((value < 0.0) ? fallback : value);
+            }
+        }
+        return path.build_beveled(cv, closed, radii, fallback, steps);
     }
     return path.build(cv, closed, steps);
 }

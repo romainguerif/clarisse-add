@@ -141,13 +141,9 @@ private:
         CoreArray<GMathVec3f> normals(count);
 
         for (unsigned int i = 0; i < count; i++) {
-            double distance = (double(i) + offset) * step;
-            if (closed) {
-                // Repli cyclique plutot que bornage : sur une boucle, un point
-                // pousse au-dela du bout doit revenir au debut.
-                distance = fmod(distance, length);
-                if (distance < 0.0) distance += length;
-            }
+            // Le repli cyclique des courbes fermees est fait par
+            // eval_at_distance, couture comprise.
+            const double distance = (double(i) + offset) * step;
 
             GMathVec3d position, tangent, normal;
             path.eval_at_distance(distance, position, tangent, normal);

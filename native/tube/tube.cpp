@@ -29,8 +29,11 @@
 #include <of_app.h>
 #include <of_object.h>
 #include <of_object_factory.h>
+#include <of_context.h>
+#include <of_item.h>
 #include <of_attr.h>
 #include <of_class.h>
+#include <of_action.h>
 
 #include <module_geometry.h>
 #include <module_polymesh.h>
@@ -41,6 +44,8 @@
 #include <core_array.h>
 #include <core_string.h>
 #include <core_vector.h>
+
+#include <cstdio>
 #include <gmath_vec3.h>
 
 #include <curve_core.h>
@@ -64,7 +69,7 @@ protected:
         ModulePolymesh::module_constructor(object);
 
         static const char *const names[] = {
-            "control_points", "closed", "steps", "radius", "radius_profile",
+            "point", "bend", "closed", "steps", "radius", "radius_profile",
             "sides", "cap", "strands", "twist", "interpolation", "bend_radius"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
@@ -297,6 +302,104 @@ private:
         return mesh;
     }
 };
+
+// Les deux boutons de l'attribute editor. cmagen fabrique leurs declarations
+// depuis le CID et les branche dans declare_class ; il ne reste qu'a les
+// definir, sous le nom qu'il a choisi : on_<attribut>_<attribut>_action.
+
+// Le nom d'objet est arbitre par add_object, qui refuse un nom deja pris : le
+// contexte n'expose ni recherche par nom ni generateur de nom unique public.
+static OfObject *
+add_unique(OfContext& context, const char *base, const char *class_name)
+{
+    CoreString name(base);
+    for (unsigned int i = 1; i < 100000u; i++) {
+        OfObject *created = context.add_object(name, class_name);
+        if (created != 0) return created;
+        char buffer[128];
+        snprintf(buffer, sizeof(buffer), "%s%u", base, i);
+        name = CoreString(buffer);
+    }
+    return 0;
+}
+
+static int
+on_add_point_add_point_action(const OfAction& action, OfObject& object, void *data)
+{
+    OfAttr *points = object.get_attribute("point");
+    if (points == 0) return 0;
+
+    // Le nouveau point prolonge le dernier segment : c'est le geste attendu
+    // quand on clique « ajouter » plusieurs fois de suite, et ca evite de poser
+    // deux points au meme endroit, ou la courbe serait degeneree.
+    CoreVector<GMathVec3d> existing;
+    gather_control_points(object, 0, existing);
+
+    GMathVec3d position(0.0, 0.0, 0.0);
+    const unsigned int found = existing.get_count();
+    if (found == 1u) {
+        position = vadd(existing[0], GMathVec3d(1.0, 0.0, 0.0));
+    } else if (found >= 2u) {
+        const GMathVec3d last = existing[found - 1u];
+        position = vadd(last, vsub(last, existing[found - 2u]));
+    }
+
+    OfObject *locator = add_unique(object.get_context(), "point", "Locator");
+    if (locator == 0) return 0;
+
+    OfAttr *translate = locator->get_attribute("translate");
+    if (translate != 0) {
+        translate->set_double(position[0], 0);
+        translate->set_double(position[1], 1);
+        translate->set_double(position[2], 2);
+    }
+
+    const unsigned int count = points->get_value_count();
+    points->set_value_count(count + 1u);
+    points->set_object(locator, count);
+
+    // La colonne voisine suit la table : sans ca la nouvelle ligne herite d'un
+    // rayon de coude indefini au lieu du « comme le global » attendu.
+    OfAttr *bend = object.get_attribute("bend");
+    if (bend != 0) {
+        bend->set_value_count(count + 1u);
+        bend->set_double(-1.0, count);
+    }
+    return 1;
+}
+
+static int
+on_draw_points_draw_points_action(const OfAction& action, OfObject& object, void *data)
+{
+    // Le SDK reconstruit n'expose aucun moyen d'activer un outil depuis du code
+    // -- rien de tel qu'un set_current_tool dans gui/ ni dans clarisse_app/.
+    // Les contraintes natives y arrivent (« Invoke Translate Tool »), donc le
+    // mecanisme existe, il est juste hors de ce qu'on sait atteindre. En
+    // attendant de le trouver, le bouton fait tout le reste : il cree la plume
+    // si besoin et la braque sur cette courbe, de sorte qu'il ne reste qu'a la
+    // choisir dans la barre d'outils.
+    OfContext& context = object.get_context();
+
+    // Le contexte s'enumere par items, pas par objets : get_object_count donne
+    // bien un compte, mais l'accesseur correspondant est get_item, qui rend un
+    // OfItem a convertir.
+    OfObject *pen = 0;
+    for (unsigned int i = 0; i < context.get_object_count(); i++) {
+        OfItem *item = context.get_item(i);
+        if (item == 0 || !item->is_object()) continue;
+        OfObject *candidate = item->to_object();
+        if (candidate != 0 && candidate->get_class().get_name() == "ToolCurvePen") {
+            pen = candidate;
+            break;
+        }
+    }
+    if (pen == 0) pen = add_unique(context, "curve_pen", "ToolCurvePen");
+    if (pen == 0) return 0;
+
+    OfAttr *target = pen->get_attribute("target");
+    if (target != 0) target->set_object(&object);
+    return 1;
+}
 
 IX_BEGIN_DECLARE_MODULE_CALLBACKS(GeometryTube, ModuleGeometryCallbacks)
     static OfModule *declare_module(OfObject& object, OfObjectFactory& objects);
