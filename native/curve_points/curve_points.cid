@@ -102,7 +102,7 @@ class "GeometryCurvePoints" "GeometryParticle" {
 
         distance "end_offset" {
             output "geometry"
-            doc "En mode Extremites, avance ou recule les deux points le long de la courbe. Positif les sort du cable, ce qui laisse la place a un connecteur sans qu'il traverse la gaine."
+            doc "En mode Extremites, fait rentrer les deux points dans le cable. Le regler sur la meme valeur que le Trim du tube pose l'embout exactement la ou la gaine s'arrete, de sorte qu'il la recouvre. Une valeur negative le sort au contraire du cable."
             animatable yes
             ui_range yes -1 1
             value 0.0

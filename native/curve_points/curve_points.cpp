@@ -123,6 +123,11 @@ private:
         // tangentes opposees. Un connecteur pose au depart doit regarder vers
         // l'exterieur du cable, pas dans le sens de parcours -- sans quoi les
         // deux embouts d'un meme cable pointent du meme cote.
+        //
+        // L'offset compte vers l'INTERIEUR du cable. C'est le sens utile : on
+        // veut poser l'embout la ou la gaine s'arrete pour qu'il la recouvre,
+        // pas l'ecarter davantage. Regle sur la meme valeur que le trim du
+        // tube, les deux se rejoignent exactement.
         if (mode == MODE_ENDS) {
             const double end_offset =
                 object->get_attribute("end_offset")->get_double();
@@ -131,8 +136,8 @@ private:
             CoreArray<GMathVec3f> end_normals(2);
 
             for (unsigned int i = 0; i < 2u; i++) {
-                const double distance = (i == 0u) ? -end_offset
-                                                  : length + end_offset;
+                const double distance = (i == 0u) ? end_offset
+                                                  : length - end_offset;
                 GMathVec3d position, tangent, normal;
                 path.eval_at_distance(distance, position, tangent, normal);
 

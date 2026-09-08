@@ -38,8 +38,8 @@ wire(tube)
 ix.cmds.SetValues([str(tube) + ".radius"], ["0.12"])
 ix.cmds.SetValues([str(tube) + ".sides"], ["18"])
 ix.cmds.SetValues([str(tube) + ".steps"], ["24"])
-ix.cmds.SetValues([str(tube) + ".trim_start"], ["0.45"])
-ix.cmds.SetValues([str(tube) + ".trim_end"], ["0.45"])
+ix.cmds.SetValues([str(tube) + ".trim_start"], ["0.25"])
+ix.cmds.SetValues([str(tube) + ".trim_end"], ["0.25"])
 print("gaine   : %d sommets" % tube.get_module().get_geometry().get_vertex_count())
 
 # Les deux extremites, orientees vers l'exterieur.
@@ -47,7 +47,9 @@ ends = ix.cmds.CreateObject("extremites", "GeometryCurvePoints", "Global", "proj
 wire_list(ends)
 ix.cmds.SetValues([str(ends) + ".mode"], ["2"])
 ix.cmds.SetValues([str(ends) + ".normal_source"], ["0"])
-ix.cmds.SetValues([str(ends) + ".end_offset"], ["0.1"])
+# Meme valeur que le trim du tube : l'embout se pose exactement la ou la gaine
+# s'arrete, et son corps la recouvre.
+ix.cmds.SetValues([str(ends) + ".end_offset"], ["0.25"])
 print("bouts   : %d points" % ends.get_module().get_point_count())
 
 # Des colliers repartis le long.

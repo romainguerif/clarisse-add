@@ -213,6 +213,18 @@ pour raccourcir la gaine.
 l'embout. C'est ce que fait Cablerator, et c'est ce qui permet au connecteur de
 recouvrir la fin du câble au lieu d'être traversé par elle.
 
+`end_offset` compte **vers l'intérieur** du câble. Le régler sur la même valeur
+que le trim du tube pose l'embout exactement là où la gaine s'arrête. Il avait
+d'abord été écrit dans l'autre sens, ce qui écartait l'embout au lieu de le
+rapprocher : l'écart se voyait au rendu, et c'est Romain qui l'a relevé.
+
+**Convention de pivot, à connaître** : le Scatterer oriente l'instance selon la
+normale du point, et le pivot de l'objet tombe donc sur le point. Un objet dont
+le pivot est au centre est à cheval sur la fin de la gaine — ce qui convient
+pour un connecteur qui doit la recouvrir, mais pas pour une pièce qui doit
+s'aboucher. Cablerator impose la convention inverse — pivot à la base, longueur
+selon +Z — et la documente plutôt que de la deviner.
+
 Le trim rééchantillonne par longueur d'arc, ce qui déplace les anneaux : on ne
 le fait donc que si un trim est réellement demandé, pour que le mode Coudes
 garde ses anneaux exactement sur les points de tangence des arcs.
