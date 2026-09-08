@@ -124,13 +124,23 @@ a relancer.
 
 Ce qui est deja decide, et qui ne changera pas :
 
-- **Ses references ne sont pas des toiles tissees.** C'est de la fibre etiree --
-  deux echelles nettement separees, quelques cables epais en longs arcs peu
-  profonds, et sous eux un voile de fibres tres fines, presque paralleles,
-  s'evasant en eventail. Des noeuds lumineux aux croisements, des grumeaux le
-  long des brins, et une profondeur faite de couches qui se perdent dans le noir.
+- **Ses references ne sont pas des toiles tissees.** C'est de la fibre etiree.
   Une araignee construit fil par fil avec un plan ; ca, c'est une masse de fibres
   qu'on a tiree. Les deux se modelisent tres differemment.
+
+  Trois corrections a ma premiere lecture, toutes mesurees sur les images et
+  toutes consignees dans `toile-clarisse.md` -- je les note ici parce qu'elles
+  changent la recette, pas seulement la description :
+
+  - **les fibres ne sont pas paralleles.** Isotropie mesuree a 0,988 sur 1,000,
+    et par blocs de cent pixels le pic local median ne depasse le plat que de
+    moitie. Ce que l'oeil lit comme du parallelisme, ce sont de **rares faisceaux
+    saillants sur un fond isotrope** -- on ne fabrique pas un fond isotrope comme
+    on fabrique un peigne ;
+  - **trois echelles et non deux**, et le « cable » est un **ruban plat de fibres
+    paralleles**, pas un cylindre. Un tube ne le fera donc pas ;
+  - chaque fibre porte une **frisure periodique**, signature de l'ouate
+    polyester. Je ne l'avais pas nommee et elle se voit.
 - **`GeometryWeb`**, deux modes : *orbitele* (cadre, moyeu, rayons, spirale a pas
   variable) et *enchevetre*. La regle qui fait tout dans le second : **un fil peut
   s'accrocher a un autre fil**, pas seulement a un ancrage. C'est de la que
@@ -144,12 +154,36 @@ Ce qui est deja decide, et qui ne changera pas :
   `TextureCurvature` (les aretes saillantes) et `TextureOcclusion` (les recoins
   abrites) -- exactement les deux criteres ou une araignee accroche. Avec le
   scatterer natif et notre `GeometrySelect`, l'ancrage est deja exprimable.
-- **Question ouverte** : le voile de fibres fines doit-il etre nos tubes ou des
-  courbes natives ? `GeometryBundle` et `GeometryFur` existent ; il faut savoir
-  si l'un des deux accepte des courbes fournies par un module tiers.
+- **La question des courbes natives est tranchee**, et bien mieux qu'espere.
+  `GeometryFurGenerator` et `GeometryFurInterpolate` **acceptent une geometrie
+  produite par un module tiers** -- leur filtre porte sur `Geometry` et non sur
+  `GeometryPolymesh`. Notre `GeometryCableField` passe et monte a **371 907
+  courbes en 0,03 seconde**. Mieux : `CurveMesh` a un constructeur et un `init()`
+  publics et exportes, donc un module a nous peut fabriquer des courbes natives
+  de bout en bout -- il faudra lier `ix_curve`, que `build.py` ignore encore.
+
+  Mais **la fourrure ne fera pas le voile** : un poil est libre a une extremite,
+  ce qui donne un duvet, alors que les fibres de la reference **relient deux
+  ancrages**. Le voile releve du modele « cable entre deux points », pas du
+  modele « poil ». Verifie au rendu.
+
+  Au passage, `GeometryBundle` **n'agrege rien** : c'est un lecteur Alembic et
+  USD. Le vrai agregateur est `SceneObjectCombiner`. Ma supposition etait fausse.
 - **Sur le tube**, les perles sont faites. Restent le *clumping* des torons, les
-  fibres echappees, et l'attenuation aux extremites -- un fil casse s'affine, il
-  ne s'arrete pas net.
+  fibres echappees, l'attenuation aux extremites -- un fil casse s'affine, il ne
+  s'arrete pas net -- et la frisure periodique.
+
+- **Une contre-intuition a retenir avant d'ecrire quoi que ce soit.** Un fil de
+  soie sec est **rigoureusement droit** : sa fleche vaut sept millieme de pour
+  cent de la portee. Ce n'est pas la gravite qui le plie, c'est la rosee, et elle
+  le plie en **polygone funiculaire** -- des segments droits entre les gouttes --
+  et non en chainette. C'est l'inverse exact de ce que fait notre node de cable,
+  et c'est ce qui distingue une toile d'un cable mou.
+
+- **Deux pieges mesures** : le semis en bruit bleu rend **exactement la moitie**
+  du compte demande, quelle que soit la surface, alors que les trois autres
+  distributions sont exactes ; et une `Image` sans `Layer3d` rend un cadre noir
+  sans le moindre message.
 
 ### Le node SDF : la suite
 
