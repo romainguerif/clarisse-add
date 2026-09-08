@@ -542,6 +542,76 @@ est une node qui le condense.
 
 ---
 
+## 9 bis. On peut donner à Clarisse une géométrie qui n'existe pas
+
+Établi le 2026-09-08 en écrivant `native/csg_sonde/`, qui **rend**. Le dossier
+complet est dans `csg-clarisse.md` ; ce qui suit est ce qui vaut pour tout
+module, pas seulement pour le CSG.
+
+`GeometryObject` est une interface **purement virtuelle qui ne mentionne jamais
+un polygone**. Elle demande huit choses : une copie, une boîte, les noms des
+shading groups, le nombre de primitives, le nombre d'arêtes d'une primitive, la
+boîte d'une primitive, son shading group, l'échantillon de surface en un
+fragment, et **l'intersection d'un rayon**. `PolyMesh` n'en est qu'une
+implémentation — `PolyMeshBase : GeometryObject`. `VolumeSparse`,
+`VolumeSurface` et `GeometrySphere` en sont d'autres.
+
+Et le constructeur de BVH est générique par-dessus :
+
+```cpp
+bool GasGeometry::create(const CtxEval&, const GeometryObject *base,
+                         const GeometryObject *deformed, ...);
+```
+
+Donc : **un module qui renvoie son propre `GeometryObject` depuis
+`create_resource(RESOURCE_ID_GEOMETRY)` reçoit gratuitement le BVH,
+l'instanciation, les shading groups, les slots de displacement et le motion
+blur.** Vérifié : la sonde rend trois booléens analytiques sans allouer un seul
+sommet, et **le `SceneObjectScatterer` natif l'instancie** sans rien de
+particulier.
+
+Tout ce qu'il faut est exporté par `ix_geometry` : le constructeur et le
+destructeur de `GeometryObject`, `push_intersection`, `setup_intersection`,
+`is_distance_clipped`, `get_local_ray`. Aucune classe à enregistrer, aucun
+`IMPLEMENT_CLASS` à écrire.
+
+### Le piège qui rend l'objet invisible sans un mot
+
+`GeometryRaytraceCtx::push_intersection` prend un `GeometryMediumDescriptor`
+par défaut. Son constructeur est un `inline` dont le corps vit dans
+`geometry_fragment.icc` — un des fichiers d'implémentation perdus — et la
+structure ne porte pas `GEOMETRY_EXPORT`, donc le symbole n'est pas non plus
+dans la DLL. Il ressort en externe non résolu et il faut le réécrire :
+
+```cpp
+inline GeometryMediumDescriptor::GeometryMediumDescriptor() { clear(); }
+inline void GeometryMediumDescriptor::clear() {
+    opacity = GMathVec3f(1.0f);   // <-- 1, pas 0
+    thickness = 0.0f; density = 0.0f; density_diff = GMathVec3f(0.0f);
+}
+```
+
+**Avec `opacity = 0`, rien ne s'affiche.** Le moteur lit « milieu totalement
+transparent » et un filtre d'intersection jette le fragment : pas de
+silhouette, pas d'alpha, pas d'avertissement. Le symptôme est indistinguable
+d'un module mal monté, et il a coûté six rendus.
+
+**La méthode qui a tranché mérite d'être retenue** : pour séparer « mon
+`GeometryObject` est mauvais » de « mon module est mal monté », renvoyer une
+`GeometrySphere` **native** depuis le même `create_resource`. Si elle s'affiche,
+le module est bon. Une mesure, deux hypothèses éliminées.
+
+Deux autres points relevés au passage :
+
+- `(u, v, w)` passés à `push_intersection` sont des **coordonnées
+  paramétriques**. Y glisser un entier de classification hors de [0, 1] est
+  refusé sans message. Le champ prévu pour ça est `sub_primitive_id`.
+- **Un `Deformer` ne peut pas changer la topologie** : `ModuleDeformerTopology`
+  fixe son `point_count` à la construction et n'expose aucun moyen de le
+  modifier. Tout ce qui ajoute ou retire des points doit être une `Geometry`.
+
+---
+
 ## 10. Pourquoi Clarisse tient des échelles que les autres ne tiennent pas
 
 Utile à savoir avant de comparer Clarisse à quoi que ce soit d'autre.

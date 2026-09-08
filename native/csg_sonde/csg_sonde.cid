@@ -1,0 +1,39 @@
+class "GeometryCsgSonde" "Geometry" {
+    #version 0.1
+    category "/Geometry"
+    doc "Sonde de faisabilite, pas un outil. Elle repond a une seule question : Clarisse accepte-t-il de tracer une geometrie qui n'a ni points ni polygones, dont la seule definition est une fonction d'intersection rayon/surface ? Le node calcule la difference, l'union ou l'intersection de deux spheres analytiques, directement dans intersect_primitive. Rien n'est tessele, rien n'est stocke. A jeter une fois la reponse ecrite."
+
+    attribute_group "csg" {
+        long "mode" {
+            output "geometry"
+            doc "L'operation booleenne appliquee entre les deux spheres."
+            preset "Union" "0"
+            preset "Intersection" "1"
+            preset "Difference (A moins B)" "2"
+            value 2
+        }
+
+        double "radius_a" {
+            output "geometry"
+            doc "Rayon de la sphere A."
+            numeric_range yes -10.0 1000.0
+            ui_range yes 0.1 5.0
+            value 1.0
+        }
+
+        double "radius_b" {
+            output "geometry"
+            doc "Rayon de la sphere B."
+            numeric_range yes -10.0 1000.0
+            ui_range yes 0.1 5.0
+            value 0.75
+        }
+
+        double "offset" {
+            output "geometry"
+            doc "Decalage du centre de B le long de X."
+            ui_range yes -3.0 3.0
+            value 0.6
+        }
+    }
+}

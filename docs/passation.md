@@ -24,7 +24,7 @@ Trois chantiers ouverts, chacun avec son document :
   l'inventaire est fait et il change la donne : `SubPixelFilterOutline` existe
   déjà et fait les quatre types de contours.
 - **`cloth-clarisse.md`** — un solveur de tissu XPBD réutilisable
-  (`native/common/cloth_solver.h`) et son premier client, `GeometryQuilt`, qui
+  (`native/common/cloth_solver.h`) et son premier client, `GeometryClothPanel`, qui
   transforme chaque polygone d'un maillage en coussin capitonné. C'est une vraie
   simulation, pas un bombement peint : Romain l'avait demandé explicitement.
   Le document liste les six erreurs de modélisation qui ont chacune produit une
@@ -133,6 +133,7 @@ comme on l'a cru jusqu'au 2026-09-08. Voir §0.
 |---|---|
 | **`curves-clarisse.md`** | **Chantier en cours.** Le système de courbes de Clarisse (il s'appelle « Fur »), pourquoi on ne passe pas par lui, la preuve que le chemin polymesh se lie, l'état des quatre modules, les pièges d'API, et ce que dit l'état de l'art des générateurs de câbles. |
 | **`npr-clarisse.md`** | Le NPR : les quatre images cibles, les quatre axes, l'inventaire de ce que Clarisse a déjà (beaucoup), le dossier simulation d'encre, l'ordre de travail. |
+| **`csg-clarisse.md`** | **Étude de faisabilité du CSG**, écrite le 2026-09-08. Clarisse n'a aucun booléen — vérifié sur les 359 classes. Mais `GeometryObject` est une interface ouverte qui ne mentionne jamais un polygone : la sonde `native/csg_sonde/` rend trois booléens analytiques sans un seul sommet, et le scatterer les instancie. Quatre voies comparées, une recommandation, et une sonde d'une demi-journée qui décide de tout le reste. |
 | **`sdk-clarisse.md`** (642 l.) | **La référence vivante.** Système de modules, contrainte cmagen, chargement sans action utilisateur, pièges à crash, langage CID, contrat `CtxKernelFilter` mesuré, accès aux AOV, générateur de rayons caméra, saveurs de licence, mensonges de l'API Python, invocation de `cnode`, recettes EXR. **À lire avant d'écrire du C++.** |
 | **`integrateur-clarisse.md`** (1288 l.) | Le gros dossier du soir. Voir §5. |
 | **`optique-etat.md`** (397 l.) | État des trois nœuds d'optique, inventaire des paramètres, les deux chemins de flou, et quatre défauts trouvés en le rédigeant. |
