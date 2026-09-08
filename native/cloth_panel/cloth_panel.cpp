@@ -60,7 +60,7 @@
 #include <curve_core.h>
 #include <cloth_solver.h>
 
-#include <quilt.cma>
+#include <cloth_panel.cma>
 
 using namespace curve_core;
 
@@ -533,9 +533,9 @@ smooth_grid(CoreArray<GMathVec3d>& grid, const unsigned int& n,
 
 } // namespace
 
-class QuiltModule : public ModulePolymesh {
+class ClothPanelModule : public ModulePolymesh {
 public:
-    QuiltModule() : ModulePolymesh() {}
+    ClothPanelModule() : ModulePolymesh() {}
 
 protected:
     void
@@ -821,7 +821,7 @@ private:
         }
 
         CoreArray<CoreString> shading_group_names(1);
-        shading_group_names[0] = "quilt";
+        shading_group_names[0] = "cloth";
 
         // Un carre UV par coussin : une texture de tissu s y repete sans qu on
         // ait rien a deplier.
@@ -1106,17 +1106,17 @@ private:
     }
 };
 
-IX_BEGIN_DECLARE_MODULE_CALLBACKS(GeometryQuilt, ModuleGeometryCallbacks)
+IX_BEGIN_DECLARE_MODULE_CALLBACKS(GeometryClothPanel, ModuleGeometryCallbacks)
     static OfModule *declare_module(OfObject& object, OfObjectFactory& objects);
     static bool destroy_module(OfObject& object, OfObjectFactory& objects, OfModule *impl);
-IX_END_DECLARE_MODULE_CALLBACKS(GeometryQuilt)
+IX_END_DECLARE_MODULE_CALLBACKS(GeometryClothPanel)
 
 IX_BEGIN_EXTERN_C
 
 DSO_EXPORT void
 on_register_module(OfApp& app, CoreVector<OfClass *>& new_classes)
 {
-    OfClass *new_class = IX_DECLARE_MODULE_CLASS(GeometryQuilt);
+    OfClass *new_class = IX_DECLARE_MODULE_CLASS(GeometryClothPanel);
     new_classes.add(new_class);
 
     IX_MODULE_CLBK *module_callbacks;
@@ -1130,7 +1130,7 @@ IX_END_EXTERN_C
 OfModule *
 IX_MODULE_CLBK::declare_module(OfObject& object, OfObjectFactory& objects)
 {
-    QuiltModule *module = new QuiltModule();
+    ClothPanelModule *module = new ClothPanelModule();
     module->set_object(object);
     return module;
 }

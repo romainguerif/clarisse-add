@@ -106,6 +106,7 @@ protected:
 
         static const char *const names[] = {
             "input_geometry", "group_name",
+            "list_mode", "index",
             "texture", "texture_channel", "threshold",
             "use_normal", "direction", "angle",
             "random_ratio", "seed",
@@ -331,6 +332,37 @@ private:
             }
 
             wanted[f] = keep ? 1u : 0u;
+        }
+
+        // --- les faces designees a la main ---------------------------------
+        //
+        // Elles entrent comme un critere de plus, pas comme un systeme
+        // concurrent : meme sortie, memes combinaisons, meme chainage. Ce qui
+        // permet de melanger « ces trois faces-la » et « tout ce qui regarde en
+        // haut » dans la meme selection.
+        const long list_mode = read_long(object, "list_mode", 0);
+        if (list_mode != 0) {
+            CoreArray<unsigned char> picked(face_count);
+            for (unsigned int f = 0; f < face_count; f++) picked[f] = 0u;
+
+            const OfAttr *list = object->get_attribute("index");
+            if (list != 0) {
+                const unsigned int rows = list->get_value_count();
+                for (unsigned int r = 0; r < rows; r++) {
+                    const long face = list->get_long(r);
+                    if (face >= 0 && (unsigned long) face < face_count) {
+                        picked[(unsigned int) face] = 1u;
+                    }
+                }
+            }
+
+            for (unsigned int f = 0; f < face_count; f++) {
+                switch (list_mode) {
+                    case 2:  wanted[f] = (wanted[f] || picked[f]) ? 1u : 0u; break;
+                    case 3:  wanted[f] = (wanted[f] && !picked[f]) ? 1u : 0u; break;
+                    default: wanted[f] = picked[f]; break;
+                }
+            }
         }
 
         // --- la combinaison ------------------------------------------------

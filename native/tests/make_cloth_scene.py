@@ -12,7 +12,7 @@ OUT = r"J:\_WINDOWSTEMP\claude\quilt_scene.project"
 
 
 def quilt(name, source, **values):
-    node = ix.cmds.CreateObject(name, "GeometryQuilt", "Global", "project:/")
+    node = ix.cmds.CreateObject(name, "GeometryClothPanel", "Global", "project:/")
     ix.cmds.SetValues([str(node) + ".input_geometry"], [str(source)])
     gy = values.pop("gravity_y", None)
     if gy is not None:

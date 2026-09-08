@@ -27,14 +27,14 @@ BASE = dict(resolution=96, levels=5, iterations=8, substeps=160, damping=0.02,
             jitter=0.010, smoothing=0, smoothing_amount=0.25, seed=1)
 
 VARIANTS = [
-    ("fort oriente", dict(jitter=0.010, crease_stretch=2.5)),
-    ("faible isotrope", dict(jitter=0.002, crease_stretch=1.0)),
-    ("tres faible", dict(jitter=0.0005, crease_stretch=1.0)),
-    ("faible + variation", dict(jitter=0.002, crease_stretch=1.0,
-                                wrinkle_variation=0.8)),
-    ("faible + long", dict(jitter=0.002, crease_stretch=1.0,
-                           substeps=240, iterations=8)),
+    ("cote 0.02 m", dict(_size=0.02)),
+    ("cote 0.2 m", dict(_size=0.2)),
+    ("cote 2 m", dict()),
+    ("cote 20 m", dict(_size=20.0)),
+    ("cote 0.2 m, pli absolu", dict(_size=0.2, wrinkle_size=0.01)),
+    ("cote 2 m, pli absolu", dict(wrinkle_size=0.01)),
 ]
+
 
 
 
@@ -42,9 +42,23 @@ VARIANTS = [
 
 RAMP = "@%#*+=-:. "   # negatif -> positif
 
-grid = ix.cmds.CreateObject("carre", "GeometryPolygrid", "Global", "project:/")
-ix.cmds.SetValues([str(grid) + ".size[0]", str(grid) + ".size[1]"], ["2", "2"])
-ix.cmds.SetValues([str(grid) + ".spans[0]", str(grid) + ".spans[1]"], ["1", "1"])
+grids = {}
+
+
+def square(size):
+    """Un quad unique de `size` unites de cote."""
+    if size in grids:
+        return grids[size]
+    g = ix.cmds.CreateObject("carre_%d" % (len(grids) + 1), "GeometryPolygrid",
+                             "Global", "project:/")
+    ix.cmds.SetValues([str(g) + ".size[0]", str(g) + ".size[1]"],
+                      [str(size), str(size)])
+    ix.cmds.SetValues([str(g) + ".spans[0]", str(g) + ".spans[1]"], ["1", "1"])
+    grids[size] = g
+    return g
+
+
+grid = square(2.0)
 
 counter = [0]
 
@@ -60,11 +74,13 @@ def crossings(values):
 
 def probe(label, values):
     counter[0] += 1
-    node = ix.cmds.CreateObject("q%d" % counter[0], "GeometryQuilt",
+    node = ix.cmds.CreateObject("q%d" % counter[0], "GeometryClothPanel",
                                 "Global", "project:/")
     ix.cmds.SetValues([str(node) + ".input_geometry"], [str(grid)])
     settings = dict(BASE)
     settings.update(values)
+    size = settings.pop("_size", 2.0)
+    ix.cmds.SetValues([str(node) + ".input_geometry"], [str(square(size))])
     for key, value in settings.items():
         if node.get_attribute(key) is None:
             print("  !! pas d'attribut %s" % key)
@@ -131,9 +147,11 @@ def probe(label, values):
     ring = [lap[ring_row * side + i] for i in range(1, side - 1)]
 
     print("")
-    print("[bord %2d] %-24s h %.3f r %.3f mil %d diag %d deb %+.3f"
-          % (crossings(ring), label, max(height), relief,
-             crossings(middle), crossings(diagonal), over))
+    span = max(1e-9, max(abs(float(cloud.get_position(k)[0]))
+                         for k in range(cloud.get_point_count())) * 2.0)
+    print("[bord %2d] %-24s h/L %.3f relief/L %.4f mil %d diag %d"
+          % (crossings(ring), label, max(height) / span, relief / span,
+             crossings(middle), crossings(diagonal)))
     if side <= 34:
         step = 1 if side <= 22 else 2
         for j in range(0, side, step):

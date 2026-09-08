@@ -17,12 +17,12 @@ contraintes : distance, flexion isométrique, ancrage élastique, volume fermé.
 Aucune dépendance à Clarisse au-delà de `CoreVector` et `GMathVec3d`, donc il
 sert à n'importe quel node.
 
-`native/quilt/` — `GeometryQuilt`. Chaque polygone du maillage d'entrée devient
+`native/cloth_panel/` — `GeometryClothPanel`. Chaque polygone du maillage d'entrée devient
 un coussin capitonné. La topologie d'entrée dessine le motif : des quads
 réguliers donnent un matelas, une sphère facettée donne une boule à coussins.
 Filtre par shading group pour ne capitonner qu'une partie du maillage.
 
-`native/tests/quilt_probe.py` — une sonde qui lit le champ de plis dans le
+`native/tests/cloth_probe.py` — une sonde qui lit le champ de plis dans le
 maillage, **sans rendu**. Voir §3, c'est l'outil qui a débloqué le chantier.
 
 ---
@@ -61,7 +61,7 @@ et surtout ça ne dit pas *pourquoi* : on voit que c'est raté sans voir de
 combien.
 
 Or tout ce qu'on cherchait à régler — combien de plis, où, de quelle amplitude —
-est déjà dans le maillage. `quilt_probe.py` construit un coussin unique sur un
+est déjà dans le maillage. `cloth_probe.py` construit un coussin unique sur un
 quad de deux unités et affiche **le laplacien de la hauteur**, pas la hauteur :
 un dôme lisse a un laplacien d'un seul signe, tandis que chaque pli y apparaît
 comme une alternance creux/bosse. Compter les changements de signe le long d'une

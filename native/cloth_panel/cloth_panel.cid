@@ -1,4 +1,4 @@
-class "GeometryQuilt" "GeometryPolymesh" {
+class "GeometryClothPanel" "GeometryPolymesh" {
     #version 0.3
     category "/Geometry/Polymesh"
     doc "Transforme chaque polygone d'un maillage en coussin capitonne. La forme n'est pas dessinee mais simulee : une membrane cousue sur le contour du polygone, a qui on donne plus de matiere qu'il n'en faut, et qu'une pression interne pousse vers l'exterieur. Les bourrelets et les plis naissent de ce surplus, comme sur un vrai coussin. Tout est resolu dans un repere normalise par la taille du coussin, donc les memes reglages tiennent sur un matelas de six metres comme sur une facette de sphere centimetrique."

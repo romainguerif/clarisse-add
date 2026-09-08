@@ -19,6 +19,34 @@ class "GeometrySelect" "GeometryPolymesh" {
         }
     }
 
+    attribute_group "picked" {
+        doc "Les faces designees a la main. Une regle ne remplace pas un doigt : il y a des cas ou l'on sait exactement quelles faces on veut, et ou aucun critere ne les decrira. C'est aussi ce que remplit l'outil de selection du viewport."
+
+        long "list_mode" {
+            output "geometry"
+            doc "Ce qu'on fait de la liste. Ignorer la laisse dormir sans la perdre -- pratique pour comparer une selection a la main et une selection par regle. Les trois autres la combinent avec les criteres."
+            preset "Ignorer" "0"
+            preset "Ces faces seulement" "1"
+            preset "Ajouter aux criteres" "2"
+            preset "Retirer des criteres" "3"
+            value 0
+        }
+
+        table "faces" {
+            doc "Les indices des faces retenues, dans l'ordre ou on les a designees. L'ordre n'a pas d'importance ici, mais il rend la table lisible et permet de defaire la derniere."
+            main_column "index"
+            toggle_rows yes
+            reorder_rows yes
+
+            long "index" {
+                output "geometry"
+                doc "Indice de la face dans le maillage d'entree."
+                numeric_range yes 0 1000000000
+                value 0
+            }
+        }
+    }
+
     attribute_group "criteria" {
         doc "Ce qui fait qu'une face est retenue. Les criteres actifs se cumulent : une face doit satisfaire tous ceux qui sont allumes."
 
