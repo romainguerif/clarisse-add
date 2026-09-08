@@ -15,27 +15,25 @@ Le coussin est un quad unique de deux unites de cote, horizontal, donc la
 hauteur est simplement la coordonnee Y.
 """
 
-BASE = dict(resolution=64, levels=4, iterations=320,
+BASE = dict(resolution=96, levels=5, iterations=320,
             puff_relative=0.33, shoulder=2.6, squareness=5.0,
             pressure=1.0, pressure_softness=0.005,
             seam=0.07, seam_depth=0.03,
-            seam_gather=0.32, seam_wrinkle_scale=0.045,
-            wrinkles=0.08, wrinkle_reach=0.75, corner_gather=0.06,
-            stretch=0.02, shear_stiffness=4.0,
-            wrinkle_scale=0.10, wrinkle_size=0.0,
-            stuffing=1.2, gravity_strength=0.0,
-            jitter=0.008, smoothing=0, smoothing_amount=0.25, seed=1)
+            seam_gather=0.38, seam_wrinkle_scale=0.04,
+            wrinkles=0.07, wrinkle_reach=0.8, corner_gather=0.06,
+            stretch=0.02, shear_stiffness=4.0, crease_stretch=3.0,
+            wrinkle_scale=0.09, wrinkle_size=0.0,
+            stuffing=8.0, gravity_strength=0.0,
+            jitter=0.010, smoothing=0, smoothing_amount=0.25, seed=1)
 
 VARIANTS = [
-    ("s.04 ouate 1", dict(wrinkles=0.04, stuffing=1.0)),
-    ("s.04 ouate 3", dict(wrinkles=0.04, stuffing=3.0)),
-    ("s.08 ouate 3", dict(wrinkles=0.08, stuffing=3.0)),
-    ("s.08 ouate 8", dict(wrinkles=0.08, stuffing=8.0)),
-    ("s.12 ouate 8", dict(wrinkles=0.12, stuffing=8.0)),
-    ("s.08 ouate 8 pli .07", dict(wrinkles=0.08, stuffing=8.0,
-                                  wrinkle_scale=0.07)),
+    ("ouate 4 etire 1", dict(stuffing=4.0, crease_stretch=1.0)),
+    ("ouate 4 etire 3", dict(stuffing=4.0)),
+    ("ouate 8 etire 3", dict()),
+    ("ouate 16 etire 3", dict(stuffing=16.0)),
+    ("ouate 8 etire 6", dict(crease_stretch=6.0)),
+    ("ouate 8 fronce 0.55", dict(seam_gather=0.55)),
 ]
-
 
 RAMP = "@%#*+=-:. "   # negatif -> positif
 
@@ -73,7 +71,9 @@ def probe(label, values):
         print("%-22s : RIEN" % label)
         return
 
-    n = int(settings["resolution"])
+    # La valeur retenue par le node, pas celle qu'on a demandee : le CID borne,
+    # et une borne silencieuse fausse toute la lecture.
+    n = int(node.get_attribute("resolution").get_long())
     side = n + 1
     cloud = mesh.get_point_cloud()
     if cloud.get_point_count() < side * side:

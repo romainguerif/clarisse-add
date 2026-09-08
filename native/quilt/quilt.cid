@@ -23,8 +23,8 @@ class "GeometryQuilt" "GeometryPolymesh" {
         long "resolution" {
             output "geometry"
             doc "Nombre de subdivisions par coussin. C'est ce qui borne la finesse des plis : un pli ne peut pas etre plus etroit qu'une maille. Les compliances etant normalisees par la taille de maille, monter la resolution affine le resultat sans changer la matiere."
-            numeric_range yes 3 64
-            ui_range yes 6 24
+            numeric_range yes 3 256
+            ui_range yes 8 64
             value 14
         }
 
@@ -46,8 +46,8 @@ class "GeometryQuilt" "GeometryPolymesh" {
         long "max_resolution" {
             output "geometry"
             doc "Plafond de subdivision quand la taille de maille pilote la resolution. Il n'y a que lui pour empecher une seule grande face de faire exploser le nombre de sommets."
-            numeric_range yes 3 128
-            ui_range yes 8 64
+            numeric_range yes 3 256
+            ui_range yes 8 96
             value 40
         }
     }
@@ -197,6 +197,15 @@ class "GeometryQuilt" "GeometryPolymesh" {
             numeric_range yes 0.0 1000
             ui_range yes 0.0 20
             value 4
+        }
+
+        double "crease_stretch" {
+            output "geometry"
+            doc "Allongement des plis perpendiculairement a la couture. A 1 ils sont ronds et repartis au hasard, ce qui donne un aspect grumeleux ; en montant ils s'etirent en cretes qui partent de la couture en eventail et meurent avant le sommet -- ce que font les vrais panneaux cousus. L'effet ne joue que pres des coutures, la ou l'orientation a un sens."
+            animatable yes
+            numeric_range yes 1 12
+            ui_range yes 1 6
+            value 3
         }
 
         percentage "wrinkle_scale" {

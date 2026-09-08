@@ -293,6 +293,66 @@ période.
 
 ---
 
+## 5 quater. Des plis orientés, pas des taches
+
+Sur les références, les plis ne sont pas des bosses rondes réparties au hasard.
+Ce sont des crêtes allongées, **perpendiculaires à la couture**, qui en partent
+en éventail et meurent avant le sommet. Un bruit isotrope ne peut pas produire
+ça : il donne des taches, et le coussin sort grumeleux.
+
+L'amorçage se fait donc dans le repère de la couture la plus proche — une
+coordonnée qui court le long d'elle, une autre qui s'en éloigne — avec le bruit
+étiré dans la seconde. On sème exactement le mode qu'on veut voir flamber,
+orientation comprise. Le réglage est `crease_stretch`.
+
+Trois détails, chacun découvert au rendu :
+
+- **L'étirement doit culminer sur l'épaule, pas dans la couture.** Appliqué à
+  fond dans une bande étroite, il donne un fronce parfaitement régulier — une
+  chaîne de maillons identiques. L'éventail, lui, vit sur l'épaule.
+- **Le repère se réfléchit sur les diagonales**, puisqu'il échange les deux
+  coordonnées. Sans un décalage par côté, les quatre éventails d'un coussin sont
+  l'image les uns des autres, et ça se lit immédiatement.
+- **L'enveloppe de l'amorçage était à l'envers.** Elle culminait au centre du
+  coussin et s'annulait près du bord, alors que c'est du bord que partent les
+  plis. Elle est maintenant plate partout sauf sur la première maille, qui
+  touche des points épinglés.
+
+Une note de méthode, tirée d'un piège coûteux : le CID bornait `resolution` à
+64, et demander 96 la ramenait à 64 **sans rien dire**. La sonde comparait alors
+une grille de 65 à une attente de 97 et annonçait « maillage trop court » sans
+qu'on comprenne pourquoi. Toute sonde doit relire la valeur retenue par le node,
+jamais celle qu'elle a demandée.
+
+---
+
+## 5 quinquies. Le réglage qui atteint les références
+
+Mesuré, rendu, comparé — c'est le point de départ à recopier, pas une vérité :
+
+```
+resolution 96   levels 5   iterations 320
+puff_relative 0.33   shoulder 2.6   squareness 5.0
+seam 0.055   seam_depth 0.025
+seam_gather 0.34   seam_wrinkle_scale 0.04
+wrinkles 0.07   wrinkle_reach 0.8   corner_gather 0.06
+stuffing 16   wrinkle_scale 0.09   crease_stretch 4
+stretch 0.02   shear_stiffness 4   pressure_softness 0.005
+jitter 0.010   smoothing 0
+```
+
+Deux cent trente mille sommets pour vingt-cinq coussins, quinze secondes de
+construction. Le lissage est à zéro : à cette finesse il mangerait les plis
+qu'on vient de gagner.
+
+Un point à savoir avant de crier au bug : les creux du fronce sortent **noirs**
+sous un éclairage dur. Vérification faite pixel par pixel, ils sont opaques —
+c'est de la géométrie en ombre profonde, pas un trou dans le maillage. Sous un
+éclairage doux ils redeviennent gris. La scène de test a d'ailleurs dû être
+rééclairée en cours de route : on jugeait des sillons dans le noir.
+
+---
+
 ## 6. L'échelle du monde
 
 Tout se résout dans un repère normalisé, centré sur le coussin et divisé par son
@@ -336,6 +396,7 @@ Pour obtenir des plis :
 | `corner_gather` | le fronçage des coins, d'où partent les plis en étoile |
 | `seam_gather` | le tissu ramassé le long de la couture — le détail qui fait tissu |
 | `seam_wrinkle_scale` | la finesse de ce fronce, bien plus fine que les plis du coussin |
+| `crease_stretch` | des crêtes en éventail depuis la couture, au lieu de taches rondes |
 
 Qualité :
 

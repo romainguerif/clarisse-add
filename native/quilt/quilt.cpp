@@ -93,6 +93,7 @@ struct Settings {
 
     double stretch;
     double shear;
+    double crease_stretch;  // allongement des plis perpendiculairement a la couture
     double wrinkle_scale;   // largeur de pli visee, en fraction du coussin
     double wrinkle_size;    // la meme, en unites du monde ; 0 = utiliser la fraction
 
@@ -490,14 +491,38 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
             if (wave < 1e-6) wave = 1e-6;
             const double frequency = 1.0 / wave;
 
-            const double edge = 4.0 * u * (1.0 - u) * v * (1.0 - v);
-            const double fade = 0.25 + 0.75 * edge;
+            // Le repere de la couture la plus proche : `along` court le long
+            // d'elle, `across` s'en eloigne. Etirer le bruit dans le second
+            // donne des cretes perpendiculaires a la couture -- l'eventail des
+            // references -- la ou un bruit isotrope ne donne que des taches.
+            const double du = 2.0 * ((u < 0.5) ? u : 1.0 - u);
+            const double dv = 2.0 * ((v < 0.5) ? v : 1.0 - v);
+            const double along = (du < dv) ? v : u;
+            const double across = (du < dv) ? u : v;
+            // Un decalage par cote. Sans lui, echanger u et v de part et
+            // d'autre de la diagonale reflechit le bruit, et les quatre
+            // eventails d'un coussin sont l'image les uns des autres.
+            const double side_offset =
+                (du < dv) ? ((u < 0.5) ? 0.0 : 19.3)
+                          : ((v < 0.5) ? 41.7 : 63.1);
+            // L'allongement culmine sur l'epaule et retombe aux deux bouts :
+            // au ras de la couture parce qu'un fronce oriente y devient une
+            // chaine de maillons identiques, et au sommet parce qu'il n'y a
+            // plus de couture dont s'eloigner.
+            const double shoulder_weight = 4.0 * mix * (1.0 - mix);
+            const double stretch =
+                1.0 + (settings.crease_stretch - 1.0) * shoulder_weight;
+
+            const double edge = (du < dv) ? du : dv;
+            const double fade = smoothstep01(0.06, edge);
             // Trois octaves : la premiere pose la largeur des plis, les deux
             // autres cassent la regularite. Avec une seule frequence, le fronce
             // sort tresse et on lit la periode.
             const double noise =
-                fbm(GMathVec3d(u, v, double(level) * 3.7), frequency,
-                    3u, 0.5, seed);
+                fbm(GMathVec3d(along + side_offset,
+                               across / stretch + side_offset * 0.37,
+                               double(level) * 3.7),
+                    frequency, 4u, 0.55, seed);
             solver.positions[here] =
                 vadd(solver.positions[here],
                      vscale(patch.normal, fade * amount * noise));
@@ -592,7 +617,8 @@ protected:
             "puff_relative", "shoulder", "squareness",
             "pressure", "pressure_softness",
             "wrinkles", "corner_gather", "wrinkle_reach", "stuffing",
-            "stretch", "shear_stiffness", "wrinkle_scale", "wrinkle_size",
+            "stretch", "shear_stiffness", "crease_stretch",
+            "wrinkle_scale", "wrinkle_size",
             "gravity", "gravity_strength",
             "iterations", "jitter", "smoothing", "smoothing_amount", "seed"
         };
@@ -783,6 +809,8 @@ private:
         settings.stuffing = read_double(object, "stuffing", 3.0);
         settings.stretch = read_double(object, "stretch", 0.02);
         settings.shear = read_double(object, "shear_stiffness", 4.0);
+        settings.crease_stretch = read_double(object, "crease_stretch", 3.0);
+        if (settings.crease_stretch < 1.0) settings.crease_stretch = 1.0;
         settings.wrinkle_scale = read_double(object, "wrinkle_scale", 0.28);
         settings.wrinkle_size = read_double(object, "wrinkle_size", 0.0);
         settings.detail = read_double(object, "detail", 0.0);
