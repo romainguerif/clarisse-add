@@ -136,7 +136,11 @@ ray_triangle(const GMathVec3d& origin, const GMathVec3d& direction,
     if (hit <= 1e-9) return false;
 
     distance = hit;
-    front = det < 0.0;
+    // Le determinant vaut moins le produit scalaire de la direction par la
+    // normale : une face qui regarde la camera le rend positif. L'inverse,
+    // ecrit d'abord, ne retenait que les faces tournant le dos -- donc la paroi
+    // du fond sur un objet ferme, qui s'affiche ailleurs a l'ecran.
+    front = det > 0.0;
     return true;
 }
 
@@ -290,8 +294,15 @@ public:
         const double nx = 2.0 * (double(px) / double(ctx.gl.width)) - 1.0;
         const double ny = 1.0 - 2.0 * (double(py) / double(ctx.gl.height));
 
-        const double h = view->get_horizontal_zoom_factor(1.0);
-        const double v = view->get_vertical_zoom_factor(1.0);
+        // En perspective l'etendue se mesure a une unite devant l'oeil et le
+        // rayon diverge ; en orthographique il ne diverge pas, et l'etendue
+        // visible est celle prise a la distance de pivot. Mesurer a une unite
+        // dans ce cas rapetissait la vue d'autant, et tout ce qui n'etait pas
+        // au centre exact tombait bien trop pres du milieu.
+        const double reference =
+            view->is_orthographic() ? view->get_eye_distance() : 1.0;
+        const double h = view->get_horizontal_zoom_factor(reference);
+        const double v = view->get_vertical_zoom_factor(reference);
         const double aspect = view->get_aspect_ratio();
         const double lx = (aspect != 0.0) ? (nx * h / aspect) : (nx * h);
         const double ly = ny * v;
