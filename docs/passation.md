@@ -117,10 +117,17 @@ Trois choses, parce que `cnode` n'a pas de viewport et qu'on ne lance jamais
 
 ### Le chantier en cours : la toile d'araignee
 
-Romain veut des images d'art de toiles. **Un agent ecrivait
-`docs/toile-clarisse.md` au moment ou cette session s'est arretee** : si le
-fichier existe, il fait autorite sur ce qui suit ; s'il manque, la recherche est
-a relancer.
+Romain veut des images d'art de toiles. **La recherche est finie et tient en
+deux documents**, qui font autorite sur tout ce qui suit -- si un resume les
+contredit, ce sont eux qui ont raison :
+
+- **`toile-clarisse.md`** : les deux references de Romain (de la fibre etiree
+  en macro, pas une toile) et l'integration dans Clarisse ;
+- **`toile-orbitele.md`** : la vraie toile d'araignee, mesuree. Litterature
+  primaire, chaque nombre avec son URL. **Sa page de garde liste les neuf
+  points qui changent ce qu'on allait ecrire, et sa derniere section donne la
+  fiche des valeurs d'usine du node.** Lire ces deux morceaux suffit pour
+  commencer ; le corps est une reference ou l'on revient.
 
 Ce qui est deja decide, et qui ne changera pas :
 
@@ -145,11 +152,42 @@ Ce qui est deja decide, et qui ne changera pas :
   variable) et *enchevetre*. La regle qui fait tout dans le second : **un fil peut
   s'accrocher a un autre fil**, pas seulement a un ancrage. C'est de la que
   viennent les V, les points de traction et l'aspect recursif.
+
+  **Le mode orbitele se construit dans l'ordre de l'araignee**, parce que c'est
+  cet ordre qui produit les irregularites justes : cadre, puis rayons du haut
+  vers le bas -- chacun insere **sous** le precedent, et c'est le point
+  d'attache au cadre qui decide de l'angle au moyeu --, puis le moyeu, puis une
+  auxiliaire **logarithmique** du centre vers le bord, puis la spirale de
+  capture **arithmetique** du bord vers le centre. Les valeurs d'usine :
+  **32 rayons** (le compte ne depend pas de la taille de l'araignee, le
+  diametre si), **13,2 degres d'angle en haut contre 8,4 en bas**, moyeu sur
+  les dix premiers pour cent du rayon, zone libre jusqu'a trente, capture
+  au-dela, **pas de 5,6 mm** croissant vers le haut et constant vers le bas,
+  **plus ou moins trente pour cent d'un tour a l'autre**.
+
+  **Trois reglages independants**, a ne pas fusionner : la forme generale de la
+  toile, l'asymetrie d'extension (le bas 1,3 a 1,4 fois plus grand) et
+  l'asymetrie angulaire -- cette derniere **survit a une extension nulle**,
+  chez 92 araignees sur 93.
+
+  **Et il faut du desordre de topologie** : **trente-cinq anomalies par toile**,
+  dont des rayons devies (84 % des toiles), des rayons en Y (45 %) et des
+  rayons surnumeraires (15 %). Un bruit ajoute apres coup ne les remplace pas.
 - **La relaxation reutilise `cloth_solver.h`.** Une toile est un reseau
   masse-ressort, exactement ce que ce solveur sait faire : ancrages epingles,
   fils en contraintes de distance, un peu de gravite -- et les tensions et les
   coudes aux jonctions apparaissent au lieu d'etre dessines. C'est le deuxieme
   client du solveur, et c'est ce qu'on annoncait en l'ecrivant.
+
+  **Les raideurs relatives sont mesurees et il ne faut pas les inventer** :
+  amarrage, cadre et rayon sont dans un rapport de tension **10 : 7 : 1**,
+  identique chez quatre especes donc independant de la geometrie, et la spirale
+  est a **un dixieme du rayon**. Ce sont les compliances a cabler.
+
+  **Attention au piege inverse** : une spirale de capture reelle **n'a jamais
+  de mou**, parce que le treuil capillaire enroule l'excedent de fil dans la
+  gouttelette a tension constante. Si notre relaxation sort des spirales molles,
+  c'est un artefact et pas du realisme.
 - **L'ancrage ne demande pas de nouveau node.** Verifie : Clarisse possede
   `TextureCurvature` (les aretes saillantes) et `TextureOcclusion` (les recoins
   abrites) -- exactement les deux criteres ou une araignee accroche. Avec le
@@ -172,6 +210,16 @@ Ce qui est deja decide, et qui ne changera pas :
 - **Sur le tube**, les perles sont faites. Restent le *clumping* des torons, les
   fibres echappees, l'attenuation aux extremites -- un fil casse s'affine, il ne
   s'arrete pas net -- et la frisure periodique.
+
+  **Deux corrections mesurees a ce que j'ai livre**, toutes deux dans
+  `toile-orbitele.md` : les gouttes reelles ne sont **pas rondes** mais une fois
+  et demie plus longues que larges (rapport mesure **1,2 a 1,65**, moyenne
+  **1,35**), donc la largeur deduite automatiquement doit viser 1,35 et non 1 ;
+  et **elles alternent grosses et petites**, la secondaire faisant de 2 % a
+  59 % de la primaire selon l'espece. Enfin l'espacement : **28 a 35 fois le
+  rayon du fil**, et non les **neuf** que donne la formule de Rayleigh non
+  visqueuse -- un reglage cale sur neuf donne des perles trois fois trop
+  serrees.
 
 - **Une contre-intuition a retenir avant d'ecrire quoi que ce soit.** Un fil de
   soie sec est **rigoureusement droit** : sa fleche vaut sept millieme de pour
@@ -338,6 +386,11 @@ comme on l'a cru jusqu'au 2026-09-08. Voir §0.
 | **`npr-clarisse.md`** | Le NPR : les quatre images cibles, les quatre axes, l'inventaire de ce que Clarisse a déjà (beaucoup), le dossier simulation d'encre, l'ordre de travail. |
 | **`csg-clarisse.md`** | **Étude de faisabilité du CSG**, écrite le 2026-09-08. Clarisse n'a aucun booléen — vérifié sur les 359 classes. Mais `GeometryObject` est une interface ouverte qui ne mentionne jamais un polygone : la sonde `native/csg_sonde/` rend trois booléens analytiques sans un seul sommet, et le scatterer les instancie. Quatre voies comparées, une recommandation, et une sonde d'une demi-journée qui décide de tout le reste. **Deux points sont corrigés par `sdf-clarisse.md` : le découpage en une primitive par feuille, et « aucun moteur de production ne fait ça ».** |
 | **`sdf-clarisse.md`** | **MagicaCSG, les champs de distance, et la question du GPU**, écrit le 2026-09-08. Le sphere tracing avec mélange doux **rend dans Clarisse** — sonde, images et chiffres. L'état de l'art (MagicaCSG discrétise, comme Dreams, comme tout le monde) et les mesures GPU/CPU sur cette machine. **Réponse au GPU : pas de noyau par rayon (mesuré, 1,41 rayon par appel contre 20 µs de latence), mais `ix_glutils.lib` réexporte GLEW jusqu'à GL 4.6 avec les compute shaders — vérifié à l'édition de liens.** |
+| **`toile-orbitele.md`** (736 l.) | **La toile d'araignée réelle, mesurée**, écrit le 2026-09-08. Littérature primaire, chaque nombre avec son URL : séquence de construction, comptes de rayons, pas de spirale par espèce, asymétries, diamètres et mécanique des soies, gouttelettes de glu, tensions. **Sa page de garde liste les neuf points qui corrigent ce qu'on allait écrire ; sa dernière section est la fiche des valeurs d'usine de `GeometryWeb`.** Le résultat le plus contre-intuitif : **un fil sec ne fait pas de chaînette**. |
+| **`toile-clarisse.md`** (405 l.) | Les deux références de Romain — de la fibre étirée en macro, pas une toile tissée — mesurées image par image, et l'intégration Clarisse. Corrige trois de mes lectures à l'œil : les fibres ne sont **pas** parallèles (isotropie 0,988), il y a **trois** échelles, et le « câble » est un **ruban plat**. |
+| **`cloth-clarisse.md`** (495 l.) | Le panneau de tissu : XPBD, le modèle de Fluent, la sonde laplacienne qui a débloqué la qualité, et pourquoi la pression est une **force** et non une contrainte de volume. |
+| **`fluent-audit.md`** (1164 l.) | Audit du plugin Fluent : ce qu'il fait, comment, et lesquels de ses outils se portent dans Clarisse. |
+| **`bokeh-clarisse.md`** (479 l.) | Le nœud et la caméra bokeh, et la mesure des coutures de tuile. |
 | **`sdk-clarisse.md`** (642 l.) | **La référence vivante.** Système de modules, contrainte cmagen, chargement sans action utilisateur, pièges à crash, langage CID, contrat `CtxKernelFilter` mesuré, accès aux AOV, générateur de rayons caméra, saveurs de licence, mensonges de l'API Python, invocation de `cnode`, recettes EXR. **À lire avant d'écrire du C++.** |
 | **`integrateur-clarisse.md`** (1288 l.) | Le gros dossier du soir. Voir §5. |
 | **`optique-etat.md`** (397 l.) | État des trois nœuds d'optique, inventaire des paramètres, les deux chemins de flou, et quatre défauts trouvés en le rédigeant. |
