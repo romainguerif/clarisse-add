@@ -14,9 +14,11 @@ débruiteur (§6) restent valables mais passent derrière.
 Deux chantiers ouverts, chacun avec son document :
 
 - **`curves-clarisse.md`** — des tubes, cordes, câbles et branches posés à la
-  main, vus de près, sur lesquels on puisse scatter. **Du code existe déjà** :
-  `native/tube/` compile, se charge et produit un maillage juste. Un point reste
-  ouvert, l'invalidation de la ressource.
+  main, vus de près, sur lesquels on puisse scatter. **Quatre modules livrés et
+  vérifiés au rendu** : `tube` (tubes, cordes à torons, coudes, chaînette,
+  trim), `curve_points` (distribution et embouts), `curve_deform`, plus la
+  plume `pen` — celle-là reste à essayer en interactif, un outil ne se teste
+  pas dans `cnode`.
 - **`npr-clarisse.md`** — une boîte à outils NPR pour beaucoup de styles, à
   partir de quatre couvertures de romans données comme cibles. Aucun code, mais
   l'inventaire est fait et il change la donne : `SubPixelFilterOutline` existe
