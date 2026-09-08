@@ -1,0 +1,66 @@
+class "GeometryTube" "GeometryPolymesh" {
+    #version 0.1
+    category "/Geometry/Polymesh"
+    doc "Balaye un profil circulaire le long d'une courbe passant par des points de controle. Produit un vrai maillage polygonal : le displacement, la subdivision, le scatter et l'export fonctionnent dessus comme sur n'importe quelle geometrie."
+
+    attribute_group "curve" {
+        doc "La courbe suivie par le tube."
+
+        list<reference> "control_points" {
+            filter "SceneItem"
+            input "motion" "geometry" "motion_blur"
+            output "geometry"
+            doc "Les points de controle, dans l'ordre. N'importe quel item de scene fait l'affaire ; un locator est le choix naturel. Il en faut au moins deux."
+        }
+
+        bool "closed" {
+            output "geometry"
+            doc "Referme la courbe sur elle-meme."
+            value no
+        }
+
+        long "steps" {
+            output "geometry"
+            doc "Nombre de subdivisions entre deux points de controle. Plus il y en a, plus les virages sont ronds."
+            numeric_range yes 1 200
+            ui_range yes 1 32
+            value 8
+        }
+    }
+
+    attribute_group "profile" {
+        doc "La section balayee le long de la courbe."
+
+        distance "radius" {
+            output "geometry"
+            doc "Rayon du tube."
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 1
+            value 0.05
+        }
+
+        curve "radius_profile" {
+            output "geometry"
+            doc "Multiplie le rayon le long du tube. L'abscisse va de la base (0) a la pointe (1)."
+            value[] {
+                key 0 0.0 1 0.0 0.0 0.0 -0.3333 0.0 0.3333 0.0 yes yes no yes
+                key 0 1 1 0.0 0.0 0.0 -0.3333 0.0 0.3333 0.0 yes yes no yes
+            }
+        }
+
+        long "sides" {
+            output "geometry"
+            doc "Nombre de cotes de la section. 3 donne un tube triangulaire, 12 un tube lisse."
+            numeric_range yes 3 256
+            ui_range yes 3 32
+            value 12
+        }
+
+        bool "cap" {
+            output "geometry"
+            doc "Ferme les deux extremites du tube."
+            value yes
+        }
+    }
+}

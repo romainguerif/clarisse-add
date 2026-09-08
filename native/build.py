@@ -41,8 +41,17 @@ VCVARS = (r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
 # dans les en-tetes, mais la classe porte __declspec(dllimport) : MSVC va
 # alors chercher le symbole dans la DLL au lieu d'inliner le corps. Tout
 # module qui touche a des pixels en a besoin.
+# ix_poly : PolyMesh, pour les modules qui produisent de la geometrie.
+#
+# ix_gmath : GMathTransform. Ses sept fonctions inline vivent dans
+# gmath_transform.icc, qui fait partie des fichiers perdus -- mais la classe
+# porte GMATH_EXPORT au niveau de la classe, donc MSVC les a exportees dans la
+# DLL et l'edition de liens les y retrouve. C'est ce qui debloque toute la
+# famille module_scene_item -> module_geometry -> module_polymesh.
+#
+# ix_geometry : GeometryUvMap, GeometryPointCloud, GeometryObject.
 LIBS = ["ix_module", "ix_of", "ix_dso", "ix_core", "ix_gui", "ix_event",
-        "ix_image", "ix_raytrace"]
+        "ix_image", "ix_raytrace", "ix_poly", "ix_gmath", "ix_geometry"]
 
 
 def includes():
