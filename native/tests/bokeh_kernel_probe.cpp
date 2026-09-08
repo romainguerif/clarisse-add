@@ -423,6 +423,40 @@ probe_aperture_shape()
     }
 }
 
+// -- 8. prediction pour le banc de rendu --------------------------------------
+//
+// Les sections precedentes valident le noyau et la couverture du vignettage,
+// mais elles somment les taps un par un. La convolution reelle, elle, passe par
+// des SEGMENTS intersectes avec le disque de troncature, et sous anamorphisme
+// ce disque devient une ellipse dans l'espace des pixels -- un chemin de code
+// que rien d'autre n'exerce.
+//
+// On predit donc ici ce que le filtre doit rendre sur l'aplat a 0,5 du banc de
+// rendu, pour la variante anamorphique. Les deux implementations n'ont rien en
+// commun : si elles tombent d'accord, l'intersection segment-ellipse est juste.
+static void
+probe_render_prediction()
+{
+    printf("\n== 8. prediction pour la variante anamorphique du banc ==\n");
+    printf("rayon 120, vignettage 0.8, anamorphisme 0.5, aplat source a 0.5\n");
+    printf("a comparer aux colonnes du rendu, ligne y=870\n\n");
+
+    KernelSpec s = base_spec(120.0, 0);
+    s.anamorphism = 0.5;
+    Kernel k;
+    bokeh_build_kernel(k, s);
+    Vignette v = make_vignette(k, s, 0.8);
+    v.scale_x = k.scale_x;
+    v.scale_y = k.scale_y;
+
+    printf("      x  :");
+    for (int x = 200; x <= 1700; x += 250) printf(" %8d", x);
+    printf("\n  valeur :");
+    for (int x = 200; x <= 1700; x += 250)
+        printf(" %8.5f", 0.5 * flat_gain(k, v, x, 870.0));
+    printf("\n");
+}
+
 int
 main()
 {
@@ -433,6 +467,7 @@ main()
     probe_edge_cases();
     probe_energy();
     probe_aperture_shape();
+    probe_render_prediction();
     printf("\n");
     return 0;
 }

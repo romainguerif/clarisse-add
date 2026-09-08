@@ -81,7 +81,8 @@ const double SPHERICAL_POWER = 4.0;
 // de laquelle la lentille doit tirer. Ignorer ce decalage et prendre 2 et 3
 // en dur correle rigidement le point de lentille a la position dans le pixel :
 // on obtient des motifs reguliers dans le flou au lieu du bruit attendu.
-const unsigned int PRIMES[24] = {
+const int PRIME_COUNT = 24;
+const unsigned int PRIMES[PRIME_COUNT] = {
     2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37,
     41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89
 };
@@ -289,8 +290,8 @@ bokeh_lens_sample(const RayGeneratorCameraPerspective& generator,
     // Les dimensions de Halton sont celles que le moteur nous alloue. Prendre
     // 2 et 3 en dur correle le point de lentille a la position dans le pixel.
     const unsigned int dim = gen.get_sampling_dimension_offset();
-    const unsigned int base_a = PRIMES[dim % 22];
-    const unsigned int base_b = PRIMES[(dim + 1) % 22];
+    const unsigned int base_a = PRIMES[dim % PRIME_COUNT];
+    const unsigned int base_b = PRIMES[(dim + 1) % PRIME_COUNT];
 
     const unsigned int seed = sample.seed + sample.index;
     double u0 = radical_inverse(seed + 1, base_a);
@@ -338,8 +339,8 @@ bokeh_lens_sample(const RayGeneratorCameraPerspective& generator,
         for (int attempt = 0; attempt < 6 && !inside; ++attempt) {
             const double dx = x - sx, dy = y - sy;
             if (dx * dx + dy * dy <= 1.0) { inside = true; break; }
-            const unsigned int a = PRIMES[(dim + 2 + attempt * 2) % 22];
-            const unsigned int b = PRIMES[(dim + 3 + attempt * 2) % 22];
+            const unsigned int a = PRIMES[(dim + 2 + attempt * 2) % PRIME_COUNT];
+            const unsigned int b = PRIMES[(dim + 3 + attempt * 2) % PRIME_COUNT];
             u0 = radical_inverse(seed + attempt + 2, a);
             u1 = radical_inverse(seed + attempt + 2, b);
             sample_aperture(gen, u0, u1, swirl_angle, x, y);
@@ -460,6 +461,42 @@ inline double attr_double_at(OfObject& o, const char *name, const unsigned int& 
     return a ? a->get_double(index) : fallback;
 }
 
+// Distance de mise au point relevee sur l'objet vise, ou -1.
+//
+// L'attribut `focus_object` etait declare, deverrouille par le module avec
+// f_stop et focus_distance, propose dans l'interface -- et jamais lu. Le
+// renseigner ne faisait donc rien du tout, en silence, ce qui est la pire des
+// pannes : l'utilisateur croit avoir fait le point.
+//
+// La grandeur juste est la PROJECTION sur l'axe de visee, pas la distance
+// euclidienne. Une lentille mince fait le point sur un plan parallele au
+// capteur, pas sur une sphere centree sur l'oeil : un objet decale sur le cote
+// serait declare plus loin qu'il ne l'est, et d'autant plus que le champ est
+// large. Meme convention que le filtre d'image, sans quoi passer de l'un a
+// l'autre deplacerait le point.
+double focus_from_object(OfObject& camera)
+{
+    OfAttr *target_attr = camera.get_attribute("focus_object");
+    if (target_attr == 0) return -1.0;
+    OfObject *target = target_attr->get_object();
+    if (target == 0) return -1.0;
+
+    ModuleSceneItem *eye = camera.get_module<ModuleSceneItem>();
+    ModuleSceneItem *aim = target->get_module<ModuleSceneItem>();
+    if (eye == 0 || aim == 0) return -1.0;
+
+    GMathVec3d position, ax, ay, az, other;
+    eye->get_global_matrix().extract_translation(position);
+    eye->get_global_matrix().extract_frame(ax, ay, az);
+    aim->get_global_matrix().extract_translation(other);
+
+    // Une camera Clarisse vise son -Z local. extract_frame decompose la
+    // matrice, donc l'axe rendu est orthonorme meme sous echelle ou
+    // cisaillement.
+    const double depth = (other - position).dot(-az);
+    return (depth > 0.0) ? depth : -1.0;
+}
+
 } // namespace
 
 RayGeneratorCamera *
@@ -481,6 +518,15 @@ IX_MODULE_CLBK::create_ray_generator(OfObject& object, const CtxMotionBlur *moti
     if (attr_bool(object, "enable_dof")) {
         f_stop = attr_double(object, "f_stop", 5.6);
         focus = attr_double(object, "focus_distance", 5.0);
+
+        // L'objet vise l'emporte sur la distance saisie : c'est le geste le
+        // plus courant, et une distance en unites de scene ne se devine pas.
+        const double aimed = focus_from_object(object);
+        if (aimed > 0.0) {
+            focus = aimed;
+            LOG_INFO("[CameraBokeh] mise au point sur l'objet : "
+                     << focus << " unites\n");
+        }
     }
 
     generator->set_shape(film_w, film_h, focal, f_stop, focus);
@@ -530,7 +576,13 @@ IX_MODULE_CLBK::get_config(OfObject& object, CameraConfig& config)
     config.film_offset_y = attr_double_at(object, "film_offset", 1);
     config.lens_ratio = attr_double(object, "lens_ratio", 1.0);
     config.f_stop = attr_bool(object, "enable_dof") ? attr_double(object, "f_stop", 5.6) : 0.0;
-    config.focus_distance = attr_double(object, "focus_distance", 5.0);
+    // La meme resolution que dans le generateur de rayons : la configuration
+    // que Clarisse affiche et celle qui rend doivent dire la meme chose, sans
+    // quoi l'affichage de la profondeur de champ dans le viewport contredirait
+    // l'image.
+    const double aimed = focus_from_object(object);
+    config.focus_distance = (aimed > 0.0) ? aimed
+                                          : attr_double(object, "focus_distance", 5.0);
     for (int i = 0; i < 4; ++i)
         config.overscan[i] = attr_double_at(object, "overscan", i, i == 0 ? 1.0 : 0.0);
 }

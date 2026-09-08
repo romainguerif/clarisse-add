@@ -68,7 +68,19 @@ aperture_init(Aperture& a, int blades, const double& rotation,
         a.ny[k] = sin(angle);
     }
 
-    const double bulge = fabs(curvature) * (1.0 - a.apothem);
+    double bulge = fabs(curvature) * (1.0 - a.apothem);
+
+    // Une lame creusee ne peut pas se creuser jusqu'au centre. Le rayon au
+    // milieu de la lame vaut apotheme - bombement ; a trois lames l'apotheme
+    // vaut 1/2 et le bombement maximal vaut 1/2 aussi, si bien qu'a -100 %
+    // l'ouverture se pince exactement a zero et disparait. Elle ne rendrait
+    // plus aucun flou, et cote camera plus aucune profondeur de champ -- un
+    // reglage qui eteint la fonction n'est pas un reglage.
+    //
+    // On garde donc un dixieme de l'apotheme. C'est une etoile tres marquee,
+    // et elle existe encore.
+    if (a.concave && bulge > 0.9 * a.apothem) bulge = 0.9 * a.apothem;
+
     if (bulge < 1e-9) {
         a.arc_radius = 0.0;     // polygone droit : pas d'arc
         a.arc_centre = 0.0;
@@ -104,23 +116,43 @@ aperture_edge(const Aperture& a, const double& ux, const double& uy,
     }
 
     const double sin2 = 1.0 - cos_d * cos_d;
-    const double inside = a.arc_radius * a.arc_radius
-                          - a.arc_centre * a.arc_centre * sin2;
-    if (inside <= 0.0) return a.apothem;
+    double inside = a.arc_radius * a.arc_radius
+                    - a.arc_centre * a.arc_centre * sin2;
+
+    // Le rayon tangente l'arc : les deux intersections se confondent. Rendre
+    // l'apotheme la -- ce que faisait la version precedente -- coupe les
+    // sommets de l'etoile. A quatre lames creusees a fond, le sommet tombait
+    // ainsi a 0,707 au lieu de 1, et le cas se produit par simple arrondi
+    // puisque la tangence y est exacte. La racine vaut zero, elle ne vaut pas
+    // autre chose.
+    if (inside < 0.0) inside = 0.0;
     const double root = sqrt(inside);
 
-    // Laquelle des deux intersections est la bonne ? Choisir sur le signe de
-    // la courbure ne marche pas : pour une lame tres creusee, le centre de
-    // l'arc repasse du cote proche et la racine "moins" donne un rayon qui
-    // s'effondre. Mesure a trois lames : a -0.5 le sommet tombe a 0.875, a
-    // -0.8 a 0.238, a -1.0 exactement a zero -- l'ouverture disparait, donc
-    // plus aucun flou du tout, et cote camera plus aucune profondeur de champ.
+    // Laquelle des deux intersections est la bonne ?
     //
-    // Le critere geometrique juste est la position du centre de l'arc par
-    // rapport au sommet : la racine "plus" convient tant que le centre reste
-    // en deca, ce qui se lit sur c * apotheme.
-    if (a.arc_centre * a.apothem < 1.0) return a.arc_centre * cos_d + root;
-    return a.arc_centre * cos_d - root;
+    // Le rayon partant du centre coupe le cercle de l'arc deux fois, une fois
+    // en deca du centre de l'arc et une fois au-dela. Une lame BOMBEE gonfle
+    // vers l'exterieur : c'est l'intersection lointaine. Une lame CREUSEE
+    // rentre vers le centre : c'est la proche. Il n'y a pas d'autre cas, et
+    // le signe de la courbure suffit a trancher.
+    //
+    // Un critere sur la position du centre de l'arc a ete essaye et il est
+    // faux. Il repond juste au SOMMET de la lame -- ou l'arc peut
+    // effectivement passer par la branche lointaine -- et faux partout
+    // ailleurs, en particulier au milieu de la lame, ou il rendait le
+    // gonflement au lieu du creux. Mesure a trois lames et -50 % : rayon de
+    // 3,50 au milieu de la lame la ou la geometrie donne 0,25, soit une
+    // ouverture quatorze fois trop grande, largement hors du disque
+    // circonscrit et donc hors de la marge reservee autour de chaque tuile.
+    //
+    // Reserve assumee : avec la branche proche, le sommet d'une etoile a trois
+    // lames est legerement rogne (0,875 au lieu de 1 a -50 %). C'est le prix
+    // de la description par demi-plans, qui suppose la forme etoilee vue du
+    // centre ; l'arc d'une lame tres creusee deborde de son secteur. L'ecart
+    // decroit vite avec le nombre de lames et il est nul des cinq lames.
+    if (!a.concave) return a.arc_centre * cos_d + root;
+    const double edge = a.arc_centre * cos_d - root;
+    return (edge > 0.0) ? edge : 0.0;
 }
 
 // Rayon de la frontiere a un angle donne. Pratique quand on echantillonne en

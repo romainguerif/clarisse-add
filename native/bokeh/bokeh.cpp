@@ -60,6 +60,7 @@
 #include <vector>
 
 #include "aperture.h"
+#include "bokeh_kernel.h"
 #include <bokeh.cma>
 
 // Instantane de la passe de profondeur, pris une fois par evaluation dans
@@ -118,7 +119,7 @@ struct Slice {
 class BokehModule : public ModuleKernelFilter {
 public:
     BokehModule() : ModuleKernelFilter(), focus_override(-1.0), lens_radius(0.0),
-                    lens_focal(35.0), lens_stop(5.6) {}
+                    lens_focal(35.0), lens_stop(5.6), lens_pixel_width(1.0) {}
     DepthSnapshot depth;
 
     // Distance calculee depuis l'objet vise, ou -1 si aucun n'est renseigne.
@@ -142,6 +143,13 @@ public:
     // par tuile et ne doit pas refaire cette remontee.
     double lens_focal;
     double lens_stop;
+
+    // Largeur en pixels ayant servi a convertir le cercle de confusion en
+    // pixels quand le rayon maximal a ete mesure. filter doit reprendre
+    // celle-la, pas celle de l'image entiere : sous region de rendu limitee
+    // les deux different, et les fractions cesseraient de se rapporter au
+    // maximum mesure.
+    double lens_pixel_width;
 };
 
 // La doc du SDK ecrit ces callbacks avec ModuleObject * ; le vrai typedef dit
@@ -195,30 +203,16 @@ IX_MODULE_CLBK::destroy_module(OfObject& object, OfObjectFactory& objects, OfMod
 
 namespace {
 
-using clarisse_add::Aperture;
-using clarisse_add::aperture_init;
-using clarisse_add::aperture_edge;
+using clarisse_add::Kernel;
+using clarisse_add::KernelSpec;
+using clarisse_add::Vignette;
+using clarisse_add::Tap;
+using clarisse_add::Run;
+using clarisse_add::bokeh_build_kernel;
+using clarisse_add::bokeh_kernel_reach;
 
 const double PI = 3.14159265358979323846;
 
-// Finesse de l'anneau d'aberration spherique. p grand concentre l'energie
-// tres pres du bord ; 4 donne une bulle de savon credible.
-const double SPHERICAL_POWER = 4.0;
-
-// Quantification des poids interieurs pour les sommes prefixees. Sans
-// aberration spherique l'interieur est uniforme et un seul niveau suffit.
-//
-// A 16 niveaux, chaque marche vaut 6,25 % du pic : sur une bulle de savon
-// eclairee a 50, cela fait des anneaux concentriques de 3 unites contre un
-// fond a 0,1 -- parfaitement visibles. Le cout est lineaire en nombre de
-// segments, pas en echantillons : monter a 64 divise la marche par quatre
-// pour un surcout modeste.
-const int SPHERICAL_LEVELS = 64;
-
-// Ecart de rayon entre le rouge et le bleu, a pleine aberration chromatique.
-// A 5 % il fallait chercher la frange a la loupe ; les optiques reelles en
-// montrent bien plus sur les boules de bokeh.
-const double CHROMA_SPREAD = 0.18;
 
 // Nombre de paliers de rayon quand une passe de profondeur pilote le flou.
 //
@@ -269,6 +263,13 @@ struct Settings {
     double max_kernel;          // plafond du rayon, en pixels
     int    image_width;
     int    image_height;
+    // Largeur en pixels qui convertit le cercle de confusion millimetrique en
+    // pixels. Elle est distincte de image_width parce que les deux ne sont pas
+    // toujours la meme chose : pre_filter la prend sur l'instantane de
+    // profondeur, filter prendrait celle de l'image entiere. Une region de
+    // rendu limitee suffit a les separer, et le rayon maximal mesure une fois
+    // pour toutes ne correspondrait plus aux fractions calculees par tuile.
+    double coc_pixel_width;
 };
 
 // Lit les reglages depuis le Cma synchronise par Clarisse. Appele aussi bien
@@ -359,277 +360,81 @@ read_settings(const CtxEval& eval, const CtxKernelFilter& ctx,
     // compte de get_x/get_y, non nuls des qu'une region de rendu est active.
     s.image_width  = proxy ? proxy->get_image_width() : 1;
     s.image_height = proxy ? proxy->get_image_height() : 1;
+    s.coc_pixel_width = s.image_width;
 }
 
 // -- le noyau -----------------------------------------------------------------
 //
-// Un tap explicite : utilise pour les echantillons de bord, dont la couverture
-// est partielle, et pour le chemin lent.
-struct Tap {
-    int   dx;
-    int   dy;
-    float weight;
-};
-
-// Un segment horizontal de l'interieur, a poids constant sur son niveau.
-struct Run {
-    int dy;
-    int x0;
-    int x1;   // inclus
-};
-
-struct Kernel {
-    int    reach;
-    double total;           // somme de tous les poids, avant normalisation
-    double total_unvignetted;  // la meme, sans le disque de troncature
-    double level_weight;    // poids d'un niveau de l'interieur
-    int    levels;
-    std::vector<Run> runs;  // interieur, quantifie par niveaux
-    std::vector<Tap> edge;  // bord, couverture partielle, poids exact
-    std::vector<Tap> all;   // tous les taps, pour le chemin lent
-    bool   uniform_interior;
-};
-
-// Couverture d'un echantillon, suréchantillonnee 8x8 quand il est a cheval sur
-// la frontiere. Le suréchantillonnage n'est fait que la : sur un rayon de 100
-// il concerne quelques centaines de taps sur trente mille.
-inline double
-coverage(const Aperture& a, const double& cx, const double& cy,
-         const double& step, const double& softness)
-{
-    const double rho = sqrt(cx * cx + cy * cy);
-    const double edge = aperture_edge(a, cx, cy, rho);
-    const double d = rho - edge;          // <0 dedans, >0 dehors
-
-    // La douceur est un fondu de la frontiere sur une bande de largeur
-    // `softness`, en fraction du rayon. Elle doit ponderer, pas seulement
-    // elargir la zone testee : le test 8x8 porte sur une cellule d'un pixel,
-    // donc au-dela d'un demi-pixel de la frontiere les 64 sous-echantillons
-    // tombent tous du meme cote et le resultat ne change pas d'un iota.
-    // C'est ce qu'on a mesure : ecart 0,000 entre douceur 0 et douceur 1.
-    if (softness > 1e-6) {
-        if (d <= -softness) return 1.0;
-        if (d >= softness) return 0.0;
-        const double t = 0.5 - d / (2.0 * softness);
-        return t * t * (3.0 - 2.0 * t);   // smoothstep
-    }
-
-    // Bord franc : un pixel de couverture partielle suffit a supprimer le
-    // crenelage, et il se calcule par sous-echantillonnage de la cellule.
-    const double half_cell = step * 0.7072;
-    if (d < -half_cell) return 1.0;
-    if (d > half_cell) return 0.0;
-
-    const int N = 8;
-    int inside = 0;
-    for (int j = 0; j < N; ++j) {
-        const double sy = cy + step * ((j + 0.5) / N - 0.5);
-        for (int i = 0; i < N; ++i) {
-            const double sx = cx + step * ((i + 0.5) / N - 0.5);
-            const double r = sqrt(sx * sx + sy * sy);
-            if (r <= aperture_edge(a, sx, sy, r)) ++inside;
-        }
-    }
-    return double(inside) / (N * N);
-}
-
-// Construit le noyau pour une position donnee dans le cadre.
+// Il vit dans `common/bokeh_kernel.h` : c'est la seule partie du filtre qui se
+// mesure sans rendre, et `tests/bokeh_kernel_probe.cpp` doit pouvoir la batir
+// sans Clarisse. Ici, seulement le passage des reglages du node vers la
+// description que la construction attend.
 //
-// Le noyau depend de l'endroit du cadre a cause du vignettage optique, nul au
-// centre et maximal dans les coins. On le rebatit donc par tuile, evalue en
-// son centre. Le faire par pixel serait plus juste et cent fois plus lent,
-// pour une difference invisible sur 64 pixels -- le vignettage varie a
-// l'echelle du cadre.
-void
-build_kernel(Kernel& k, const Settings& s, const double& channel_scale,
-             const double& frame_x, const double& frame_y,
-             const bool& keep_taps)
+// `channel_scale` porte l'aberration chromatique : le rayon de chaque canal
+// differe legerement, et c'est ce qui colore le bord des boules.
+KernelSpec
+kernel_spec(const Settings& s, const double& channel_scale, const bool& keep_taps)
 {
-    k.runs.clear();
-    k.edge.clear();
-    k.all.clear();
-    k.total = 0.0;
-    k.total_unvignetted = 0.0;
-    k.levels = 1;
-    k.level_weight = 0.0;
-    k.uniform_interior = (s.spherical == 0.0);
-
-    const double radius = s.radius * channel_scale;
-    if (radius < 0.5) { k.reach = 0; return; }
-
-    Aperture aperture;
-    aperture_init(aperture, s.blades, s.rotation, s.curvature);
-
-    // Anamorphisme : on comprime les coordonnees d'echantillonnage sur un axe,
-    // ce qui etire la forme obtenue sur l'autre.
-    double scale_x = 1.0, scale_y = 1.0;
-    if (s.anamorphism > 0.0) scale_x = 1.0 + s.anamorphism;
-    else if (s.anamorphism < 0.0) scale_y = 1.0 - s.anamorphism;
-
-    const int reach_x = (int)(radius / scale_x + 1.5);
-    const int reach_y = (int)(radius / scale_y + 1.5);
-    k.reach = reach_x > reach_y ? reach_x : reach_y;
-
-    // Vignettage optique : le barillet tronque le faisceau hors axe. La pupille
-    // apparente devient l'intersection de deux disques decales -- l'amande dite
-    // oeil-de-chat. Le decalage est dirige vers le centre du cadre, de sorte
-    // que le grand axe de l'ovale soit tangentiel : les amandes tournent autour
-    // du centre, elles ne pointent pas vers lui.
-    const double frame_r = sqrt(frame_x * frame_x + frame_y * frame_y);
-    const double offset = s.vignetting * frame_r;
-    double shift_x = 0.0, shift_y = 0.0;
-    if (offset > 1e-6 && frame_r > 1e-9) {
-        shift_x = -frame_x / frame_r * offset;
-        shift_y = -frame_y / frame_r * offset;
-    }
-
-    // La douceur du bord, en fraction du rayon. A zero, `coverage` retombe sur
-    // un sous-echantillonnage d'un pixel, qui suffit a supprimer le crenelage.
-    const double softness = s.softness;
-    const double step = 1.0 / radius;
-
-    // Largeur de la rampe du disque de troncature. Elle suit la douceur quand
-    // elle est demandee, un pixel sinon.
-    const double cut_feather = (softness > step) ? softness : step;
-
-    // Poids brut par echantillon, garde pour extraire les segments ensuite.
-    const int side = 2 * k.reach + 1;
-    std::vector<float> field((size_t)side * side, 0.0f);
-    std::vector<float> partial((size_t)side * side, 0.0f);
-    double max_interior = 0.0;
-
-    for (int dy = -k.reach; dy <= k.reach; ++dy) {
-        for (int dx = -k.reach; dx <= k.reach; ++dx) {
-            const double ux = dx * scale_x / radius;
-            const double uy = dy * scale_y / radius;
-
-            double cover = coverage(aperture, ux, uy, step, softness);
-            if (cover <= 0.0) continue;
-
-            // Le poids avant troncature sert de reference d'exposition : le
-            // vignettage optique DOIT assombrir les coins, c'est ce qu'il est.
-            // Normaliser par la somme locale annulerait exactement
-            // l'assombrissement et ne garderait que la forme d'amande.
-            const double cover_full = cover;
-
-            if (offset > 1e-6) {
-                // Disque de troncature : intersection de deux convexes.
-                const double vx = ux - shift_x;
-                const double vy = uy - shift_y;
-                const double vr = sqrt(vx * vx + vy * vy);
-                double cut = (1.0 - vr) / cut_feather + 0.5;
-                if (cut <= 0.0) continue;
-                if (cut > 1.0) cut = 1.0;
-                cover *= cut;
-            }
-
-            // Aberration spherique : redistribution radiale a moyenne
-            // preservee. La moyenne de rho^p ponderee par l'aire sur le disque
-            // unite vaut 2/(p+2), donc le terme entre parentheses est de
-            // moyenne nulle : le curseur deplace l'energie sans en ajouter.
-            double weight = cover;
-            if (s.spherical != 0.0) {
-                // rho^4 par deux multiplications : ni sqrt ni pow.
-                const double rho2 = ux * ux + uy * uy;
-                const double p = SPHERICAL_POWER;   // 4
-                double bias = 1.0 + s.spherical * (rho2 * rho2 - 2.0 / (p + 2.0));
-                if (bias < 0.0) bias = 0.0;
-                weight *= bias;
-            }
-            {
-                double full = cover_full;
-                if (s.spherical != 0.0) {
-                    const double rho2f = ux * ux + uy * uy;
-                    double bias = 1.0 + s.spherical
-                                  * (rho2f * rho2f - 2.0 / (SPHERICAL_POWER + 2.0));
-                    if (bias < 0.0) bias = 0.0;
-                    full *= bias;
-                }
-                k.total_unvignetted += full;
-            }
-
-            if (weight <= 0.0) continue;
-
-            const size_t index = (size_t)(dy + k.reach) * side + (dx + k.reach);
-            if (cover >= 0.999) {
-                field[index] = (float) weight;
-                if (weight > max_interior) max_interior = weight;
-            } else {
-                partial[index] = (float) weight;
-            }
-            k.total += weight;
-
-            if (keep_taps) {
-                Tap tap;
-                tap.dx = dx;
-                tap.dy = dy;
-                tap.weight = (float) weight;
-                k.all.push_back(tap);
-            }
-        }
-    }
-
-    if (k.total <= 0.0) { k.reach = 0; return; }
-
-    // Les echantillons de bord gardent leur poids exact : les quantifier ferait
-    // apparaitre des marches sur le pourtour des boules, et c'est precisement
-    // la que ca se voit.
-    for (int dy = -k.reach; dy <= k.reach; ++dy) {
-        for (int dx = -k.reach; dx <= k.reach; ++dx) {
-            const size_t index = (size_t)(dy + k.reach) * side + (dx + k.reach);
-            if (partial[index] > 0.0f) {
-                Tap tap;
-                tap.dx = dx;
-                tap.dy = dy;
-                tap.weight = partial[index];
-                k.edge.push_back(tap);
-            }
-        }
-    }
-
-    // L'interieur, lui, se decompose en niveaux : chaque niveau est un ensemble
-    // de segments horizontaux, et un segment se somme en deux lectures dans une
-    // somme prefixee. Sans aberration spherique tous les poids interieurs sont
-    // egaux et un seul niveau suffit.
-    k.levels = k.uniform_interior ? 1 : SPHERICAL_LEVELS;
-    k.level_weight = max_interior / k.levels;
-    if (k.level_weight <= 0.0) { k.levels = 0; return; }
-
-    for (int level = 1; level <= k.levels; ++level) {
-        const float threshold = (float)((level - 0.5) * k.level_weight);
-        for (int dy = -k.reach; dy <= k.reach; ++dy) {
-            // `open` plutot qu'une sentinelle a -1 : dx est negatif sur la
-            // moitie gauche du noyau, et un segment qui y commence serait
-            // indistinguable de l'absence de segment. Le bug se voit tres
-            // bien -- chaque boule perd sa moitie gauche.
-            bool open = false;
-            int start = 0;
-            for (int dx = -k.reach; dx <= k.reach + 1; ++dx) {
-                const bool in = (dx <= k.reach) &&
-                    field[(size_t)(dy + k.reach) * side + (dx + k.reach)] >= threshold;
-                if (in && !open) { open = true; start = dx; }
-                else if (!in && open) {
-                    Run run;
-                    run.dy = dy;
-                    run.x0 = start;
-                    run.x1 = dx - 1;
-                    k.runs.push_back(run);
-                    open = false;
-                }
-            }
-        }
-    }
-
-    // La quantification de l'interieur decale legerement la somme des poids.
-    // On recalcule le total sur ce qui sera reellement somme, pour que la
-    // normalisation soit exacte et l'energie conservee.
-    double quantised = 0.0;
-    for (size_t i = 0; i < k.runs.size(); ++i)
-        quantised += (k.runs[i].x1 - k.runs[i].x0 + 1) * k.level_weight;
-    for (size_t i = 0; i < k.edge.size(); ++i)
-        quantised += k.edge[i].weight;
-    if (quantised > 0.0) k.total = quantised;
+    KernelSpec spec;
+    spec.radius      = s.radius * channel_scale;
+    spec.blades      = s.blades;
+    spec.rotation    = s.rotation;
+    spec.curvature   = s.curvature;
+    spec.anamorphism = s.anamorphism;
+    spec.softness    = s.softness;
+    spec.spherical   = s.spherical;
+    spec.keep_taps   = keep_taps;
+    return spec;
 }
+
+// Portee du noyau le plus large, en pixels, tous canaux confondus.
+//
+// C'est le nombre que `pre_filter` doit reserver autour de chaque tuile, et il
+// doit etre calcule par la MEME formule que celle qui borne les boucles de
+// construction -- d'ou l'appel commun a `bokeh_kernel_reach`.
+//
+// Les deux etaient calcules separement et differemment, et c'etait une source
+// de coutures a soi seule. `pre_filter` reservait `rayon * (1 + 0,18 |chroma|)`
+// alors que `filter` appliquait `rayon * (1 + chroma (offset - 1))`, qui monte
+// a 1,4 fois le rayon avec le decalage par defaut et une dose negative. Le
+// noyau debordait alors de la marge, lisait du vide au bord de la tuile et s'y
+// assombrissait : une grille sombre au pas de 64 pixels, mesuree a 0,79 % de
+// saut moyen sur la grille contre 0,014 % ailleurs, soit un rapport de 55.
+// La douceur s'ajoutait au meme endroit, sa jupe portant jusqu'a
+// (1 + douceur) fois le rayon.
+double
+widest_reach(const Settings& s, const double& radius)
+{
+    double widest = 1.0;
+    if (s.chromatic != 0.0) {
+        for (int c = 0; c < 3; ++c) {
+            const double scale = 1.0 + s.chromatic * (s.chroma_offset[c] - 1.0);
+            if (scale > widest) widest = scale;
+        }
+    }
+    return bokeh_kernel_reach(radius * widest, s.softness);
+}
+
+// Le vignettage optique qui accompagne un noyau donne. Il ne fait PAS partie du
+// noyau : il se lit par pixel, sur la position dans le cadre du pixel de
+// destination, ce qui est la seule facon de n'avoir aucune frontiere de tuile
+// dans le resultat.
+Vignette
+vignette_for(const Settings& s, const Kernel& k, const double& radius)
+{
+    Vignette v;
+    v.active   = (s.vignetting > 1e-6) && (radius > 0.5);
+    v.strength = s.vignetting;
+    v.radius   = radius;
+    v.scale_x  = k.scale_x;
+    v.scale_y  = k.scale_y;
+    v.half_w   = s.image_width * 0.5;
+    v.half_h   = s.image_height * 0.5;
+    v.feather  = 1.0;   // un pixel : le barillet est une piece de metal
+    v.cut      = Vignette::cut_radius(radius, v.feather);
+    return v;
+}
+
 
 // Repere monde d'un objet de scene : sa position, et l'axe qu'il regarde.
 //
@@ -824,7 +629,7 @@ lens_coc_pixels(const Settings& s, const double& z, const double& focus)
     const double c_mm = aperture * f * fabs(S2 - S1) / (S2 * (S1 - f));
 
     const double width_mm = (s.aperture_width > 1e-6) ? s.aperture_width : 1.0;
-    return 0.5 * c_mm / width_mm * (double) s.image_width;
+    return 0.5 * c_mm / width_mm * s.coc_pixel_width;
 }
 
 double
@@ -929,6 +734,13 @@ build_slices(std::vector<Slice>& slices, const double& smin, const double& smax,
     const double back_span  = has_back  ?  smax : 0.0;
     const double total_span = front_span + back_span;
 
+    // Quand les deux cotes existent, il faut au moins une tranche pour chacun.
+    // A `corrective_slices` = 2 le budget hors zone nette valait 1, la borne
+    // haute le ramenait a zero pour l'avant, et l'avant se retrouvait sans
+    // aucune tranche -- alors que la documentation du reglage promet
+    // exactement l'inverse : "A 2, l'avant et l'arriere sont separes."
+    if (has_front && has_back && budget < 2) budget = 2;
+
     int n_front = 0, n_back = 0;
     if (has_front && has_back) {
         n_front = (int)(budget * front_span / total_span + 0.5);
@@ -1000,6 +812,130 @@ struct Prefix {
     }
 };
 
+// -- convolution d'un pixel ---------------------------------------------------
+//
+// Une seule fonction pour les deux chemins de flou : ce qui les distingue est
+// le choix du noyau, pas la maniere de le sommer.
+//
+// C'est ici que s'applique le vignettage optique, PAR PIXEL. Le batir dans le
+// noyau obligeait a le rebatir par tuile -- Clarisse n'offre pas d'autre
+// granularite -- et le rendait donc constant par tuile puis discontinu a la
+// frontiere : une couture. Par pixel, il ne coute pourtant rien de plus, parce
+// que la troncature est un DISQUE : son intersection avec un segment
+// horizontal du noyau se calcule en une racine carree, et le segment reste un
+// segment, donc la somme prefixee s'applique toujours.
+//
+// `used` rend la somme des poids REELLEMENT appliques. Elle sert quand
+// l'utilisateur demande de preserver l'exposition : on divise alors par elle,
+// ce qui garde la forme d'amande sans l'assombrissement. Sinon on divise par
+// l'energie du noyau entier, et l'assombrissement est celui de l'optique.
+inline double
+convolve_pixel(const float *plane, const int& stride, const int& rows,
+               const Prefix& prefix, const Kernel& k,
+               const int& cx, const int& cy,
+               const Vignette& v, const double& ox, const double& oy,
+               double& used)
+{
+    double run_sum = 0.0, run_weight = 0.0;
+    double edge_sum = 0.0, edge_weight = 0.0;
+
+    // Convolution, pas correlation : le noyau est retourne. Sans ce
+    // retournement la PSF appliquee est K(-d), donc un polygone impair sort
+    // tourne de 180 degres, et l'amande du vignettage se place du cote oppose
+    // au centre du cadre -- l'inverse de ce qu'une optique produit.
+    for (size_t i = 0; i < k.runs.size(); ++i) {
+        const Run& run = k.runs[i];
+        const int ry = cy - run.dy;
+        if (ry < 0 || ry >= rows) continue;
+
+        const int a = run.x0, b = run.x1;
+
+        if (!v.active) {
+            int x0 = cx - b;
+            int x1 = cx - a;
+            if (x1 < 0 || x0 >= stride) continue;
+            if (x0 < 0) x0 = 0;
+            if (x1 >= stride) x1 = stride - 1;
+            run_sum += prefix.span(ry, x0, x1);
+            run_weight += (x1 - x0 + 1);
+            continue;
+        }
+
+        // Le disque de troncature coupe la ligne dy en un intervalle.
+        const double t = run.dy * v.scale_y - oy;
+        const double inside = v.cut * v.cut - t * t;
+        if (inside <= 0.0) continue;
+        const double h = sqrt(inside);
+        const double lo = (ox - h) / v.scale_x;
+        const double hi = (ox + h) / v.scale_x;
+
+        // Les pixels entierement dedans passent par la somme prefixee ; les
+        // deux du bord recoivent leur couverture exacte, faute de quoi le bord
+        // du barillet serait crenele -- et un bord crenele sur une boule de
+        // bokeh se voit autant qu'une couture.
+        int full_lo = (int) ceil(lo + 0.5);
+        int full_hi = (int) floor(hi - 0.5);
+        if (full_lo < a) full_lo = a;
+        if (full_hi > b) full_hi = b;
+
+        if (full_lo <= full_hi) {
+            int x0 = cx - full_hi;
+            int x1 = cx - full_lo;
+            if (!(x1 < 0 || x0 >= stride)) {
+                if (x0 < 0) x0 = 0;
+                if (x1 >= stride) x1 = stride - 1;
+                run_sum += prefix.span(ry, x0, x1);
+                run_weight += (x1 - x0 + 1);
+            }
+        }
+
+        int p0 = (int) floor(lo - 0.5);
+        int p1 = (int) ceil(hi + 0.5);
+        if (p0 < a) p0 = a;
+        if (p1 > b) p1 = b;
+
+        // Deux tranches de bord seulement. Balayer tout l'intervalle en
+        // sautant le bloc plein couterait la longueur du segment, ce qui
+        // annulerait tout l'interet de la somme prefixee.
+        const bool has_full = (full_lo <= full_hi);
+        const int lead_end  = has_full ? (full_lo - 1) : p1;
+        const int trail_beg = has_full ? (full_hi + 1) : (p1 + 1);
+        for (int pass = 0; pass < 2; ++pass) {
+            const int from = pass ? (trail_beg > p0 ? trail_beg : p0) : p0;
+            const int to   = pass ? p1 : (lead_end < p1 ? lead_end : p1);
+            for (int dx = from; dx <= to; ++dx) {
+                double left = dx - 0.5, right = dx + 0.5;
+                if (left < lo) left = lo;
+                if (right > hi) right = hi;
+                double w = right - left;
+                if (w <= 0.0) continue;
+                if (w > 1.0) w = 1.0;
+                const int tx = cx - dx;
+                if (tx < 0 || tx >= stride) continue;
+                run_sum += plane[(size_t) ry * stride + tx] * w;
+                run_weight += w;
+            }
+        }
+    }
+
+    for (size_t i = 0; i < k.edge.size(); ++i) {
+        const Tap& tap = k.edge[i];
+        const int ty = cy - tap.dy;
+        const int tx = cx - tap.dx;
+        if (ty < 0 || ty >= rows || tx < 0 || tx >= stride) continue;
+        double w = tap.weight;
+        if (v.active) {
+            w *= v.cover(tap.dx, tap.dy, ox, oy);
+            if (w <= 0.0) continue;
+        }
+        edge_sum += plane[(size_t) ty * stride + tx] * w;
+        edge_weight += w;
+    }
+
+    used = run_weight * k.level_weight + edge_weight;
+    return run_sum * k.level_weight + edge_sum;
+}
+
 // -- flou d'un plan a rayon constant ------------------------------------------
 
 // Recopie la tuile depuis le plan source, sans flou. C'est le cas de la tranche
@@ -1022,18 +958,17 @@ copy_plane(const float *plane, const int& stride, const CtxKernelFilter& ctx,
 // ramassage et epandage ne coincident qu'a rayon constant.
 void
 blur_plane(const float *plane, const int& stride, const int& rows,
-           const CtxKernelFilter& ctx, const Kernel& k,
+           const CtxKernelFilter& ctx, const Kernel& k, const Vignette& v,
            const bool& preserve_exposure, float *dest)
 {
     const int width  = ctx.region.width;
     const int height = ctx.region.height;
 
-    // Le vignettage optique DOIT assombrir les coins. Diviser par la somme
-    // locale des poids l'annulerait exactement et ne laisserait que la forme
-    // d'amande : on divise par la somme du noyau NON tronque.
-    const double reference = (preserve_exposure || k.total_unvignetted <= 0.0)
-                             ? k.total : k.total_unvignetted;
-    const double inverse = (reference > 0.0) ? (1.0 / reference) : 0.0;
+    // Le vignettage optique DOIT assombrir les coins : c'est ce qu'il est.
+    // Diviser par la somme des poids reellement appliques l'annulerait
+    // exactement et ne laisserait que la forme d'amande -- ce qu'on ne fait
+    // que si l'utilisateur le demande.
+    const double inverse = (k.total > 0.0) ? (1.0 / k.total) : 0.0;
 
     Prefix prefix;
     prefix.build(plane, stride, rows);
@@ -1042,31 +977,17 @@ blur_plane(const float *plane, const int& stride, const int& rows,
         const int cy = y + ctx.region.y;
         for (int x = 0; x < width; ++x) {
             const int cx = x + ctx.region.x;
-            double sum = 0.0;
 
-            // Convolution, pas correlation : le noyau est retourne.
-            for (size_t i = 0; i < k.runs.size(); ++i) {
-                const Run& run = k.runs[i];
-                const int ry = cy - run.dy;
-                if (ry < 0 || ry >= rows) continue;
-                int x0 = cx - run.x1;
-                int x1 = cx - run.x0;
-                if (x1 < 0 || x0 >= stride) continue;
-                if (x0 < 0) x0 = 0;
-                if (x1 >= stride) x1 = stride - 1;
-                sum += prefix.span(ry, x0, x1);
-            }
-            sum *= k.level_weight;
+            double ox = 0.0, oy = 0.0;
+            if (v.active) v.centre(ctx.x0 + x, ctx.y0 + y, ox, oy);
 
-            for (size_t i = 0; i < k.edge.size(); ++i) {
-                const Tap& tap = k.edge[i];
-                const int ty = cy - tap.dy;
-                const int tx = cx - tap.dx;
-                if (ty < 0 || ty >= rows || tx < 0 || tx >= stride) continue;
-                sum += plane[(size_t)ty * stride + tx] * tap.weight;
-            }
+            double used = 0.0;
+            const double sum = convolve_pixel(plane, stride, rows, prefix, k,
+                                              cx, cy, v, ox, oy, used);
 
-            dest[(size_t) y * width + x] = (float)(sum * inverse);
+            const double scale = (preserve_exposure && used > 0.0)
+                                 ? (1.0 / used) : inverse;
+            dest[(size_t) y * width + x] = (float)(sum * scale);
         }
     }
 }
@@ -1084,7 +1005,6 @@ bool
 filter_sliced(const Settings& s, const CtxKernelFilter& ctx, const ImageProxy& src,
               const DepthSnapshot& depth, const std::vector<Slice>& slices,
               const float *const *channels, float *const *out,
-              const double& frame_x, const double& frame_y,
               const bool& split, const double *channel_scale)
 {
     const int stride = (int) src.get_width();
@@ -1108,6 +1028,23 @@ filter_sliced(const Settings& s, const CtxKernelFilter& ctx, const ImageProxy& s
         }
     }
 
+    // ATTENTION avant de toucher a ce qui suit : le trou d'alpha le long des
+    // silhouettes n'est PAS un probleme de decoupage, et deux corrections
+    // plausibles ont ete essayees ici puis retirees parce que la mesure a dit
+    // qu'elles ne servaient a rien.
+    //
+    // Un median 3x3 sur la CoC, pour rattacher les pixels de silhouette a
+    // l'une des deux surfaces : mesure, la carte de CoC est deja une marche
+    // franche (0 jusqu'a x=318, -1 a partir de x=319, sans aucune valeur
+    // intermediaire). Il n'y avait rien a rattacher. Gain : 0,2576 -> 0,2759.
+    //
+    // Un plancher de couverture a la somme des couvertures de tranches : au
+    // point le plus creux la somme VAUT deja la couverture obtenue, parce
+    // qu'une seule tranche y contribue. Gain : nul.
+    //
+    // La vraie cause est ecrite dans docs/bokeh-clarisse.md, section sur
+    // l'occlusion.
+
     // La reprise des hautes lumieres est deja appliquee aux canaux couleur par
     // l'appelant : ici la couleur est prete a flouter. Elle ne touche PAS la
     // couverture, et c'est voulu -- une lumiere vive s'etale plus fort sans
@@ -1116,6 +1053,7 @@ filter_sliced(const Settings& s, const CtxKernelFilter& ctx, const ImageProxy& s
     std::vector<float> plane(source_count);
     std::vector<float> blurred(dest_count);
     std::vector<float> cover(dest_count);
+
 
     for (size_t si = 0; si < slices.size(); ++si) {
         const Slice& sl = slices[si];
@@ -1133,12 +1071,13 @@ filter_sliced(const Settings& s, const CtxKernelFilter& ctx, const ImageProxy& s
         scaled.radius = s.radius * sl.coc;
 
         Kernel kern[3];
+        Vignette vign[3];
         bool sharp = (scaled.radius < 0.5);
         if (!sharp) {
             for (int c = 0; c < 3; ++c) {
                 if (c != 1 && !split) continue;
-                build_kernel(kern[c], scaled, channel_scale[c],
-                             frame_x, frame_y, false);
+                bokeh_build_kernel(kern[c], kernel_spec(scaled, channel_scale[c], false));
+                vign[c] = vignette_for(s, kern[c], scaled.radius * channel_scale[c]);
             }
             if (kern[1].total <= 0.0) sharp = true;
         }
@@ -1155,7 +1094,7 @@ filter_sliced(const Settings& s, const CtxKernelFilter& ctx, const ImageProxy& s
         // vignettage rendrait chaque tranche partiellement transparente, les
         // tranches cesseraient de se couvrir et l'image se creuserait.
         if (sharp) copy_plane(&plane[0], stride, ctx, &cover[0]);
-        else       blur_plane(&plane[0], stride, rows, ctx, kern[1],
+        else       blur_plane(&plane[0], stride, rows, ctx, kern[1], vign[1],
                               true, &cover[0]);
 
         // Une couverture hors de [0, 1] inverserait le report : le facteur
@@ -1168,12 +1107,19 @@ filter_sliced(const Settings& s, const CtxKernelFilter& ctx, const ImageProxy& s
         for (int c = 0; c < 4; ++c) {
             if (channels[c] == 0) continue;
 
+            // L'ALPHA suit la couverture, pas l'exposition. Le flouter comme
+            // une couleur le faisait assombrir par le vignettage : la matte
+            // devenait transparente dans les coins du cadre alors que la
+            // couverture utilisee juste au-dessus pour recomposer, elle,
+            // restait pleine. Les deux cessaient d'etre d'accord, et l'image
+            // se creusait la ou le vignettage etait le plus fort.
+            const bool as_coverage = (c == 3);
             for (size_t i = 0; i < source_count; ++i)
                 plane[i] = (sc[i] < sl.lo || sc[i] >= sl.hi) ? 0.0f : channels[c][i];
+            const int kc = (split && c < 3) ? c : 1;
             if (sharp) copy_plane(&plane[0], stride, ctx, &blurred[0]);
-            else       blur_plane(&plane[0], stride, rows, ctx,
-                                  kern[(split && c < 3) ? c : 1],
-                                  s.preserve_exposure, &blurred[0]);
+            else       blur_plane(&plane[0], stride, rows, ctx, kern[kc], vign[kc],
+                                  as_coverage || s.preserve_exposure, &blurred[0]);
 
             float *dest = &acc[(size_t) c * dest_count];
             for (size_t i = 0; i < dest_count; ++i)
@@ -1219,7 +1165,7 @@ draw_diagnostic(const Settings& s, const CtxKernelFilter& ctx, float *const *out
         Settings shape = s;
         shape.radius = display;
         Kernel k;
-        build_kernel(k, shape, 1.0, 0.0, 0.0, true);
+        bokeh_build_kernel(k, kernel_spec(shape, 1.0, true));
 
         double peak = 0.0;
         for (size_t i = 0; i < k.all.size(); ++i)
@@ -1308,10 +1254,11 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
     read_settings(eval, ctx, 0, s);
 
     // L'anamorphisme ne fait que COMPRIMER un axe : la portee reste le rayon.
-    // L'aberration chromatique, elle, agrandit le noyau d'un canal.
-    double reach = s.radius * (1.0 + CHROMA_SPREAD * fabs(s.chromatic));
-
-    kernel_radius = (unsigned int)(reach < 0.0 ? 0.0 : reach + 1.5);
+    // L'aberration chromatique agrandit le noyau d'un canal, la douceur lui
+    // ajoute une jupe. Les deux sont dans `widest_reach`, qui appelle la meme
+    // fonction que la construction du noyau -- c'est tout l'interet.
+    const double reach = widest_reach(s, s.radius);
+    kernel_radius = (unsigned int)(reach < 0.0 ? 0.0 : reach + 2.5);
     total_pass_count = 1;
 
     // La passe de profondeur est un AOV de l'image filtree elle-meme.
@@ -1467,8 +1414,13 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
     // rayon a une fraction : elle doit etre la MEME pour toutes les tuiles,
     // sinon deux tuiles voisines normaliseraient differemment.
     if (s.real_lens) {
-        s.image_width  = depth.w;
-        s.image_height = depth.h;
+        // La largeur qui convertit les millimetres en pixels est celle de
+        // l'instantane, et elle est memorisee pour que `filter` se serve
+        // EXACTEMENT de la meme. Le maximum mesure ici sert de reference a
+        // toutes les tuiles : si l'une d'elles convertissait avec une autre
+        // largeur, sa fraction ne voudrait plus dire la meme chose.
+        s.coc_pixel_width = depth.w;
+        module->lens_pixel_width = depth.w;
         const double focus = (s.focus_override > 0.0) ? s.focus_override
                                                       : s.focus_distance;
         double peak = 0.0;
@@ -1485,8 +1437,8 @@ IX_MODULE_CLBK::pre_filter(OfObject& object, const CtxEval& eval, const CtxKerne
         s.radius = peak;
         module->lens_radius = peak;
 
-        const double reach = peak * (1.0 + CHROMA_SPREAD * fabs(s.chromatic));
-        kernel_radius = (unsigned int)(reach < 0.0 ? 0.0 : reach + 1.5);
+        const double reach = widest_reach(s, peak);
+        kernel_radius = (unsigned int)(reach < 0.0 ? 0.0 : reach + 2.5);
 
         LOG_INFO("[Bokeh] objectif reel : " << s.focal_length << " mm f/"
                  << s.f_stop << ", point a " << focus << " unites, rayon max "
@@ -1553,9 +1505,10 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
         // donnerait une reference differente d'une tuile a l'autre, donc des
         // rayons incoherents et des coutures.
         if (s.real_lens) {
-            s.radius       = owner->lens_radius;
-            s.focal_length = owner->lens_focal;
-            s.f_stop       = owner->lens_stop;
+            s.radius          = owner->lens_radius;
+            s.focal_length    = owner->lens_focal;
+            s.f_stop          = owner->lens_stop;
+            s.coc_pixel_width = owner->lens_pixel_width;
         }
     }
 
@@ -1578,12 +1531,13 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     const int width  = ctx.region.width;
     const int height = ctx.region.height;
 
-    // Position de la tuile dans le cadre, ramenee a [-1, 1] depuis le centre :
-    // c'est ce qui pilote le vignettage optique.
+    // Demi-dimensions du cadre. Elles servent a la courbure de bloom, et au
+    // vignettage optique -- qui, lui, se recalcule PAR PIXEL dans la
+    // convolution. Le calculer une fois par tuile, comme on le faisait, revient
+    // a en faire une fonction en escalier de la position, donc a poser une
+    // discontinuite sur chaque frontiere de tuile.
     const double half_w = s.image_width * 0.5;
     const double half_h = s.image_height * 0.5;
-    const double frame_x = (ctx.x0 + width * 0.5 - half_w) / (half_w > 0.0 ? half_w : 1.0);
-    const double frame_y = (ctx.y0 + height * 0.5 - half_h) / (half_h > 0.0 ? half_h : 1.0);
 
     // Un noyau par canal quand l'aberration chromatique est active : c'est le
     // decalage de rayon entre canaux qui colore le bord des boules. L'alpha
@@ -1669,8 +1623,7 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     // repli quand aucune profondeur n'est branchee.
     if (depth != 0 && module->slices.size() >= 2)
         return filter_sliced(s, ctx, *src, *depth, module->slices,
-                             channels, out, frame_x, frame_y,
-                             split, channel_scale);
+                             channels, out, split, channel_scale);
 
     // Une passe de profondeur branchee ? Alors le rayon varie par pixel, et on
     // bat une echelle de noyaux plutot qu'un seul. Le palier 0 est le pixel
@@ -1678,13 +1631,16 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
     const int steps = depth ? DEPTH_STEPS : 1;
 
     std::vector<Kernel> ladder((size_t) steps * 3);
+    std::vector<Vignette> vignettes((size_t) steps * 3);
     for (int level = 0; level < steps; ++level) {
         Settings scaled = s;
         if (depth) scaled.radius = s.radius * (level + 1) / (double) steps;
         for (int c = 0; c < 3; ++c) {
             if (c != 1 && !split) continue;   // un seul noyau sans aberration
-            build_kernel(ladder[(size_t) level * 3 + c], scaled,
-                         channel_scale[c], frame_x, frame_y, false);
+            const size_t at = (size_t) level * 3 + c;
+            bokeh_build_kernel(ladder[at], kernel_spec(scaled, channel_scale[c], false));
+            vignettes[at] = vignette_for(s, ladder[at],
+                                         scaled.radius * channel_scale[c]);
         }
     }
     if (ladder[1].total <= 0.0) return true;
@@ -1705,11 +1661,15 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
 
             prefix.build(channels[c], stride, rows);
             // Le vignettage optique DOIT assombrir les coins -- c'est ce qu'il
-            // est. Diviser par la somme locale des poids annulerait exactement
-            // l'assombrissement et ne garderait que la forme d'amande : mesure
-            // a 55,9 % d'energie dans le coin, et un gain de 1,000 quand meme.
-            // On divise donc par la somme du noyau NON tronque, sauf si
-            // l'utilisateur demande de preserver l'exposition.
+            // est. On divise donc par l'energie du noyau ENTIER, pas par celle
+            // qui reste apres troncature : diviser par celle-la annulerait
+            // exactement l'assombrissement et ne garderait que la forme
+            // d'amande. Sauf si l'utilisateur demande de preserver
+            // l'exposition, ce que la plupart des compositeurs preferent.
+            //
+            // L'alpha, lui, suit toujours la couverture : le vignettage
+            // assombrit la lumiere, il ne perce pas la matiere.
+            const bool preserve = s.preserve_exposure || (c == 3);
             for (int y = 0; y < height; ++y) {
                 const int cy = y + ctx.region.y;
                 for (int x = 0; x < width; ++x) {
@@ -1729,45 +1689,24 @@ IX_MODULE_CLBK::filter(OfObject& object, const CtxEval& eval, const CtxKernelFil
                         if (level >= steps) level = steps - 1;
                     }
 
-                    const Kernel& k = ladder[(size_t) level * 3 + channel];
+                    const size_t at = (size_t) level * 3 + channel;
+                    const Kernel& k = ladder[at];
                     if (k.total <= 0.0) {
                         out[c][y * width + x] = channels[c][(size_t)cy * stride + cx];
                         continue;
                     }
-                    const double reference =
-                        (s.preserve_exposure || k.total_unvignetted <= 0.0)
-                        ? k.total : k.total_unvignetted;
-                    const double inverse = 1.0 / reference;
+                    const Vignette& v = vignettes[at];
 
-                    double sum = 0.0;
+                    double ox = 0.0, oy = 0.0;
+                    if (v.active) v.centre(ctx.x0 + x, ctx.y0 + y, ox, oy);
 
-                    // Convolution, pas correlation : le noyau est retourne.
-                    // Sans ce retournement la PSF affichee est K(-d), donc un
-                    // polygone impair sort tourne de 180 degres, et l'amande
-                    // du vignettage se place du cote oppose au centre du
-                    // cadre -- l'inverse de ce qu'une optique produit.
-                    for (size_t i = 0; i < k.runs.size(); ++i) {
-                        const Run& run = k.runs[i];
-                        const int ry = cy - run.dy;
-                        if (ry < 0 || ry >= rows) continue;
-                        int x0 = cx - run.x1;
-                        int x1 = cx - run.x0;
-                        if (x1 < 0 || x0 >= stride) continue;
-                        if (x0 < 0) x0 = 0;
-                        if (x1 >= stride) x1 = stride - 1;
-                        sum += prefix.span(ry, x0, x1);
-                    }
-                    sum *= k.level_weight;
-
-                    for (size_t i = 0; i < k.edge.size(); ++i) {
-                        const Tap& tap = k.edge[i];
-                        const int ty = cy - tap.dy;
-                        const int tx = cx - tap.dx;
-                        if (ty < 0 || ty >= rows || tx < 0 || tx >= stride) continue;
-                        sum += channels[c][(size_t)ty * stride + tx] * tap.weight;
-                    }
-
-                    out[c][y * width + x] = (float)(sum * inverse);
+                    double used = 0.0;
+                    const double sum = convolve_pixel(channels[c], stride, rows,
+                                                      prefix, k, cx, cy,
+                                                      v, ox, oy, used);
+                    const double scale = (preserve && used > 0.0)
+                                         ? (1.0 / used) : (1.0 / k.total);
+                    out[c][y * width + x] = (float)(sum * scale);
                 }
             }
         }

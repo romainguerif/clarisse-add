@@ -51,6 +51,12 @@ VARIANTS = [
     # les defauts ensemble.
     ("t5_optique_marquee", {"blades": 6, "optical_vignetting": 0.8,
                             "chromatic_aberration": -0.4, "softness": 0.3}),
+    # Anamorphisme ET vignettage : dans l'espace des pixels le disque de
+    # troncature devient une ELLIPSE, et son intersection avec les segments du
+    # noyau est le seul chemin de code que la sonde ne peut pas atteindre en
+    # sommant les taps un par un. La section 8 de la sonde predit la valeur
+    # attendue sur l'aplat ; le rendu doit tomber dessus.
+    ("t6_anamorphique", {"optical_vignetting": 0.8, "anamorphism": 0.5}),
 ]
 
 lines = []

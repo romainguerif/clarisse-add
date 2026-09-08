@@ -25,11 +25,16 @@ import sys
 CLARISSE = r"C:\Program Files\Isotropix\Clarisse 5.0 SP14\Clarisse"
 MAGICK = r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"
 NATIVE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# La session interactive de Clarisse garde les .dll du dossier build ouvertes,
+# et le linker ne peut alors pas les ecraser. BOKEH_BUILD permet de construire
+# ailleurs et de faire pointer cnode dessus, sans fermer sa session.
+BUILD = os.environ.get("BOKEH_BUILD") or os.path.join(NATIVE, "build")
 PROJECT = r"J:\_WINDOWSTEMP\claude\seams\seams.project"
 ROOT = r"J:\_WINDOWSTEMP\claude\seams"
 
 VARIANTS = ["t0_temoin", "t1_vignettage", "t2_chroma_negatif",
-            "t3_douceur", "t4_lames_creusees", "t5_optique_marquee"]
+            "t3_douceur", "t4_lames_creusees", "t5_optique_marquee",
+            "t6_anamorphique"]
 
 # Deux bandes, deux artefacts.
 #
@@ -55,7 +60,7 @@ def render(tag):
         out = os.path.join(ROOT, "%s_%s" % (tag, name))
         command = [os.path.join(CLARISSE, "cnode.exe"), PROJECT,
                    "-module_path", os.path.join(CLARISSE, "module"),
-                   os.path.join(NATIVE, "build"),
+                   BUILD,
                    "-image", "build://project/" + name,
                    "-frames_list", "1",
                    "-output", out + ".exr"]
