@@ -715,8 +715,25 @@ private:
             build_levels(m_radii[i], i, turns, &levels[i * (turns + 1u)]);
         }
 
-        int direction_sign = 1;
+        // On part du rayon le plus eloigne du secteur libre -- c'est-a-dire du
+        // bas quand il y en a un, puisque le secteur est en haut. Partir du
+        // premier rayon venu suffisait a tout casser : chez Zygiella le rayon
+        // zero tombe dans le secteur, les deux voisins aussi, et la spirale
+        // s'arretait a son premier point. La toile sortait sans une seule
+        // spire, ce que la mesure ne disait pas et que le rendu a montre d'un
+        // coup d'oeil.
         unsigned int index = 0u;
+        if (free_sector > 1e-6) {
+            double farthest = -1.0;
+            for (unsigned int j = 0; j < n; j++) {
+                double a = fmod(m_radii[j].angle, 2.0 * M_PI);
+                if (a < 0.0) a += 2.0 * M_PI;
+                if (a > M_PI) a = 2.0 * M_PI - a;
+                if (a > farthest) { farthest = a; index = j; }
+            }
+        }
+
+        int direction_sign = 1;
         double phase = 0.0;
         const double advance = 1.0 / double(n);
         const unsigned int limit = (turns + 2u) * n;
