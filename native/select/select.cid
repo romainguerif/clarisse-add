@@ -1,0 +1,115 @@
+class "GeometrySelect" "GeometryPolymesh" {
+    #version 0.1
+    category "/Geometry/Polymesh"
+    doc "Designe un sous-ensemble de faces d'un maillage, et le rend au reste de Clarisse sous forme de shading group. C'est la brique de base de tout ce qui ne doit s'appliquer qu'a une partie d'un objet -- capitonner, extruder, texturer autrement.\n\nUne selection n'est pas une liste d'indices mais une regle, et c'est ce qui la rend utile dans un graphe : elle se reevalue quand le maillage change en amont, elle s'anime, et elle se pilote par texture. Une liste d'indices, elle, meurt a la premiere modification de topologie.\n\nLe resultat sort dans un shading group parce que c'est la seule notion de groupe de faces que Clarisse connaisse deja : on peut donc lui assigner un materiau pour la voir, s'en servir dans un shading layer, et l'enchainer d'un node de selection au suivant pour composer des unions et des intersections."
+
+    attribute_group "input" {
+        reference "input_geometry" {
+            filter "Geometry"
+            input "shading_variable" "motion" "geometry" "motion_blur"
+            output "geometry"
+            dirtiness_pass_through yes
+            doc "Le maillage dans lequel on choisit des faces. Il ressort tel quel, avec un shading group de plus."
+        }
+
+        string "group_name" {
+            output "geometry"
+            doc "Nom du shading group produit. S'il existe deja dans le maillage d'entree, il est remplace -- ce qui permet de reprendre une selection et de l'affiner sans multiplier les groupes."
+            value "selection"
+        }
+    }
+
+    attribute_group "criteria" {
+        doc "Ce qui fait qu'une face est retenue. Les criteres actifs se cumulent : une face doit satisfaire tous ceux qui sont allumes."
+
+        reference "texture" {
+            filter "Texture"
+            output "geometry"
+            doc "Retient les faces ou cette texture depasse le seuil. C'est le critere le plus puissant des trois, parce qu'il donne acces a tout ce que Clarisse sait fabriquer : une projection, une carte peinte, un bruit, un gradient, une distance a un objet. La texture est evaluee aux sommets et moyennee sur la face."
+        }
+
+        long "texture_channel" {
+            output "geometry"
+            doc "Composante lue dans la texture."
+            preset "Luminance" "0"
+            preset "Rouge" "1"
+            preset "Vert" "2"
+            preset "Bleu" "3"
+            preset "Alpha" "4"
+            value 0
+        }
+
+        double "threshold" {
+            output "geometry"
+            doc "Valeur au-dela de laquelle la face est retenue."
+            animatable yes
+            ui_range yes 0.0 1
+            value 0.5
+        }
+
+        bool "use_normal" {
+            output "geometry"
+            doc "Retient les faces dont la normale s'ecarte de moins de l'angle donne de la direction donnee. De quoi attraper le dessus d'un objet, ses flancs, ou tout ce qui regarde une direction."
+            value no
+        }
+
+        double[3] "direction" {
+            output "geometry"
+            doc "Direction visee, en coordonnees du monde."
+            animatable yes
+            value 0.0 1 0.0
+        }
+
+        angle "angle" {
+            output "geometry"
+            doc "Ecart maximal a cette direction."
+            animatable yes
+            numeric_range yes 0.0 180
+            ui_range yes 0.0 90
+            value 45
+        }
+
+        percentage "random_ratio" {
+            output "geometry"
+            doc "Ne garde qu'une fraction des faces retenues, tiree au hasard. A 1 tout passe. Utile pour ne capitonner qu'une face sur trois, ou pour semer des variantes."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 1
+        }
+
+        long "seed" {
+            output "geometry"
+            doc "Change le tirage sans changer la proportion."
+            numeric_range yes 0.0 1000000
+            value 0
+        }
+    }
+
+    attribute_group "combine" {
+        doc "Comment le resultat se combine avec une selection deja faite. C'est ce qui permet d'enchainer les nodes et de composer."
+
+        string "source_group" {
+            output "geometry"
+            doc "Shading group de depart, venu de l'amont ou d'un autre node de selection. Laisse vide, on part de rien."
+            value ""
+        }
+
+        long "mode" {
+            output "geometry"
+            doc "Ce qu'on fait de la selection de depart. Remplacer l'ignore ; les trois autres la combinent avec les criteres."
+            preset "Remplacer" "0"
+            preset "Ajouter" "1"
+            preset "Intersecter" "2"
+            preset "Soustraire" "3"
+            value 0
+        }
+
+        long "grow" {
+            output "geometry"
+            doc "Elargit la selection de tant d'anneaux de faces voisines. En negatif, la retrecit d'autant. Deux faces sont voisines des qu'elles partagent un sommet."
+            numeric_range yes -32 32
+            ui_range yes -4 4
+            value 0
+        }
+    }
+}

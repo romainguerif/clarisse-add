@@ -63,9 +63,13 @@ VCVARS = (r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
 # create_resource. PolyMesh s'en passe -- ix_poly reexporte ce qu'il faut --
 # mais ParticleCloud non : sa vtable reclame ResourceData::is_serializable, qui
 # ne vit que la.
+# ix_shader : ShaderHelpers, et notamment `evaluate_vertices_texture`. C'est
+# par la qu'un node de geometrie evalue une texture Clarisse aux sommets d'un
+# maillage -- ce qui transforme n'importe quelle texture en pinceau de
+# selection.
 LIBS = ["ix_module", "ix_of", "ix_dso", "ix_core", "ix_gui", "ix_event",
         "ix_image", "ix_raytrace", "ix_poly", "ix_gmath", "ix_geometry", "ix_particle",
-        "ix_resource", "ix_ctx", "ix_app"]
+        "ix_resource", "ix_ctx", "ix_app", "ix_shader"]
 
 # Les bibliotheques du systeme, que le linker trouve tout seul une fois
 # vcvarsall passe. opengl32 sert aux modules qui tracent dans le viewport :
