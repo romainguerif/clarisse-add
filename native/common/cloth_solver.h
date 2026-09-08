@@ -87,6 +87,24 @@ struct Bend {
     double lambda;
 };
 
+// Un rappel elastique vers une position de reference : le tissu pose sur
+// quelque chose de mou, qui le repousse quand il s'en ecarte.
+//
+// C'est ce qui distingue un coussin rembourre d'un ballon, et ce n'est pas un
+// detail : une enveloppe close remplie de gaz a qui on donne du tissu en trop
+// ne se plisse pas, elle se deforme en une seule grande bosse -- le volume est
+// conserve, mais rien n'interdit a la forme de changer. Une ouate, elle,
+// resiste au changement de forme et pas seulement de volume. Elle donne au
+// flambage la fondation elastique sans laquelle il n'a aucune longueur d'onde
+// preferee : c'est le K de la loi de Cerda-Mahadevan, et sans K la longueur
+// d'onde part a l'infini -- autrement dit, un seul grand pli.
+struct Anchor {
+    unsigned int index;
+    GMathVec3d target;
+    double compliance;
+    double lambda;
+};
+
 // La pression interne d'un volume ferme. C'est elle qui gonfle un coussin, et
 // c'est d'elle que naissent les plis : la membrane a plus de surface que le
 // volume n'en demande, et le surplus doit aller quelque part.
@@ -95,6 +113,16 @@ struct Pressure {
     double rest_volume;                   // six fois le volume, non normalise
     double target;                        // multiplicateur : au-dela de 1, ca gonfle
     double compliance;
+    // La meme chose, mais exprimee relativement a la raideur propre de la
+    // contrainte plutot qu'en unites absolues. Le gradient du volume est une
+    // somme d'aires : sa norme depend de la taille du coussin et du pas de la
+    // grille, si bien qu'une compliance absolue ne veut pas dire la meme chose
+    // d'un maillage a l'autre. Multipliee par le denominateur, elle devient un
+    // pur facteur de relachement -- et surtout, elle laisse la pression ceder
+    // quand le tissu est deja tendu. Sans cela, un volume vise inatteignable et
+    // des aretes inextensibles se battent indefiniment, et le solveur ne
+    // converge pas : il broie.
+    double softness;
     double lambda;
 };
 
@@ -106,6 +134,7 @@ public:
     CoreVector<double> inverse_mass;      // zero pour un point epingle
     CoreVector<Distance> distances;
     CoreVector<Bend> bends;
+    CoreVector<Anchor> anchors;
     Pressure pressure;
 
     inline void enable_pressure(const bool& on) { m_has_pressure = on; }
@@ -193,6 +222,9 @@ public:
         for (unsigned int i = 0; i < bends.get_count(); i++) {
             bends[i].lambda = 0.0;
         }
+        for (unsigned int i = 0; i < anchors.get_count(); i++) {
+            anchors[i].lambda = 0.0;
+        }
         pressure.lambda = 0.0;
 
         CoreArray<GMathVec3d> gradient;
@@ -205,6 +237,7 @@ public:
             const bool forward = (it % 2u) == 0u;
             project_distances(forward);
             project_bends(forward);
+            project_anchors(forward);
             if (m_has_pressure) project_pressure(gradient);
         }
     }
@@ -246,6 +279,30 @@ private:
 
             positions[c.a] = cadd(positions[c.a], cscale(n, wa * d_lambda));
             positions[c.b] = csub(positions[c.b], cscale(n, wb * d_lambda));
+        }
+    }
+
+    void
+    project_anchors(const bool& forward)
+    {
+        const unsigned int total = anchors.get_count();
+        for (unsigned int k = 0; k < total; k++) {
+            Anchor& c = anchors[forward ? k : (total - 1u - k)];
+
+            const double w = inverse_mass[c.index];
+            if (w <= 0.0) continue;
+
+            const GMathVec3d delta = csub(positions[c.index], c.target);
+            const double length = delta.get_length();
+            if (length < 1e-12) continue;
+
+            const GMathVec3d n = cscale(delta, 1.0 / length);
+            const double d_lambda =
+                (-length - c.compliance * c.lambda) / (w + c.compliance);
+            c.lambda += d_lambda;
+
+            positions[c.index] =
+                cadd(positions[c.index], cscale(n, w * d_lambda));
         }
     }
 
@@ -323,10 +380,12 @@ private:
         }
         if (denominator <= 1e-18) return;
 
+        const double alpha =
+            pressure.compliance + pressure.softness * denominator;
+
         const double violation = volume - pressure.target * pressure.rest_volume;
         const double d_lambda =
-            (-violation - pressure.compliance * pressure.lambda)
-            / (denominator + pressure.compliance);
+            (-violation - alpha * pressure.lambda) / (denominator + alpha);
         pressure.lambda += d_lambda;
 
         for (unsigned int i = 0; i < count; i++) {

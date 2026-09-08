@@ -1,7 +1,7 @@
 class "GeometryQuilt" "GeometryPolymesh" {
-    #version 0.2
+    #version 0.3
     category "/Geometry/Polymesh"
-    doc "Transforme chaque polygone d'un maillage en coussin capitonne. La forme n'est pas dessinee mais simulee : une membrane cousue sur le contour du polygone, a qui on donne plus de matiere qu'il n'en faut, et qu'une pression interne pousse vers l'exterieur. Les bourrelets et les plis naissent de ce surplus, comme sur un vrai coussin. Marche sur n'importe quel maillage, plan ou courbe."
+    doc "Transforme chaque polygone d'un maillage en coussin capitonne. La forme n'est pas dessinee mais simulee : une membrane cousue sur le contour du polygone, a qui on donne plus de matiere qu'il n'en faut, et qu'une pression interne pousse vers l'exterieur. Les bourrelets et les plis naissent de ce surplus, comme sur un vrai coussin. Tout est resolu dans un repere normalise par la taille du coussin, donc les memes reglages tiennent sur un matelas de six metres comme sur une facette de sphere centimetrique."
 
     attribute_group "input" {
         doc "Le maillage a capitonner."
@@ -22,49 +22,64 @@ class "GeometryQuilt" "GeometryPolymesh" {
 
         long "resolution" {
             output "geometry"
-            doc "Nombre de subdivisions par coussin. C'est ce qui borne la finesse des plis : un pli ne peut pas etre plus etroit qu'une maille. C'est donc un reglage de style autant que de qualite."
+            doc "Nombre de subdivisions par coussin. C'est ce qui borne la finesse des plis : un pli ne peut pas etre plus etroit qu'une maille. Les compliances etant normalisees par la taille de maille, monter la resolution affine le resultat sans changer la matiere."
             numeric_range yes 3 64
-            ui_range yes 6 20
-            value 10
+            ui_range yes 6 24
+            value 14
+        }
+
+        long "levels" {
+            output "geometry"
+            doc "Nombre de niveaux de resolution resolus en cascade. La simulation part grossiere, puis chaque niveau reprend la forme du precedent et l'affine, jusqu'a la resolution demandee -- qui reste celle du resultat. Une relaxation en positions ne propage l'information que d'une arete par passe : sans cascade, il faudrait des milliers d'iterations pour que deux bords opposes se parlent."
+            numeric_range yes 1 5
+            ui_range yes 1 4
+            value 3
+        }
+
+        distance "detail" {
+            output "geometry"
+            doc "Taille de maille visee, en unites du monde. A zero, tous les coussins ont la meme resolution. Au-dessus, chacun prend la sienne selon sa taille reelle : une grande face est plus finement decoupee qu'une petite, ce qui evite a la fois de gaspiller sur les petites et de manquer de details sur les grandes."
+            ui_range yes 0.0 0.5
+            value 0.0
+        }
+
+        long "max_resolution" {
+            output "geometry"
+            doc "Plafond de subdivision quand la taille de maille pilote la resolution. Il n'y a que lui pour empecher une seule grande face de faire exploser le nombre de sommets."
+            numeric_range yes 3 128
+            ui_range yes 8 64
+            value 40
         }
     }
 
     attribute_group "cushion" {
         doc "La forme du coussin."
 
-        percentage "seam" {
-            output "geometry"
-            doc "Largeur du sillon de couture, en fraction du coussin."
-            animatable yes
-            numeric_range yes 0.0 0.49
-            ui_range yes 0.0 0.3
-            value 0.12
-        }
-
-        distance "seam_depth" {
-            output "geometry"
-            doc "De combien la couture s'enfonce sous la surface d'origine."
-            animatable yes
-            ui_range yes 0.0 0.2
-            value 0.02
-        }
-
-        percentage "slack" {
-            output "geometry"
-            doc "Surplus de matiere dans la membrane, en fraction. C'est le reglage central : sans surplus, la membrane est deja tendue a plat et la pression ne peut que l'etirer, ce qui donne une bosse lisse. Avec du surplus, la matiere en trop doit aller quelque part -- et elle se plisse."
-            animatable yes
-            numeric_range yes 0.0 2
-            ui_range yes 0.0 0.6
-            value 0.18
-        }
-
         percentage "puff_relative" {
             output "geometry"
-            doc "Volume vise, en fraction du rayon du coussin. Proportionnel a la taille de la face, donc un meme reglage tient sur un matelas de six metres comme sur une sphere aux faces centimetriques."
+            doc "Hauteur visee du coussin, en fraction de son rayon. C'est un reglage de forme pure : le patron du tissu est taille sur cette hauteur, donc gonfler davantage ne met jamais la pression et les aretes en contradiction."
             animatable yes
-            numeric_range yes 0.0 10
-            ui_range yes 0.0 1
-            value 0.35
+            numeric_range yes 0.0 2
+            ui_range yes 0.05 0.8
+            value 0.3
+        }
+
+        double "shoulder" {
+            output "geometry"
+            doc "Forme du profil, de la couture au sommet. A 1 le coussin est une tente ; en montant, le dessus s'aplatit et les flancs se redressent, ce que fait un coussin bien rembourre qui pousse contre son enveloppe. C'est aussi la pente du tissu au ras de la couture, et elle doit rester finie : un patron a tangente verticale n'est pas suivable, le tissu s'y rabat en clapet."
+            animatable yes
+            numeric_range yes 1 12
+            ui_range yes 1.5 6
+            value 2.5
+        }
+
+        double "squareness" {
+            output "geometry"
+            doc "Arrondi des angles du coussin. Bas, le bombement est un dome rond perdu au milieu de sa case ; haut, c'est un carre aux angles adoucis qui la remplit. C'est ce qui separe un matelas pneumatique d'un capitonnage."
+            animatable yes
+            numeric_range yes 1 16
+            ui_range yes 1.5 8
+            value 4
         }
 
         percentage "pressure" {
@@ -72,37 +87,130 @@ class "GeometryQuilt" "GeometryPolymesh" {
             doc "Multiplie le volume vise. Au-dela de 1 le coussin est surgonfle et se tend ; en dessous il se degonfle et pend."
             animatable yes
             numeric_range yes 0.0 10
-            ui_range yes 0.2 3
+            ui_range yes 0.2 2
             value 1
+        }
+
+        percentage "pressure_softness" {
+            output "geometry"
+            doc "De combien le rembourrage se laisse comprimer. C'est ce qui decide du sort du surplus de tissu : une pression qui cede laisse le coussin gonfler un peu plus et le surplus disparait sans faire de pli ; une pression ferme l'oblige a se plisser. Un vrai rembourrage ne cede presque pas -- monter ce reglage lisse les plis, et c'est la premiere chose a regarder quand le coussin sort trop propre."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.1
+            value 0.005
+        }
+
+        percentage "seam" {
+            output "geometry"
+            doc "Largeur du mplat de couture, en fraction du coussin. Le tissu y reste plat, au niveau du sillon, et sans surplus : les plis y meurent, et le bombement ne commence qu'apres. C'est ce qui donne une bordure nette au lieu d'un bourrelet mou qui deborde sur la couture."
+            animatable yes
+            numeric_range yes 0.0 0.49
+            ui_range yes 0.02 0.2
+            value 0.06
+        }
+
+        percentage "seam_depth" {
+            output "geometry"
+            doc "Profondeur du sillon, en fraction du rayon du coussin. Le contour est enfonce le long des normales aux sommets du maillage d'entree, donc deux coussins voisins enfoncent leur arete commune exactement au meme endroit -- une sphere capitonnee ne s'ouvre pas."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.2
+            value 0.06
+        }
+
+    }
+
+    attribute_group "fabric" {
+        doc "Le tissu : combien il y en a, et comment il se comporte."
+
+        percentage "wrinkles" {
+            output "geometry"
+            doc "Surplus de matiere par rapport au patron du coussin. C'est le reglage des plis, et le seul : le patron est deja taille a la bonne hauteur, donc tout ce qu'on ajoute ici n'a nulle part ou aller et se plisse. Quelques pourcents suffisent -- beaucoup de surplus ne fait pas beaucoup de petits plis, il en fait un seul, tres grand."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.25
+            value 0.1
+        }
+
+        percentage "corner_gather" {
+            output "geometry"
+            doc "Surplus supplementaire rentre dans les quatre coins. Un coin est le seul endroit ou le tissu est tenu dans deux directions a la fois : sur un vrai capitonnage c'est la qu'on rentre l'exces, et c'est de la que partent les plis en etoile."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.3
+            value 0.08
+        }
+
+        percentage "wrinkle_reach" {
+            output "geometry"
+            doc "Jusqu'ou les plis remontent depuis la couture, en fraction du coussin. Sur un vrai capitonnage le tissu est tendu sur la couronne -- c'est la qu'il a le plus de forme a couvrir -- et le surplus reste en bas, juste au-dessus de la couture. Bas, on obtient un dessus lisse et une ceinture de plis ; haut, un coussin grumeleux sur toute sa surface."
+            animatable yes
+            numeric_range yes 0.05 2
+            ui_range yes 0.1 1
+            value 0.5
+        }
+
+        percentage "stuffing" {
+            output "geometry"
+            doc "Fermete du rembourrage. A zero le coussin est une enveloppe vide sous pression : un ballon, qui conserve son volume mais pas sa forme -- donnez-lui du tissu en trop et il se deforme en une seule grosse bosse au lieu de se plisser. Au-dessus, une ouate rappelle le tissu vers la forme visee, et c'est elle qui donne aux plis une largeur definie : c'est la fondation elastique de la loi de Cerda, sans laquelle la longueur d'onde part a l'infini."
+            animatable yes
+            numeric_range yes 0.0 10
+            ui_range yes 0.0 2
+            value 1
+        }
+
+        double "stretch" {
+            output "geometry"
+            doc "Elasticite en tension. A zero le tissu est inextensible et tout le surplus part en plis ; en montant, il s'etire un peu au lieu de se plisser. Un vrai tissu tisse s'etire de quelques pourcents."
+            animatable yes
+            numeric_range yes 0.0 5
+            ui_range yes 0.0 0.2
+            value 0.02
+        }
+
+        double "shear_stiffness" {
+            output "geometry"
+            doc "Souplesse en cisaillement. Un tissu tisse cede environ cent fois plus facilement en biais qu'en droit fil, et c'est ce qui laisse les plis prendre leurs diagonales. A zero la grille devient rigide en losange et les plis s'alignent sur elle."
+            animatable yes
+            numeric_range yes 0.0 1000
+            ui_range yes 0.0 20
+            value 4
+        }
+
+        percentage "wrinkle_scale" {
+            output "geometry"
+            doc "Largeur des plis, en fraction du coussin. C'est la raideur de flexion du tissu, exprimee dans l'unite qui se voit : a 1 le tissu est raide et fait un seul grand pli, a 0.2 il est souple et en fait cinq. Le calcul suit la loi de Cerda -- la longueur d'onde de flambage va en racine quatrieme de la raideur -- et la valeur est normalisee par l'aire de maille, donc changer la resolution affine les plis sans changer la matiere. Un pli ne peut pas etre plus etroit que quatre mailles : en dessous, monter la resolution."
+            animatable yes
+            numeric_range yes 0.01 2
+            ui_range yes 0.12 0.8
+            value 0.28
+        }
+
+        distance "wrinkle_size" {
+            output "geometry"
+            doc "La meme largeur de pli, mais en unites du monde. A zero, les plis restent proportionnels au coussin : meme aspect quelle que soit la taille de l'objet. Au-dessus, ils prennent une taille absolue -- un grand coussin en fait donc beaucoup et des fins, un petit deux ou trois. C'est le comportement d'un vrai tissu, dont la raideur ne sait rien de la taille de ce qu'on en coud, et c'est ce reglage qui rend une scene a plusieurs echelles credible."
+            ui_range yes 0.0 1
+            value 0.0
         }
     }
 
-    attribute_group "material" {
-        doc "Le comportement du tissu. Ce sont des complaisances : plus la valeur est grande, plus la membrane cede."
-
-        double "stiffness" {
-            output "geometry"
-            doc "Complaisance en tension. A zero la membrane est inextensible et tout le surplus part en plis ; en montant, elle s'etire au lieu de se plisser."
-            animatable yes
-            numeric_range yes 0.0 1
-            ui_range yes 0.0 0.01
-            value 0.0
-        }
-
-        double "bend_stiffness" {
-            output "geometry"
-            doc "Complaisance en flexion. C'est elle qui decide de la taille des plis : une membrane raide fait peu de grands plis, une membrane souple beaucoup de petits."
-            animatable yes
-            numeric_range yes 0.0 1000
-            ui_range yes 0.0 5
-            value 0.4
-        }
+    attribute_group "gravity" {
+        doc "La pesanteur. Elle rompt la symetrie du coussin et lui donne un dessus different de son dessous."
 
         double[3] "gravity" {
             output "geometry"
-            doc "Direction vers laquelle la membrane retombe. Rompt la symetrie du coussin et donne un dessus different d'un dessous."
+            doc "Direction vers laquelle la membrane retombe. Seule la direction compte, la longueur est ignoree."
             animatable yes
             value 0.0 -1 0.0
+        }
+
+        percentage "gravity_strength" {
+            output "geometry"
+            doc "De combien le tissu retombe, en fraction du rayon du coussin. C'est ce qui creuse le dessus et gonfle le dessous, et ce qui fait pendre les plis vers le bas au lieu de les laisser symetriques."
+            animatable yes
+            numeric_range yes 0.0 2
+            ui_range yes 0.0 0.3
+            value 0.05
         }
     }
 
@@ -113,17 +221,33 @@ class "GeometryQuilt" "GeometryPolymesh" {
             output "geometry"
             doc "Nombre de passes de relaxation. Le solveur converge vers un equilibre bien defini, donc monter ce nombre affine la forme sans la changer -- contrairement a un solveur en positions ordinaire, ou la raideur depend du budget."
             numeric_range yes 1 5000
-            ui_range yes 20 400
-            value 120
+            ui_range yes 40 400
+            value 160
         }
 
         percentage "jitter" {
             output "geometry"
-            doc "Bruit initial hors du plan, en fraction du coussin. Il est indispensable et non cosmetique : une membrane parfaitement plane est une configuration exactement stationnaire du solveur -- toutes les corrections y sont coplanaires -- et resterait plate quelle que soit la pression. Ce bruit choisit de quel cote elle flambe."
+            doc "Bruit initial hors du plan, en fraction du coussin. Il est indispensable et non cosmetique : une membrane parfaitement plane est une configuration exactement stationnaire du solveur -- toutes les corrections y sont coplanaires -- et resterait plate quelle que soit la pression. Ce bruit choisit de quel cote elle flambe, et donc ou tombent les plis."
             animatable yes
             numeric_range yes 0.0 1
-            ui_range yes 0.0 0.05
+            ui_range yes 0.0 0.03
             value 0.006
+        }
+
+        long "smoothing" {
+            output "geometry"
+            doc "Passes de lissage apres la simulation. Le solveur laisse des irregularites de maille qui ne se voient pas sur la forme mais accrochent la lumiere en speculaire. Quelques passes tres douces les enlevent sans toucher aux plis, beaucoup plus larges qu'une maille."
+            numeric_range yes 0.0 20
+            ui_range yes 0.0 6
+            value 2
+        }
+
+        percentage "smoothing_amount" {
+            output "geometry"
+            doc "Force de chaque passe de lissage."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 0.3
         }
 
         long "seed" {

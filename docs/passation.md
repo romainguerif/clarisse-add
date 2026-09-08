@@ -11,7 +11,7 @@ Romain : « avant de faire le moteur de rendu, on va faire quelques petits trucs
 plus simples, à commencer par le système de curves ». L'intégrateur (§5) et le
 débruiteur (§6) restent valables mais passent derrière.
 
-Deux chantiers ouverts, chacun avec son document :
+Trois chantiers ouverts, chacun avec son document :
 
 - **`curves-clarisse.md`** — des tubes, cordes, câbles et branches posés à la
   main, vus de près, sur lesquels on puisse scatter. **Quatre modules livrés et
@@ -23,6 +23,20 @@ Deux chantiers ouverts, chacun avec son document :
   partir de quatre couvertures de romans données comme cibles. Aucun code, mais
   l'inventaire est fait et il change la donne : `SubPixelFilterOutline` existe
   déjà et fait les quatre types de contours.
+- **`cloth-clarisse.md`** — un solveur de tissu XPBD réutilisable
+  (`native/common/cloth_solver.h`) et son premier client, `GeometryQuilt`, qui
+  transforme chaque polygone d'un maillage en coussin capitonné. C'est une vraie
+  simulation, pas un bombement peint : Romain l'avait demandé explicitement.
+  Le document liste les six erreurs de modélisation qui ont chacune produit une
+  image plausible et fausse — elles se reposeront à l'identique au prochain node
+  de simulation. **À lire avant d'écrire quoi que ce soit qui simule.**
+
+  Deux leçons en sortent qui dépassent le tissu. La première : écrire une sonde
+  qui lit le résultat dans le maillage plutôt que de juger au rendu — juger au
+  rendu est lent, cher, et ne dit pas de combien on se trompe. La seconde : une
+  contrainte métrique impossible ne produit pas « un peu de tension », elle
+  produit un artefact ; ce qu'on veut obtenir géométriquement doit être mis dans
+  la forme de repos.
 
 **Une correction importante est tombée ce jour-là**, et elle vaut pour tout le
 projet : la règle « on ne dérive que des classes abstraites » est **fausse**.
