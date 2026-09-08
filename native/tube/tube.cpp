@@ -74,7 +74,7 @@ protected:
 
         static const char *const names[] = {
             "point", "bend", "closed", "steps", "radius", "radius_profile",
-            "sides", "cap", "strands", "twist", "interpolation", "bend_radius", "slack", "gravity"
+            "sides", "cap", "strands", "twist", "interpolation", "bend_radius", "slack", "gravity", "trim_start", "trim_end"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
 
@@ -140,6 +140,25 @@ private:
         const unsigned int rings = path.get_sample_count();
         if (rings < 2u) return 0;
 
+        // Raccourcir la gaine aux deux bouts. C'est ce qui permet a un
+        // connecteur pose a l'extremite de recouvrir la fin du cable au lieu
+        // d'etre traverse par elle -- en gros plan, c'est la difference entre
+        // un raccord et un tube qui sort d'un bouchon.
+        const OfAttr *trim_start_attr = object->get_attribute("trim_start");
+        const OfAttr *trim_end_attr = object->get_attribute("trim_end");
+        const double trim_start = (trim_start_attr != 0)
+                                ? trim_start_attr->get_double() : 0.0;
+        const double trim_end = (trim_end_attr != 0)
+                              ? trim_end_attr->get_double() : 0.0;
+        const double full_length = path.get_length();
+        double trimmed = full_length - trim_start - trim_end;
+        if (trimmed < 1e-6) trimmed = 1e-6;
+        // Rechantillonner change le placement des anneaux : on ne le fait donc
+        // que si un trim est reellement demande, pour que le mode Coudes garde
+        // ses anneaux exactement sur les points de tangence des arcs.
+        const bool trimming = (trim_start > 1e-9 || trim_end > 1e-9)
+                            && full_length > 1e-9 && !closed;
+
         // Un toron unique occupe tout le rayon ; a partir de deux, ils se
         // rangent sur un cercle et leur rayon propre est celui qui les fait
         // s'effleurer sans se penetrer.
@@ -180,14 +199,23 @@ private:
             double scale = 1.0;
             if (profile != 0) scale = profile->get_curve_double(t);
 
-            const GMathVec3d& centre = path.get_position(r);
-            const GMathVec3d& n = path.get_normal(r);
-            const GMathVec3d b = path.get_binormal(r);
+            GMathVec3d centre, tangent_at, n;
+            double arc_here;
+            if (trimming) {
+                arc_here = trim_start + trimmed * t;
+                path.eval_at_distance(arc_here, centre, tangent_at, n);
+            } else {
+                centre = path.get_position(r);
+                tangent_at = path.get_tangent(r);
+                n = path.get_normal(r);
+                arc_here = path.get_arc_length(r);
+            }
+            const GMathVec3d b = vnorm(vcross(tangent_at, n));
 
             // La torsion se compte en tours par unite de longueur reelle, pas
             // par parametre : sinon le pas de la corde se resserrerait dans les
             // virages, ou la courbe est echantillonnee plus dense au metre.
-            const double helix = 2.0 * M_PI * twist * path.get_arc_length(r);
+            const double helix = 2.0 * M_PI * twist * arc_here;
 
             for (unsigned int strand = 0; strand < strands; strand++) {
                 const double phase = helix

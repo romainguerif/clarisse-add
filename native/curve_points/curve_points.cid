@@ -70,6 +70,7 @@ class "GeometryCurvePoints" "GeometryParticle" {
             doc "Nombre fixe repartit N points sur toute la longueur. Espacement en pose un tous les tant, et le compte depend de la longueur de la courbe."
             preset "Nombre fixe" "0"
             preset "Espacement" "1"
+            preset "Extremites" "2"
             value 0
         }
 
@@ -96,6 +97,14 @@ class "GeometryCurvePoints" "GeometryParticle" {
             doc "Decale tous les points le long de la courbe, en fraction de l'ecart entre deux."
             animatable yes
             numeric_range yes -1 1
+            value 0.0
+        }
+
+        distance "end_offset" {
+            output "geometry"
+            doc "En mode Extremites, avance ou recule les deux points le long de la courbe. Positif les sort du cable, ce qui laisse la place a un connecteur sans qu'il traverse la gaine."
+            animatable yes
+            ui_range yes -1 1
             value 0.0
         }
 

@@ -132,6 +132,24 @@ class "GeometryTube" "GeometryPolymesh" {
             value 0.5
         }
 
+        distance "trim_start" {
+            output "geometry"
+            doc "Raccourcit la gaine au depart. Sert a la faire finir a l'interieur d'un connecteur plutot que de le traverser."
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 1
+            value 0.0
+        }
+
+        distance "trim_end" {
+            output "geometry"
+            doc "Raccourcit la gaine a l'arrivee."
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 1
+            value 0.0
+        }
+
         bool "cap" {
             output "geometry"
             doc "Ferme les deux extremites du tube."

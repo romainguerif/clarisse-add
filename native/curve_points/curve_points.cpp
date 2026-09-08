@@ -43,7 +43,7 @@ using namespace curve_core;
 
 namespace {
 
-enum { MODE_COUNT = 0, MODE_SPACING = 1 };
+enum { MODE_COUNT = 0, MODE_SPACING = 1, MODE_ENDS = 2 };
 enum { NORMAL_TANGENT = 0, NORMAL_NORMAL = 1, NORMAL_BINORMAL = 2, NORMAL_UP = 3 };
 
 } // namespace
@@ -61,7 +61,7 @@ protected:
         static const char *const names[] = {
             "control_points", "closed", "steps", "mode", "count", "spacing",
             "offset", "include_last", "normal_source", "lateral_offset",
-            "interpolation", "bend_radius", "slack", "gravity"
+            "interpolation", "bend_radius", "slack", "gravity", "end_offset"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
 
@@ -118,6 +118,52 @@ private:
         const bool include_last = object->get_attribute("include_last")->get_bool();
         const long normal_source = object->get_attribute("normal_source")->get_long();
         const double lateral = object->get_attribute("lateral_offset")->get_double();
+
+        // Le mode Extremites est a part : deux points, et surtout deux
+        // tangentes opposees. Un connecteur pose au depart doit regarder vers
+        // l'exterieur du cable, pas dans le sens de parcours -- sans quoi les
+        // deux embouts d'un meme cable pointent du meme cote.
+        if (mode == MODE_ENDS) {
+            const double end_offset =
+                object->get_attribute("end_offset")->get_double();
+
+            CoreArray<GMathVec3f> ends(2);
+            CoreArray<GMathVec3f> end_normals(2);
+
+            for (unsigned int i = 0; i < 2u; i++) {
+                const double distance = (i == 0u) ? -end_offset
+                                                  : length + end_offset;
+                GMathVec3d position, tangent, normal;
+                path.eval_at_distance(distance, position, tangent, normal);
+
+                // eval_at_distance borne aux extremites ; on prolonge droit au
+                // dela, sinon un offset positif ne sortirait jamais du cable.
+                if (distance < 0.0) {
+                    position = vadd(position, vscale(tangent, distance));
+                } else if (distance > length) {
+                    position = vadd(position, vscale(tangent, distance - length));
+                }
+
+                GMathVec3d axis = (i == 0u) ? vscale(tangent, -1.0) : tangent;
+                switch (normal_source) {
+                    case NORMAL_NORMAL:   axis = normal; break;
+                    case NORMAL_BINORMAL: axis = vnorm(vcross(tangent, normal)); break;
+                    case NORMAL_UP:       axis = GMathVec3d(0.0, 1.0, 0.0); break;
+                    default: break;
+                }
+
+                ends[i] = GMathVec3f(float(position[0]), float(position[1]),
+                                     float(position[2]));
+                end_normals[i] = GMathVec3f(float(axis[0]), float(axis[1]),
+                                            float(axis[2]));
+            }
+
+            GeometryPointCloud caps;
+            if (!caps.init(2u, ends.get_data(), end_normals.get_data(), 0)) {
+                return 0;
+            }
+            return new ParticleCloud(caps);
+        }
 
         // Combien de points, et a quel pas.
         unsigned int count = 0;
