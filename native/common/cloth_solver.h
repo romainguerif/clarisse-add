@@ -73,6 +73,11 @@ struct Distance {
     unsigned int b;
     double rest;
     double compliance;
+    // La meme, quand l'arete est comprimee plutot qu'etiree. Un tissu resiste a
+    // l'etirement et flambe librement : les deux ne se valent pas, et une
+    // contrainte symetrique interdit au tissu de se raccourcir localement,
+    // c'est-a-dire d'empiler des plis.
+    double compression;
     double lambda;
 };
 
@@ -128,14 +133,31 @@ struct Pressure {
 
 class Solver {
 public:
-    Solver() : m_has_pressure(false) {}
+    Solver() : pressure_force(0.0), m_has_pressure(false) {}
 
     CoreVector<GMathVec3d> positions;
+    CoreVector<GMathVec3d> velocity;      // vide = simulation quasi statique
     CoreVector<double> inverse_mass;      // zero pour un point epingle
     CoreVector<Distance> distances;
     CoreVector<Bend> bends;
     CoreVector<Anchor> anchors;
     Pressure pressure;
+
+    // La pression comme force, et non comme contrainte de volume.
+    //
+    // Les deux existent dans la litterature et ne font pas la meme chose. Une
+    // contrainte de volume vise une valeur et s'arrete des qu'elle l'atteint ;
+    // si on la regle sur le volume de la forme voulue, elle est satisfaite des
+    // le depart et ne pousse jamais rien. Une force, elle, pousse toujours, et
+    // le gonflement s'arrete quand la tension de la membrane l'equilibre. C'est
+    // ce second modele qu'utilisent les solveurs de tissu de production, et
+    // c'est de lui que naissent les plis : la membrane est poussee vers
+    // l'exterieur, le tissu en trop ne peut pas suivre, il se plie en chemin.
+    //
+    // La valeur est une acceleration, pas une force au sens strict : a densite
+    // surfacique uniforme, la masse d'un sommet est proportionnelle a son aire
+    // et l'aire se simplifie. Il ne reste que la direction de la normale.
+    double pressure_force;
 
     inline void enable_pressure(const bool& on) { m_has_pressure = on; }
 
@@ -198,52 +220,122 @@ public:
         return total;
     }
 
-    // La relaxation. Un seul pas, `iterations` projections, les multiplicateurs
-    // accumules d'un bout a l'autre : c'est ce qui fait converger vers
-    // l'equilibre statique plutot que vers un compromis dependant du budget.
+    // La simulation. `substeps` pas de temps, `iterations` projections par pas.
+    //
+    // A un seul pas on retrouve exactement l'ancienne relaxation statique : le
+    // tissu glisse vers l'equilibre lisse le plus proche de son point de
+    // depart. Au-dela, la vitesse entre en jeu et change la nature du resultat.
+    // Le tissu depasse, revient, et se pose dans un etat bien plus plisse -- ce
+    // sont deux equilibres egalement valides, mais c'est la dynamique qui va
+    // chercher le second. C'est la difference entre deux grands plis et un
+    // fronce dense, et c'est ce que font tous les solveurs de tissu de
+    // production.
+    //
+    // Le pas de temps vaut un et n'est jamais expose : toutes les compliances
+    // gardent donc le sens qu'on leur a calibre, et `substeps` n'ajoute que de
+    // l'inertie.
     void
-    solve(const unsigned int& iterations, const GMathVec3d& gravity)
+    solve(const unsigned int& substeps, const unsigned int& iterations,
+          const GMathVec3d& gravity, const double& damping)
     {
         const unsigned int count = positions.get_count();
         if (count == 0u) return;
 
-        // La gravite est appliquee une fois, comme un deplacement initial. On
-        // ne l'integre pas dans le temps : il n'y a pas de trajectoire, juste
-        // une position de depart deja penchee dans le bon sens.
+        velocity.remove_all();
         for (unsigned int i = 0; i < count; i++) {
-            if (inverse_mass[i] > 0.0) {
-                positions[i] = cadd(positions[i], gravity);
-            }
+            velocity.add(GMathVec3d(0.0, 0.0, 0.0));
         }
 
-        for (unsigned int i = 0; i < distances.get_count(); i++) {
-            distances[i].lambda = 0.0;
-        }
-        for (unsigned int i = 0; i < bends.get_count(); i++) {
-            bends[i].lambda = 0.0;
-        }
-        for (unsigned int i = 0; i < anchors.get_count(); i++) {
-            anchors[i].lambda = 0.0;
-        }
-        pressure.lambda = 0.0;
-
+        CoreArray<GMathVec3d> previous(count);
         CoreArray<GMathVec3d> gradient;
-        if (m_has_pressure) gradient.resize(count);
+        if (m_has_pressure || pressure_force != 0.0) gradient.resize(count);
 
-        for (unsigned int it = 0; it < iterations; it++) {
-            // Balayage alterne. L'ordre de Gauss-Seidel biaise la propagation
-            // dans le sens du parcours ; l'inverser une fois sur deux symetrise
-            // le resultat sans rien couter.
-            const bool forward = (it % 2u) == 0u;
-            project_distances(forward);
-            project_bends(forward);
-            project_anchors(forward);
-            if (m_has_pressure) project_pressure(gradient);
+        const double keep = 1.0 - ((damping < 0.0) ? 0.0
+                                  : ((damping > 1.0) ? 1.0 : damping));
+        const unsigned int steps = (substeps < 1u) ? 1u : substeps;
+
+        for (unsigned int step = 0; step < steps; step++) {
+            // La prediction : ou le tissu irait s'il n'y avait aucune
+            // contrainte. C'est elle qui porte l'inertie et la gravite.
+            if (pressure_force != 0.0
+                && pressure.triangles.get_count() > 0u) {
+                accumulate_normals(gradient);
+            }
+
+            for (unsigned int i = 0; i < count; i++) {
+                previous[i] = positions[i];
+                if (inverse_mass[i] <= 0.0) continue;
+
+                GMathVec3d push = cadd(velocity[i], gravity);
+                if (pressure_force != 0.0
+                    && pressure.triangles.get_count() > 0u) {
+                    const double norm = gradient[i].get_length();
+                    if (norm > 1e-12) {
+                        push = cadd(push, cscale(gradient[i],
+                                                 pressure_force / norm));
+                    }
+                }
+                positions[i] = cadd(positions[i], push);
+            }
+
+            for (unsigned int i = 0; i < distances.get_count(); i++) {
+                distances[i].lambda = 0.0;
+            }
+            for (unsigned int i = 0; i < bends.get_count(); i++) {
+                bends[i].lambda = 0.0;
+            }
+            for (unsigned int i = 0; i < anchors.get_count(); i++) {
+                anchors[i].lambda = 0.0;
+            }
+            pressure.lambda = 0.0;
+
+            for (unsigned int it = 0; it < iterations; it++) {
+                // Balayage alterne. L'ordre de Gauss-Seidel biaise la
+                // propagation dans le sens du parcours ; l'inverser une fois
+                // sur deux symetrise le resultat sans rien couter.
+                const bool forward = (it % 2u) == 0u;
+                project_distances(forward);
+                project_bends(forward);
+                project_anchors(forward);
+                if (m_has_pressure) project_pressure(gradient);
+            }
+
+            // La vitesse se relit sur le deplacement effectif : c'est ce qui
+            // fait qu'une contrainte qui retient le tissu lui enleve aussi son
+            // elan, sans qu'on ait a le calculer.
+            for (unsigned int i = 0; i < count; i++) {
+                if (inverse_mass[i] <= 0.0) continue;
+                velocity[i] = cscale(csub(positions[i], previous[i]), keep);
+            }
         }
     }
 
 private:
     bool m_has_pressure;
+
+    // La normale de chaque sommet, ponderee par l'aire des triangles qui la
+    // portent -- c'est exactement le gradient du volume, au facteur six pres.
+    void
+    accumulate_normals(CoreArray<GMathVec3d>& gradient) const
+    {
+        const unsigned int count = positions.get_count();
+        for (unsigned int i = 0; i < count; i++) {
+            gradient[i] = GMathVec3d(0.0, 0.0, 0.0);
+        }
+        const unsigned int triangles = pressure.triangles.get_count() / 3u;
+        for (unsigned int t = 0; t < triangles; t++) {
+            const unsigned int ia = pressure.triangles[t * 3u];
+            const unsigned int ib = pressure.triangles[t * 3u + 1u];
+            const unsigned int ic = pressure.triangles[t * 3u + 2u];
+            const GMathVec3d& a = positions[ia];
+            const GMathVec3d& b = positions[ib];
+            const GMathVec3d& c = positions[ic];
+            const GMathVec3d n = ccross(csub(b, a), csub(c, a));
+            gradient[ia] = cadd(gradient[ia], n);
+            gradient[ib] = cadd(gradient[ib], n);
+            gradient[ic] = cadd(gradient[ic], n);
+        }
+    }
 
     static double
     cotangent(const GMathVec3d& u, const GMathVec3d& v)
@@ -272,9 +364,13 @@ private:
             const GMathVec3d n = cscale(delta, 1.0 / length);
             const double violation = length - c.rest;
 
-            const double denominator = w + c.compliance;
+            // Comprimee, l'arete cede beaucoup plus facilement qu'etiree.
+            const double alpha =
+                (violation < 0.0) ? c.compression : c.compliance;
+
+            const double denominator = w + alpha;
             const double d_lambda =
-                (-violation - c.compliance * c.lambda) / denominator;
+                (-violation - alpha * c.lambda) / denominator;
             c.lambda += d_lambda;
 
             positions[c.a] = cadd(positions[c.a], cscale(n, wa * d_lambda));

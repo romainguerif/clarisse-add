@@ -38,16 +38,17 @@ ix.cmds.SetValues([str(grid) + ".translate"], ["-4.0", "0.0", "0.0"])
 ix.cmds.SetValues([str(grid) + ".unseen_by_camera"], ["1"])
 
 matelas = quilt("matelas", grid,
-                resolution=96, levels=5, iterations=320,
-                puff_relative=0.33, shoulder=2.6, squareness=5.0,
-                pressure=1.0, pressure_softness=0.005,
-                seam=0.055, seam_depth=0.025,
-                seam_gather=0.34, seam_wrinkle_scale=0.04,
-                wrinkles=0.07, wrinkle_reach=0.8, corner_gather=0.06,
-                stretch=0.02, shear_stiffness=4.0, crease_stretch=4.0,
-                wrinkle_scale=0.09, wrinkle_size=0.0, stuffing=16.0,
-                gravity_strength=0.05, gravity_y=-1.0,
-                jitter=0.010, smoothing=0, smoothing_amount=0.2)
+                resolution=96, levels=5, substeps=160, iterations=8,
+                damping=0.02,
+                pressure=4.0, pin_rings=2,
+                seam=0.055, seam_depth=0.03,
+                seam_gather=0.30, seam_wrinkle_scale=0.055,
+                wrinkles=0.12, wrinkle_reach=2.0, corner_gather=0.0,
+                stretch=0.02, compression=500.0, shear_stiffness=4.0,
+                crease_stretch=1.0, wrinkle_variation=0.45,
+                wrinkle_scale=0.045, wrinkle_size=0.0,
+                gravity_strength=0.0,
+                jitter=0.002, smoothing=0, smoothing_amount=0.2)
 
 # Une sphere : triangles et pentagones, orientations quelconques. Ce qu'on
 # regarde ici, ce sont les aretes partagees : le contour est enfonce le long des
@@ -61,16 +62,16 @@ ix.cmds.SetValues([str(sphere) + ".translate"], ["-0.6", "0.0", "-3.2"])
 ix.cmds.SetValues([str(sphere) + ".unseen_by_camera"], ["1"])
 
 boule = quilt("boule", sphere,
-              resolution=48, levels=4, iterations=260,
-              puff_relative=0.33, shoulder=2.6, squareness=5.0,
-              pressure=1.0, pressure_softness=0.005,
-              seam=0.065, seam_depth=0.025,
-              seam_gather=0.32, seam_wrinkle_scale=0.06,
-              wrinkles=0.07, wrinkle_reach=0.8, corner_gather=0.06,
-              stretch=0.02, shear_stiffness=4.0, crease_stretch=4.0,
-              wrinkle_scale=0.13, stuffing=12.0,
-              gravity_strength=0.04,
-              jitter=0.010, smoothing=0, smoothing_amount=0.2)
+              resolution=28, levels=3, substeps=100, iterations=8,
+              damping=0.02,
+              pressure=4.0, pin_rings=2,
+              seam=0.065, seam_depth=0.03,
+              seam_gather=0.28, seam_wrinkle_scale=0.06,
+              wrinkles=0.12, wrinkle_reach=2.0,
+              stretch=0.02, compression=500.0, shear_stiffness=4.0,
+              crease_stretch=1.0, wrinkle_variation=0.45, wrinkle_scale=0.08,
+              gravity_strength=0.0,
+              jitter=0.002, smoothing=0, smoothing_amount=0.2)
 
 material = ix.cmds.CreateObject("mat", "MaterialPhysicalStandard", "Global", "project:/")
 ix.cmds.SetValues([str(material) + ".diffuse_front_color"], ["0.5", "0.51", "0.55"])

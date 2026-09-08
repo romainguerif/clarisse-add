@@ -353,6 +353,83 @@ rééclairée en cours de route : on jugeait des sillons dans le noir.
 
 ---
 
+## 5 sexies. Le changement de modèle : on suit Fluent
+
+Romain a fourni le code de Fluent. Il ne fallait pas le lire pour copier —
+c'est du code commercial — mais pour comprendre, et ce qu'on y comprend rend
+caduque une partie de ce qui précède.
+
+**Fluent n'écrit pas de solveur.** Il extrait les faces sélectionnées, remaille
+vers deux mille faces, épingle deux anneaux de bord, agrandit le tissu de dix
+pour cent, met une force de pression uniforme, règle la flexion cent fois plus
+souple que la tension, coupe la gravité, et lance le solveur de tissu de
+Blender pendant plusieurs dizaines d'images. Puis il fige et subdivise.
+
+Trois différences avec ce que j'avais écrit, et toutes les trois comptent.
+
+**Une force, pas une contrainte de volume.** Une force pousse sans jamais être
+satisfaite : le gonflement s'arrête quand la tension de la membrane l'équilibre.
+Ma contrainte de volume visait un volume calculé d'avance — elle était donc déjà
+satisfaite au départ et ne poussait rien. C'est pour ça que la dynamique que je
+venais d'ajouter ne changeait rien : il n'y avait aucune force motrice.
+
+**Départ à plat.** La forme du coussin n'est pas dessinée, elle est le résultat
+du gonflement d'une membrane épinglée. J'avais dessiné à la main un patron
+analytique — rayon, épaulement, arrondi des angles — pour obtenir ce que la
+physique produit toute seule. Les plis viennent du **trajet**, pas de l'arrivée :
+la pression pousse, le tissu en trop ne peut pas suivre, il se plie en chemin.
+On ne peut pas atteindre cet état en glissant vers l'équilibre le plus proche,
+ce qui explique tout le mal qu'on avait eu.
+
+**Aucun rembourrage.** La fondation élastique (§4.1) était un contournement du
+solveur statique. Avec une vraie dynamique elle ne sert plus, et pire : elle
+rappelait le tissu vers sa forme à chaque pas, écrasant les plis qu'on
+cherchait. Mesure faite, elle rendait `inflate_from` totalement inopérant — les
+mêmes chiffres à 0.15 et à 1.0.
+
+Un quatrième emprunt, moins visible : **le tissu ne résiste pratiquement pas à
+la compression**. Blender expose tension et compression séparément ; ma contrainte
+de distance était symétrique, donc incapable de se raccourcir localement,
+c'est-à-dire d'empiler des plis. C'est ce réglage, à lui seul, qui a fait passer
+le compte de plis au bord de trois à dix-huit.
+
+### Ce que la mesure dit du nouveau modèle
+
+| | plis au bord |
+|---|---|
+| compression symétrique | 3 |
+| compression libre | 2 |
+| compression libre + flexion souple | 18 |
+| idem, résolution 96, simulation longue | 24 |
+
+Et un résultat qui a fait supprimer du code : avec une force de pression, le
+nombre de plis est **le même** qu'on amorce fort et orienté ou vingt fois plus
+faiblement et sans direction. L'instabilité existe vraiment maintenant, et c'est
+elle qui choisit. Le bruit d'amorçage fort ne faisait plus qu'imposer sa propre
+périodicité par-dessus. Il est redevenu une graine.
+
+### Ce qui reste
+
+Les plis sortent **réguliers** — un éventail cannelé, là où les références sont
+désordonnées. Ce n'est pas un défaut du solveur : une membrane carrée, régulière,
+uniformément tendue, flambe en éventail régulier. C'est la bonne réponse à une
+question trop propre.
+
+Fluent y échappe en remaillant le panneau en triangles isotropes irréguliers
+avant de simuler (Instant Meshes ou QuadRemesher, en processus externe). On a
+essayé l'équivalent bon marché — déplacer les sommets dans leur plan avant toute
+mesure de longueur, réglage `mesh_jitter` — et à un tiers de maille ça adoucit
+sans casser le mode. Deux suites possibles :
+
+- monter franchement le désordre, et voir où ça casse ;
+- produire une vraie triangulation irrégulière par patch, en interne. C'est du
+  travail, mais ça garde tout dans Clarisse — appeler un remailleur externe par
+  coussin, à la construction de la géométrie, coûterait un processus par patch,
+  casserait l'évaluation paresseuse et rendrait la scène indépendante de la
+  ferme de rendu.
+
+---
+
 ## 6. L'échelle du monde
 
 Tout se résout dans un repère normalisé, centré sur le coussin et divisé par son

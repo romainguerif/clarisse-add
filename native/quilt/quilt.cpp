@@ -80,19 +80,20 @@ struct Settings {
     double seam_gather;     // surplus fronce dans le mplat
     double seam_wrinkle;    // largeur des plis du fronce, en fraction du coussin
 
-    double puff;            // hauteur visee, en fraction du rayon
-    double shoulder;        // exposant du profil : haut = dessus plat, flancs raides
-    double squareness;      // arrondi des angles du coussin
-    double pressure;        // multiplicateur du volume vise
-    double pressure_softness;
+    double pressure;        // force de gonflement, en acceleration
+    unsigned int pin_rings; // anneaux de bord epingles
 
-    double wrinkles;        // surplus de matiere par rapport au patron du coussin
+    double wrinkles;        // agrandissement du tissu par rapport au plat
     double corner_gather;   // surplus supplementaire aux quatre coins
-    double wrinkle_reach;   // jusqu'ou le surplus remonte depuis la couture
-    double stuffing;        // fermete du rembourrage ; 0 = enveloppe vide
+    double wrinkle_reach;   // jusqu'ou le surplus reste concentre pres du bord
+    double wrinkle_variation; // irregularite du surplus, d'un endroit a l'autre
+    double mesh_jitter;     // irregularite du maillage, en fraction de la maille
 
     double stretch;
+    double compression;     // combien l'arete cede plus facilement comprimee
     double shear;
+    unsigned int substeps;
+    double damping;
     double crease_stretch;  // allongement des plis perpendiculairement a la couture
     double wrinkle_scale;   // largeur de pli visee, en fraction du coussin
     double wrinkle_size;    // la meme, en unites du monde ; 0 = utiliser la fraction
@@ -147,63 +148,10 @@ smoothstep01(const double& width, const double& x)
     return t * t * (3.0 - 2.0 * t);
 }
 
-// Le profil du coussin vise : nul sur tout le contour, plat au sommet, et --
-// c'est le point delicat -- de pente finie au ras de la couture.
-//
-// La premiere version elevait un sinus a une puissance inferieure a un, ce qui
-// donne bien un dessus aplati et des flancs redresses, mais dont la pente est
-// infinie au bord. Un patron a tangente verticale n'est pas suivable : le tissu
-// ne peut pas monter droit hors de sa couture, et il se rabattait en un clapet
-// dresse au milieu de chaque arete -- un champignon noir, bien visible au
-// rendu. La forme 1 - (1 - t)^k a la meme allure et une pente qui vaut
-// simplement k, ce qui la rend representable.
-inline double
-cushion_profile(const double& t, const double& shoulder)
-{
-    if (t <= 0.0) return 0.0;
-    if (t >= 1.0) return 1.0;
-    return 1.0 - pow(1.0 - t, shoulder);
-}
-
-// La couture est un mplat, pas une tension.
-//
-// La premiere idee etait de raccourcir les longueurs au repos dans la bande de
-// couture pour y tendre le tissu. C'etait une erreur, et le rendu l'a dit :
-// cette bande a un bord epingle, donc le tissu ne peut pas y ceder en glissant,
-// il ne peut que tirer l'epaulement vers le bas. Et il tire d'autant plus fort
-// que l'epaulement est raide, c'est-a-dire au milieu de chaque arete -- d'ou
-// une encoche noire, exactement la, sur tous les coussins.
-//
-// Le vrai capitonnage ne fait pas ca : il laisse un mplat autour du coussin, et
-// le bombement ne commence qu'apres. C'est une forme, pas une contrainte, donc
-// elle est toujours realisable.
-// Le bombement se lit sur la distance au bord, pas sur un produit de deux
-// profils. Le produit affaisse les coins deux fois et donne un coussin rond
-// perdu au milieu de sa case ; ce qu'on veut est un carre aux angles adoucis,
-// qui remplit la sienne. La distance est donc un minimum lisse des deux
-// distances aux bords, dont l'exposant regle justement l'arrondi des angles.
-inline double
-cushion_bump(const double& u, const double& v, const double& shoulder,
-             const double& flat, const double& squareness)
-{
-    const double span = 1.0 - flat;
-    if (span <= 1e-6) return 0.0;
-
-    const double du = (2.0 * ((u < 0.5) ? u : 1.0 - u) - flat) / span;
-    const double dv = (2.0 * ((v < 0.5) ? v : 1.0 - v) - flat) / span;
-    if (du <= 0.0 || dv <= 0.0) return 0.0;
-
-    const double p = squareness;
-    double m = pow(pow(du, -p) + pow(dv, -p), -1.0 / p)
-             * pow(2.0, 1.0 / p);
-    if (m > 1.0) m = 1.0;
-    return cushion_profile(m, shoulder);
-}
-
 void
 add_distance(cloth::Solver& solver, const unsigned int& a,
              const unsigned int& b, const double& give,
-             const double& compliance)
+             const double& compliance, const double& compression)
 {
     cloth::Distance d;
     d.a = a;
@@ -213,6 +161,7 @@ add_distance(cloth::Solver& solver, const unsigned int& a,
     // deux fois plus fine est deux fois plus raide, et le tissu garde la meme
     // elasticite quelle que soit la resolution.
     d.compliance = compliance * d.rest;
+    d.compression = d.compliance * compression;
     d.lambda = 0.0;
     solver.distances.add(d);
 }
@@ -251,7 +200,8 @@ seam_band(const Settings& settings, const double& u, const double& v)
 }
 
 double
-surplus_at(const Settings& settings, const double& u, const double& v)
+surplus_at(const Settings& settings, const double& u, const double& v,
+           const unsigned int& seed)
 {
     const double du = 2.0 * ((u < 0.5) ? u : 1.0 - u);
     const double dv = 2.0 * ((v < 0.5) ? v : 1.0 - v);
@@ -269,7 +219,16 @@ surplus_at(const Settings& settings, const double& u, const double& v)
     if (reach < 0.0) reach = 0.0;
     const double ring =
         0.15 + 0.85 * (1.0 - smoothstep01(settings.wrinkle_reach, reach));
-    const double extra = settings.wrinkles * ring;
+    // L'irregularite. Elle module la quantite de tissu a basse frequence, ce
+    // qui suffit a casser la periodicite des plis sans changer leur largeur :
+    // ils restent de la meme taille, mais ne tombent plus au meme endroit.
+    double variation = 1.0;
+    if (settings.wrinkle_variation > 0.0) {
+        variation += settings.wrinkle_variation
+                   * fbm(GMathVec3d(u, v, 0.0), 3.0, 2u, 0.5, seed + 5081u);
+        if (variation < 0.0) variation = 0.0;
+    }
+    const double extra = settings.wrinkles * ring * variation;
 
     // Le fronce des coins. Un coin est le seul endroit ou le tissu est tenu
     // dans deux directions a la fois ; sur un vrai capitonnage c'est la qu'on
@@ -290,10 +249,18 @@ surplus_at(const Settings& settings, const double& u, const double& v)
     return 1.0 + settings.seam_gather * (1.0 - band) + (extra + corner) * band;
 }
 
-// La membrane d'un patch, resolue a la resolution `n`, dans le repere
-// normalise. Les positions de depart peuvent venir d'un niveau plus grossier :
-// c'est tout l'interet de la cascade, les grandes formes sont deja la et les
-// passes fines n'ont plus qu'a poser les plis.
+// La membrane d'un patch, resolue a la resolution `n`.
+//
+// Le modele est celui des solveurs de tissu de production, lu dans Fluent : un
+// tissu plat, epingle sur son contour, un peu plus grand qu'il ne faut, qu'une
+// force de pression gonfle pendant une vraie simulation. La forme du coussin
+// n'est pas dessinee -- elle est ce que donne une membrane epinglee qu'on
+// gonfle, et c'est pour ca qu'elle est juste sans qu'on ait a la decrire.
+//
+// Les plis viennent du trajet, pas de l'arrivee : la pression pousse la
+// membrane vers l'exterieur, le tissu en trop ne peut pas suivre, et il se plie
+// en chemin. C'est pour ca qu'une relaxation statique n'en produisait pas -- on
+// ne peut pas atteindre cet etat en glissant vers l'equilibre le plus proche.
 void
 solve_patch(const LocalPatch& patch, const Settings& settings,
             const double& bend_alpha, const double& wrinkle,
@@ -306,44 +273,87 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
     const unsigned int count = side * side;
     const bool warm = (grid.get_count() == count);
 
-    // Le patron : le coussin vise, dessine analytiquement. Il sert a trois
-    // choses a la fois -- les longueurs au repos, le volume vise, et la
-    // position de depart. C'est ce qui fait que le solveur commence deja pres
-    // de la reponse et n'a plus qu'a decider ou tombent les plis.
+    unsigned int rings = settings.pin_rings;
+    if (rings < 1u) rings = 1u;
+    if (rings * 3u > n) rings = (n / 3u > 0u) ? n / 3u : 1u;
+
+    // Le tissu, a plat sur le quad. Les anneaux epingles sont ceux du bord --
+    // Fluent en prend deux, ce qui raidit l'attache et empeche le bourrelet de
+    // deborder sur la couture. Ils s'enfoncent dans le sillon d'autant plus
+    // qu'ils sont pres du contour.
     for (unsigned int j = 0; j < side; j++) {
         const double v = double(j) / double(n);
         for (unsigned int i = 0; i < side; i++) {
             const double u = double(i) / double(n);
-            solver.positions.add(
-                vadd(quad_point(patch.corner, u, v),
-                     vscale(patch.normal,
-                            settings.puff
-                            * cushion_bump(u, v, settings.shoulder,
-                                           settings.seam * 0.8,
-                                           settings.squareness))));
-            solver.inverse_mass.add((i == 0u || j == 0u || i == n || j == n)
-                                    ? 0.0 : 1.0);
+
+            unsigned int ring = i;
+            if (j < ring) ring = j;
+            if (n - i < ring) ring = n - i;
+            if (n - j < ring) ring = n - j;
+
+            GMathVec3d p = quad_point(patch.corner, u, v);
+
+            // Le desordre du maillage. Il est applique avant toute mesure de
+            // longueur, donc c'est bien un maillage irregulier qu'on simule, et
+            // non un maillage regulier qu'on aurait bouge.
+            if (settings.mesh_jitter > 0.0 && ring >= rings) {
+                const double cell = 1.0 / double(n);
+                const double fade =
+                    smoothstep01(2.0 / double(n),
+                                 double(ring - rings) / double(n));
+                const double du =
+                    fbm(GMathVec3d(u, v, 0.0), double(n) * 0.5, 2u, 0.5,
+                        seed + 911u);
+                const double dv =
+                    fbm(GMathVec3d(u, v, 7.3), double(n) * 0.5, 2u, 0.5,
+                        seed + 1723u);
+                const GMathVec3d ax =
+                    vsub(quad_point(patch.corner, 1.0, v),
+                         quad_point(patch.corner, 0.0, v));
+                const GMathVec3d ay =
+                    vsub(quad_point(patch.corner, u, 1.0),
+                         quad_point(patch.corner, u, 0.0));
+                const double amount = settings.mesh_jitter * cell * fade;
+                p = vadd(p, vadd(vscale(ax, amount * du),
+                                 vscale(ay, amount * dv)));
+            }
+
+            if (ring < rings) {
+                const double sink =
+                    1.0 - double(ring) / double(rings);
+                p = vadd(p, vscale(patch.normal,
+                                   -settings.seam_depth * sink));
+            }
+            solver.positions.add(p);
+            solver.inverse_mass.add((ring < rings) ? 0.0 : 1.0);
         }
     }
 
+    // Les longueurs au repos, prises sur le tissu a plat et agrandies. C'est le
+    // `shrink` negatif de Fluent : dix pour cent de tissu en trop, qui n'ont
+    // nulle part ou aller une fois la membrane gonflee.
     for (unsigned int j = 0; j < side; j++) {
         const double v = double(j) / double(n);
         for (unsigned int i = 0; i < side; i++) {
             const double u = double(i) / double(n);
             const unsigned int here = grid_index(i, j, n);
-            const double g0 = surplus_at(settings, u, v);
+            const double g0 = surplus_at(settings, u, v, seed);
 
             if (i + 1u < side) {
                 const double g1 =
-                    surplus_at(settings, double(i + 1u) / double(n), v);
+                    surplus_at(settings, double(i + 1u) / double(n), v,
+                               seed);
                 add_distance(solver, here, grid_index(i + 1u, j, n),
-                             0.5 * (g0 + g1), settings.stretch);
+                             0.5 * (g0 + g1), settings.stretch,
+                             settings.compression);
             }
             if (j + 1u < side) {
                 const double g1 =
-                    surplus_at(settings, u, double(j + 1u) / double(n));
+                    surplus_at(settings, u, double(j + 1u) / double(n),
+                               seed);
                 add_distance(solver, here, grid_index(i, j + 1u, n),
-                             0.5 * (g0 + g1), settings.stretch);
+                             0.5 * (g0 + g1), settings.stretch,
+                             settings.compression);
             }
             // Le cisaillement. Un tissu tisse cede beaucoup plus facilement en
             // biais qu'en droit fil ; sans ce terme la grille se deforme en
@@ -351,29 +361,22 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
             if (i + 1u < side && j + 1u < side) {
                 const double gd = surplus_at(settings,
                                              double(i + 1u) / double(n),
-                                             double(j + 1u) / double(n));
+                                             double(j + 1u) / double(n), seed);
                 add_distance(solver, here, grid_index(i + 1u, j + 1u, n),
-                             0.5 * (g0 + gd), settings.shear);
+                             0.5 * (g0 + gd), settings.shear,
+                             settings.compression);
                 add_distance(solver, grid_index(i + 1u, j, n),
                              grid_index(i, j + 1u, n),
-                             0.5 * (g0 + gd), settings.shear);
+                             0.5 * (g0 + gd), settings.shear,
+                             settings.compression);
             }
         }
     }
 
-    // La flexion, dans les deux directions de la grille. C'est elle qui decide
-    // de la largeur des plis : une membrane raide en fait peu et des grands,
-    // une souple beaucoup et des petits.
-    //
-    // Sa pose de repos est le coussin vise, pas le carre a plat. Le
-    // capitonnage est cousu puis mis en forme : ce n'est pas au bombement de
-    // couter de l'energie de flexion, seulement a ce qui s'en ecarte. Cela
-    // laisse la raideur ne gouverner qu'une chose, la largeur des plis, ce qui
-    // est exactement ce qu'on veut pouvoir regler.
-    // La raideur n'est pas la meme partout. Dans le mplat de couture le tissu
-    // est libre et se fronce menu ; sur le coussin il est tendu sur son
-    // rembourrage et ne fait que de larges ondulations. Une seule valeur pour
-    // les deux donnerait soit un dessus grumeleux, soit une couture lisse.
+    // La flexion, dans les deux directions de la grille, et sur la pose a plat
+    // -- un tissu est coupe a plat, c'est de la qu'il resiste a se plier.
+    // Fluent la regle cent fois plus souple que la tension : c'est ce rapport
+    // qui decide de la finesse des plis.
     for (unsigned int j = 1; j + 1u < side; j++) {
         const double v = double(j) / double(n);
         for (unsigned int i = 1; i + 1u < side; i++) {
@@ -390,17 +393,8 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
         }
     }
 
-    // L'enveloppe fermee : la membrane, plus un fond plat. La contrainte de
-    // volume n'a de sens que sur une surface close, et le fond reproduit la
-    // realite d'un capitonnage, dont le dessous est cousu sur son support.
-    const unsigned int floor_point = solver.positions.get_count();
-    GMathVec3d floor_centre(0.0, 0.0, 0.0);
-    for (unsigned int k = 0; k < 4u; k++) {
-        floor_centre = vadd(floor_centre, patch.corner[k]);
-    }
-    solver.positions.add(vscale(floor_centre, 0.25));
-    solver.inverse_mass.add(0.0);
-
+    // Les triangles ne servent plus a fermer un volume mais a donner sa normale
+    // a chaque sommet : c'est le long d'elle que la pression pousse.
     for (unsigned int j = 0; j < n; j++) {
         for (unsigned int i = 0; i < n; i++) {
             const unsigned int a = grid_index(i, j, n);
@@ -411,113 +405,43 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
             add_triangle(solver, a, c, d);
         }
     }
-    for (unsigned int i = 0; i < n; i++) {
-        add_triangle(solver, grid_index(i + 1u, 0u, n), grid_index(i, 0u, n),
-                     floor_point);
-        add_triangle(solver, grid_index(i, n, n), grid_index(i + 1u, n, n),
-                     floor_point);
-        add_triangle(solver, grid_index(0u, i, n), grid_index(0u, i + 1u, n),
-                     floor_point);
-        add_triangle(solver, grid_index(n, i + 1u, n), grid_index(n, i, n),
-                     floor_point);
-    }
+    solver.enable_pressure(false);
 
-    // Le rembourrage : chaque point du tissu est rappele vers le patron par un
-    // ressort mou. Une enveloppe close remplie de gaz conserve son volume mais
-    // pas sa forme -- donnez-lui du tissu en trop et elle se deforme en une
-    // seule grande bosse, ce qui est exactement ce qu'on obtenait. Une ouate,
-    // elle, resiste au changement de forme, et c'est elle qui donne au flambage
-    // une longueur d'onde definie.
+    // Le point de depart. Sur un niveau grossier, le tissu a plat ; sur les
+    // suivants, la forme deja trouvee. Dans les deux cas un bruit par-dessus :
+    // une membrane parfaitement plane et symetrique est une configuration
+    // stationnaire, elle gonflerait sans jamais choisir de quel cote plier.
     //
-    // La compliance suit l'inverse de l'aire de maille : un sommet represente
-    // moins de surface quand la grille se raffine, il doit donc tirer d'autant
-    // moins fort, et le rembourrage reste le meme a toute resolution.
-    if (settings.stuffing > 1e-6) {
-        const double alpha = double(n * n) / (400.0 * settings.stuffing);
-        for (unsigned int j = 1; j + 1u < side; j++) {
-            const double v = double(j) / double(n);
-            for (unsigned int i = 1; i + 1u < side; i++) {
-                const double u = double(i) / double(n);
-                cloth::Anchor anchor;
-                anchor.index = grid_index(i, j, n);
-                anchor.target = solver.positions[anchor.index];
-                // Sous la couture il n'y a pas de rembourrage : le tissu y est
-                // libre de se chiffonner, et c'est justement ce qu'on veut.
-                anchor.compliance =
-                    alpha * (1.0 + 3.0 * (1.0 - seam_band(settings, u, v)));
-                anchor.lambda = 0.0;
-                solver.anchors.add(anchor);
-            }
-        }
-    }
-
-    // Le volume vise est celui du patron lui-meme, mesure et non estime : les
-    // positions sont encore exactement le coussin dessine, donc `pressure` a 1
-    // veut dire « la forme demandee », et rien d'autre.
-    solver.pressure.rest_volume = solver.compute_volume();
-    solver.pressure.target = settings.pressure;
-    solver.pressure.compliance = 0.0;
-    solver.pressure.softness = settings.pressure_softness;
-    solver.pressure.lambda = 0.0;
-    solver.enable_pressure(true);
-
-    // Le point de depart : la forme du niveau precedent s'il y en a un, le
-    // patron sinon -- et dans les deux cas un bruit par-dessus.
-    //
-    // Ce bruit n'est pas cosmetique, et il ne suffit pas de le mettre au
-    // premier niveau. Un coussin lisse et symetrique est une configuration
-    // stationnaire du solveur : il y resterait quel que soit le surplus de
-    // matiere. Et un niveau grossier ne sait representer qu'un seul grand pli ;
-    // si les niveaux fins partent de lui sans rien pour les en tirer, ils se
-    // contentent de le lisser. C'etait exactement le defaut du premier essai :
-    // un unique pli par coussin, identique partout.
-    //
-    // Sa frequence est celle des plis voulus, pas une frequence arbitraire : on
-    // seme directement le mode qu'on veut voir flamber.
+    // Sa frequence suit la largeur de pli attendue, et il est etire
+    // perpendiculairement a la couture la plus proche : on seme exactement le
+    // mode qu'on veut voir flamber, orientation comprise.
     const double amount = settings.jitter * (warm ? 0.5 : 1.0);
     for (unsigned int j = 1; j + 1u < side; j++) {
         const double v = double(j) / double(n);
         for (unsigned int i = 1; i + 1u < side; i++) {
             const double u = double(i) / double(n);
             const unsigned int here = grid_index(i, j, n);
+            if (solver.inverse_mass[here] <= 0.0) continue;
             if (warm) solver.positions[here] = grid[here];
 
-            // La frequence du bruit suit la largeur de pli attendue a cet
-            // endroit : fine sous la couture, large sur le coussin. On seme
-            // ainsi exactement le mode qu'on veut voir flamber, la ou on le
-            // veut.
             const double mix = seam_band(settings, u, v);
             double wave = seam_wrinkle + (wrinkle - seam_wrinkle) * mix;
             if (wave < 1e-6) wave = 1e-6;
             const double frequency = 1.0 / wave;
 
-            // Le repere de la couture la plus proche : `along` court le long
-            // d'elle, `across` s'en eloigne. Etirer le bruit dans le second
-            // donne des cretes perpendiculaires a la couture -- l'eventail des
-            // references -- la ou un bruit isotrope ne donne que des taches.
             const double du = 2.0 * ((u < 0.5) ? u : 1.0 - u);
             const double dv = 2.0 * ((v < 0.5) ? v : 1.0 - v);
             const double along = (du < dv) ? v : u;
             const double across = (du < dv) ? u : v;
-            // Un decalage par cote. Sans lui, echanger u et v de part et
-            // d'autre de la diagonale reflechit le bruit, et les quatre
-            // eventails d'un coussin sont l'image les uns des autres.
             const double side_offset =
                 (du < dv) ? ((u < 0.5) ? 0.0 : 19.3)
                           : ((v < 0.5) ? 41.7 : 63.1);
-            // L'allongement culmine sur l'epaule et retombe aux deux bouts :
-            // au ras de la couture parce qu'un fronce oriente y devient une
-            // chaine de maillons identiques, et au sommet parce qu'il n'y a
-            // plus de couture dont s'eloigner.
             const double shoulder_weight = 4.0 * mix * (1.0 - mix);
             const double stretch =
                 1.0 + (settings.crease_stretch - 1.0) * shoulder_weight;
 
             const double edge = (du < dv) ? du : dv;
             const double fade = smoothstep01(0.06, edge);
-            // Trois octaves : la premiere pose la largeur des plis, les deux
-            // autres cassent la regularite. Avec une seule frequence, le fronce
-            // sort tresse et on lit la periode.
             const double noise =
                 fbm(GMathVec3d(along + side_offset,
                                across / stretch + side_offset * 0.37,
@@ -529,8 +453,17 @@ solve_patch(const LocalPatch& patch, const Settings& settings,
         }
     }
 
-    solver.solve(settings.iterations,
-                 vscale(settings.gravity, settings.gravity_strength));
+    // La pression et la gravite sont des accelerations : sur `substeps` pas de
+    // temps, un deplacement libre vaut a*S*S/2. On divise donc par le carre du
+    // nombre de pas pour que les deux reglages gardent leur sens quel que soit
+    // le budget de simulation.
+    const double steps = double((settings.substeps < 1u) ? 1u
+                                                         : settings.substeps);
+    solver.pressure_force = settings.pressure / (steps * steps);
+    solver.solve(settings.substeps, settings.iterations,
+                 vscale(settings.gravity,
+                        2.0 * settings.gravity_strength / (steps * steps)),
+                 settings.damping);
 
     grid.resize(count);
     for (unsigned int k = 0; k < count; k++) grid[k] = solver.positions[k];
@@ -614,13 +547,14 @@ protected:
             "input_geometry", "shading_group",
             "resolution", "max_resolution", "levels", "detail",
             "seam", "seam_depth", "seam_gather", "seam_wrinkle_scale",
-            "puff_relative", "shoulder", "squareness",
-            "pressure", "pressure_softness",
-            "wrinkles", "corner_gather", "wrinkle_reach", "stuffing",
-            "stretch", "shear_stiffness", "crease_stretch",
+            "pressure", "pin_rings",
+            "wrinkles", "corner_gather", "wrinkle_reach",
+            "wrinkle_variation", "mesh_jitter",
+            "stretch", "compression", "shear_stiffness", "crease_stretch",
             "wrinkle_scale", "wrinkle_size",
             "gravity", "gravity_strength",
-            "iterations", "jitter", "smoothing", "smoothing_amount", "seed"
+            "iterations", "substeps", "damping",
+            "jitter", "smoothing", "smoothing_amount", "seed"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
 
@@ -797,29 +731,29 @@ private:
         settings.seam_depth = read_double(object, "seam_depth", 0.06);
         settings.seam_gather = read_double(object, "seam_gather", 0.30);
         settings.seam_wrinkle = read_double(object, "seam_wrinkle_scale", 0.07);
-        settings.puff = read_double(object, "puff_relative", 0.30);
-        settings.shoulder = read_double(object, "shoulder", 2.5);
-        settings.squareness = read_double(object, "squareness", 4.0);
-        settings.pressure = read_double(object, "pressure", 1.0);
-        settings.pressure_softness =
-            read_double(object, "pressure_softness", 0.005);
+        settings.pressure = read_double(object, "pressure", 2.5);
+        settings.pin_rings = (unsigned int) read_long(object, "pin_rings", 2);
         settings.wrinkles = read_double(object, "wrinkles", 0.10);
         settings.corner_gather = read_double(object, "corner_gather", 0.08);
-        settings.wrinkle_reach = read_double(object, "wrinkle_reach", 0.5);
-        settings.stuffing = read_double(object, "stuffing", 3.0);
+        settings.wrinkle_reach = read_double(object, "wrinkle_reach", 2.0);
+        settings.wrinkle_variation =
+            read_double(object, "wrinkle_variation", 0.4);
+        settings.mesh_jitter = read_double(object, "mesh_jitter", 0.35);
         settings.stretch = read_double(object, "stretch", 0.02);
+        settings.compression = read_double(object, "compression", 6.0);
+        settings.substeps = (unsigned int) read_long(object, "substeps", 24);
+        settings.damping = read_double(object, "damping", 0.04);
+        if (settings.substeps < 1u) settings.substeps = 1u;
         settings.shear = read_double(object, "shear_stiffness", 4.0);
-        settings.crease_stretch = read_double(object, "crease_stretch", 3.0);
+        settings.crease_stretch = read_double(object, "crease_stretch", 1.0);
         if (settings.crease_stretch < 1.0) settings.crease_stretch = 1.0;
         settings.wrinkle_scale = read_double(object, "wrinkle_scale", 0.28);
         settings.wrinkle_size = read_double(object, "wrinkle_size", 0.0);
         settings.detail = read_double(object, "detail", 0.0);
-        if (settings.shoulder < 1.0) settings.shoulder = 1.0;
-        if (settings.squareness < 1.0) settings.squareness = 1.0;
         if (settings.wrinkle_scale < 0.01) settings.wrinkle_scale = 0.01;
         settings.gravity_strength =
-            read_double(object, "gravity_strength", 0.05);
-        settings.jitter = read_double(object, "jitter", 0.006);
+            read_double(object, "gravity_strength", 0.0);
+        settings.jitter = read_double(object, "jitter", 0.002);
         settings.seed = (unsigned int) read_long(object, "seed", 0);
 
         if (settings.resolution < 3u) settings.resolution = 3u;

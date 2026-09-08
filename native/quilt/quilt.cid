@@ -55,49 +55,21 @@ class "GeometryQuilt" "GeometryPolymesh" {
     attribute_group "cushion" {
         doc "La forme du coussin."
 
-        percentage "puff_relative" {
+        double "pressure" {
             output "geometry"
-            doc "Hauteur visee du coussin, en fraction de son rayon. C'est un reglage de forme pure : le patron du tissu est taille sur cette hauteur, donc gonfler davantage ne met jamais la pression et les aretes en contradiction."
+            doc "La force qui gonfle le coussin. C'est une force et non un volume vise : elle pousse sans jamais etre satisfaite, et le gonflement s'arrete quand la tension de la membrane l'equilibre. La hauteur du coussin est donc un resultat, pas une consigne -- c'est ce qui rend la forme juste sans qu'on ait a la decrire. Monter la pression tend le tissu et efface les plis ; la baisser le laisse mou et froisse."
             animatable yes
-            numeric_range yes 0.0 2
-            ui_range yes 0.05 0.8
-            value 0.3
-        }
-
-        double "shoulder" {
-            output "geometry"
-            doc "Forme du profil, de la couture au sommet. A 1 le coussin est une tente ; en montant, le dessus s'aplatit et les flancs se redressent, ce que fait un coussin bien rembourre qui pousse contre son enveloppe. C'est aussi la pente du tissu au ras de la couture, et elle doit rester finie : un patron a tangente verticale n'est pas suivable, le tissu s'y rabat en clapet."
-            animatable yes
-            numeric_range yes 1 12
-            ui_range yes 1.5 6
+            numeric_range yes 0.0 100
+            ui_range yes 0.5 8
             value 2.5
         }
 
-        double "squareness" {
+        long "pin_rings" {
             output "geometry"
-            doc "Arrondi des angles du coussin. Bas, le bombement est un dome rond perdu au milieu de sa case ; haut, c'est un carre aux angles adoucis qui la remplit. C'est ce qui separe un matelas pneumatique d'un capitonnage."
-            animatable yes
-            numeric_range yes 1 16
-            ui_range yes 1.5 8
-            value 4
-        }
-
-        percentage "pressure" {
-            output "geometry"
-            doc "Multiplie le volume vise. Au-dela de 1 le coussin est surgonfle et se tend ; en dessous il se degonfle et pend."
-            animatable yes
-            numeric_range yes 0.0 10
-            ui_range yes 0.2 2
-            value 1
-        }
-
-        percentage "pressure_softness" {
-            output "geometry"
-            doc "De combien le rembourrage se laisse comprimer. C'est ce qui decide du sort du surplus de tissu : une pression qui cede laisse le coussin gonfler un peu plus et le surplus disparait sans faire de pli ; une pression ferme l'oblige a se plisser. Un vrai rembourrage ne cede presque pas -- monter ce reglage lisse les plis, et c'est la premiere chose a regarder quand le coussin sort trop propre."
-            animatable yes
-            numeric_range yes 0.0 1
-            ui_range yes 0.0 0.1
-            value 0.005
+            doc "Nombre d'anneaux de mailles epingles le long de la couture. Un seul laisse le bourrelet deborder sur le sillon ; deux raidissent l'attache et donnent une bordure franche. C'est le reglage que les solveurs de tissu appellent le groupe d'epinglage."
+            numeric_range yes 1 8
+            ui_range yes 1 4
+            value 2
         }
 
         percentage "seam" {
@@ -147,11 +119,29 @@ class "GeometryQuilt" "GeometryPolymesh" {
 
         percentage "wrinkles" {
             output "geometry"
-            doc "Surplus de matiere par rapport au patron du coussin. C'est le reglage des plis, et le seul : le patron est deja taille a la bonne hauteur, donc tout ce qu'on ajoute ici n'a nulle part ou aller et se plisse. Quelques pourcents suffisent -- beaucoup de surplus ne fait pas beaucoup de petits plis, il en fait un seul, tres grand."
+            doc "De combien le tissu est plus grand que la place ou on le coud. C'est le reglage des plis, et le seul qui en cree : une fois la membrane gonflee, ce tissu en trop n'a nulle part ou aller. Dix pour cent est la valeur qu'emploient les solveurs de tissu pour un panneau capitonne."
             animatable yes
             numeric_range yes 0.0 1
-            ui_range yes 0.0 0.25
+            ui_range yes 0.0 0.3
             value 0.1
+        }
+
+        percentage "mesh_jitter" {
+            output "geometry"
+            doc "Desordre du maillage, en fraction de la maille. Une grille reguliere flambe en plis reguliers : c'est la bonne reponse a une question trop propre, mais ca donne une cannelure de colonne au lieu d'un tissu. Les solveurs de production remaillent le panneau en triangles irreguliers avant de simuler ; ce reglage fait la meme chose en deplacant les sommets dans leur plan, avant toute mesure de longueur. Les plis n'ont alors plus d'axe ou tomber."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.6
+            value 0.35
+        }
+
+        percentage "wrinkle_variation" {
+            output "geometry"
+            doc "Irregularite de la quantite de tissu d'un endroit a l'autre. A zero les plis sortent parfaitement periodiques, comme les cannelures d'une colonne -- la grille est reguliere et rien ne vient la casser. Les vrais panneaux ne le sont pas : une couturiere ne coupe pas au dixieme de millimetre. Ce reglage module le surplus a basse frequence, ce qui deplace les plis sans changer leur largeur."
+            animatable yes
+            numeric_range yes 0.0 2
+            ui_range yes 0.0 1
+            value 0.4
         }
 
         percentage "corner_gather" {
@@ -165,20 +155,11 @@ class "GeometryQuilt" "GeometryPolymesh" {
 
         percentage "wrinkle_reach" {
             output "geometry"
-            doc "Jusqu'ou les plis remontent depuis la couture, en fraction du coussin. Sur un vrai capitonnage le tissu est tendu sur la couronne -- c'est la qu'il a le plus de forme a couvrir -- et le surplus reste en bas, juste au-dessus de la couture. Bas, on obtient un dessus lisse et une ceinture de plis ; haut, un coussin grumeleux sur toute sa surface."
+            doc "Ou se concentre le tissu en trop. Au-dela de 1 il est reparti uniformement, comme sur un vrai panneau ; en dessous il est ramasse pres de la couture, ce qui laisse le dessus lisse et donne une ceinture de plis. C'est un ecart volontaire au modele physique, utile quand on veut un capitonnage plus sage."
             animatable yes
-            numeric_range yes 0.05 2
-            ui_range yes 0.1 1
-            value 0.5
-        }
-
-        percentage "stuffing" {
-            output "geometry"
-            doc "Fermete du rembourrage. A zero le coussin est une enveloppe vide sous pression : un ballon, qui conserve son volume mais pas sa forme -- donnez-lui du tissu en trop et il se deforme en une seule grosse bosse au lieu de se plisser. Au-dessus, une ouate rappelle le tissu vers la forme visee, et c'est elle qui donne aux plis une largeur definie : c'est la fondation elastique de la loi de Cerda, sans laquelle la longueur d'onde part a l'infini."
-            animatable yes
-            numeric_range yes 0.0 50
-            ui_range yes 0.0 8
-            value 3
+            numeric_range yes 0.05 3
+            ui_range yes 0.2 2
+            value 2
         }
 
         double "stretch" {
@@ -188,6 +169,15 @@ class "GeometryQuilt" "GeometryPolymesh" {
             numeric_range yes 0.0 5
             ui_range yes 0.0 0.2
             value 0.02
+        }
+
+        double "compression" {
+            output "geometry"
+            doc "Combien le tissu cede plus facilement comprime qu'etire. A 1 il resiste autant dans les deux sens, ce qui est faux : un tissu resiste a l'etirement et flambe librement. Au-dessus, il peut se raccourcir localement -- c'est-a-dire empiler des plis plutot que d'en faire un seul grand."
+            animatable yes
+            numeric_range yes 1 100
+            ui_range yes 1 20
+            value 6
         }
 
         double "shear_stiffness" {
@@ -201,11 +191,11 @@ class "GeometryQuilt" "GeometryPolymesh" {
 
         double "crease_stretch" {
             output "geometry"
-            doc "Allongement des plis perpendiculairement a la couture. A 1 ils sont ronds et repartis au hasard, ce qui donne un aspect grumeleux ; en montant ils s'etirent en cretes qui partent de la couture en eventail et meurent avant le sommet -- ce que font les vrais panneaux cousus. L'effet ne joue que pres des coutures, la ou l'orientation a un sens."
+            doc "Force l'orientation des plis perpendiculairement a la couture. A 1, on laisse la simulation choisir -- et elle choisit bien, l'eventail nait tout seul du gonflement d'une membrane epinglee. Au-dessus, on impose la direction, ce qui donne un plisse plus regulier, presque une cannelure. C'est un effet de style, pas une correction."
             animatable yes
             numeric_range yes 1 12
             ui_range yes 1 6
-            value 3
+            value 1
         }
 
         percentage "wrinkle_scale" {
@@ -237,32 +227,49 @@ class "GeometryQuilt" "GeometryPolymesh" {
 
         percentage "gravity_strength" {
             output "geometry"
-            doc "De combien le tissu retombe, en fraction du rayon du coussin. C'est ce qui creuse le dessus et gonfle le dessous, et ce qui fait pendre les plis vers le bas au lieu de les laisser symetriques."
+            doc "De combien le tissu retombe, en fraction du rayon du coussin. Zero par defaut, comme dans les solveurs de panneaux : un capitonnage tient a ses coutures et ne pend pas. A monter pour un coussin libre, ou pour casser la symetrie entre le dessus et le dessous."
             animatable yes
             numeric_range yes 0.0 2
             ui_range yes 0.0 0.3
-            value 0.05
+            value 0.0
         }
     }
 
     attribute_group "solver" {
         doc "La resolution. Ces reglages changent la precision, pas la forme visee."
 
+        long "substeps" {
+            output "geometry"
+            doc "Nombre de pas de temps. A 1 le solveur fait une relaxation statique : le tissu glisse vers l'equilibre lisse le plus proche de son point de depart. Au-dela, la vitesse entre en jeu -- le tissu depasse, revient, et se pose dans un etat bien plus plisse. Les deux sont des equilibres valides, mais c'est la dynamique qui va chercher le second, et c'est ce que font tous les solveurs de tissu de production. C'est le reglage qui separe deux grands plis d'un fronce dense."
+            numeric_range yes 1 200
+            ui_range yes 1 48
+            value 24
+        }
+
+        percentage "damping" {
+            output "geometry"
+            doc "Part de la vitesse perdue a chaque pas. A zero le tissu oscille sans jamais se poser ; trop haut, il retombe dans la relaxation statique et perd ses plis. Quelques pourcents suffisent."
+            animatable yes
+            numeric_range yes 0.0 1
+            ui_range yes 0.0 0.2
+            value 0.04
+        }
+
         long "iterations" {
             output "geometry"
-            doc "Nombre de passes de relaxation. Le solveur converge vers un equilibre bien defini, donc monter ce nombre affine la forme sans la changer -- contrairement a un solveur en positions ordinaire, ou la raideur depend du budget."
+            doc "Nombre de passes de relaxation par pas de temps. Le solveur converge vers un equilibre bien defini, donc monter ce nombre affine la forme sans changer la matiere -- contrairement a un solveur en positions ordinaire, ou la raideur depend du budget. Le cout total est le produit par le nombre de pas."
             numeric_range yes 1 5000
-            ui_range yes 40 400
-            value 160
+            ui_range yes 6 60
+            value 14
         }
 
         percentage "jitter" {
             output "geometry"
-            doc "Bruit initial hors du plan, en fraction du coussin. Il est indispensable et non cosmetique : une membrane parfaitement plane est une configuration exactement stationnaire du solveur -- toutes les corrections y sont coplanaires -- et resterait plate quelle que soit la pression. Ce bruit choisit de quel cote elle flambe, et donc ou tombent les plis."
+            doc "Bruit initial hors du plan, en fraction du coussin. Il est indispensable et non cosmetique : une membrane parfaitement plane est une configuration exactement stationnaire du solveur, et elle gonflerait sans jamais choisir de quel cote plier. Mais il doit rester une graine : mesure faite, le nombre de plis est le meme a un vingtieme de cette valeur. Le monter ne rend pas le tissu plus froisse, ca lui impose seulement le motif du bruit."
             animatable yes
             numeric_range yes 0.0 1
-            ui_range yes 0.0 0.03
-            value 0.006
+            ui_range yes 0.0 0.02
+            value 0.002
         }
 
         long "smoothing" {
