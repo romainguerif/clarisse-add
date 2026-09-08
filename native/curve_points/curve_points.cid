@@ -6,6 +6,21 @@ class "GeometryCurvePoints" "GeometryParticle" {
     attribute_group "curve" {
         doc "La courbe suivie."
 
+        reference "points_geometry" {
+            filter "Geometry"
+            input "motion" "geometry" "motion_blur"
+            output "geometry"
+            doc "Une geometrie dont les points servent de points de controle, a la place de la table. Un nuage de points disperse sur une surface, un Scatterer, un maillage : tout ce qui porte des points fait l'affaire. C'est la voie pour generer des cables en masse plutot que de les poser un par un."
+        }
+
+        long "points_order" {
+            output "geometry"
+            doc "Dans quel ordre parcourir les points de la geometrie. L'ordre du nuage donne une courbe qui zigzague d'un bout a l'autre ; le chainage part du premier point et prend chaque fois le plus proche, ce qui traverse le nuage sans revenir sur ses pas."
+            preset "Ordre du nuage" "0"
+            preset "Plus proche voisin" "1"
+            value 1
+        }
+
         list<reference> "control_points" {
             filter "SceneItem"
             input "motion" "geometry" "motion_blur"

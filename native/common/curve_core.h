@@ -30,6 +30,11 @@
 #include <of_object.h>
 #include <of_attr.h>
 #include <module_scene_item.h>
+#include <module_geometry.h>
+
+#include <geometry_object.h>
+#include <geometry_point_cloud.h>
+#include <gmath_matrix4x4.h>
 
 #include <core_array.h>
 #include <core_vector.h>
@@ -270,11 +275,103 @@ get_points_attr(OfObject& object)
     return object.get_attribute("control_points");
 }
 
+// Les points d'une geometrie de la scene, quand le node en reference une. Ca
+// ouvre la porte aux nuages de points : un Scatterer ou un GeometryPointCloud
+// natif sur une surface fournit alors les points de controle, et il devient
+// possible de generer des cables en masse au lieu de les poser un par un.
+//
+// L'ordre du nuage n'est pas celui d'un cable : un nuage disperse donne une
+// courbe qui zigzague d'un bout a l'autre du volume. D'ou le chainage par plus
+// proche voisin, qui traverse le nuage sans revenir sur ses pas. Il est en n
+// carre, ce qui reste sans consequence a l'echelle ou on pose des points de
+// controle -- quelques centaines au plus.
+inline bool
+gather_from_geometry(OfObject& object, CoreVector<GMathVec3d>& points)
+{
+    OfAttr *attr = object.get_attribute("points_geometry");
+    if (attr == 0) return false;
+
+    OfObject *source = attr->get_object();
+    if (source == 0) return false;
+
+    ModuleGeometry *module = source->get_module<ModuleGeometry>();
+    if (module == 0) return false;
+
+    const GeometryObject *geometry = module->get_geometry(false);
+    if (geometry == 0) return false;
+
+    const GeometryPointCloud *cloud = geometry->get_point_cloud();
+    if (cloud == 0) return false;
+
+    const unsigned int count = cloud->get_point_count();
+    if (count < 2u) return false;
+
+    // Les positions du nuage sont dans l'espace de l'objet ; il faut la matrice
+    // de l'item pour les remettre dans le monde, ou la courbe ignorerait le
+    // deplacement du nuage.
+    ModuleSceneItem *item = source->get_module<ModuleSceneItem>();
+    const GMathMatrix4x4d *matrix =
+        (item != 0) ? &item->get_global_matrix() : 0;
+
+    CoreVector<GMathVec3d> raw;
+    for (unsigned int i = 0; i < count; i++) {
+        // static_cast et non double(...) : `double(p[0])` se lit aussi comme
+        // la declaration d'un tableau, et le compilateur choisit cette
+        // lecture-la.
+        const GMathVec3f sample = cloud->get_position(i);
+        GMathVec3d world(static_cast<double>(sample[0]),
+                         static_cast<double>(sample[1]),
+                         static_cast<double>(sample[2]));
+        if (matrix != 0) {
+            GMathVec3d transformed;
+            GMathMatrix4x4d::multiply(transformed, world, *matrix);
+            world = transformed;
+        }
+        raw.add(world);
+    }
+
+    const OfAttr *order = object.get_attribute("points_order");
+    if (order == 0 || order->get_long() == 0) {
+        for (unsigned int i = 0; i < raw.get_count(); i++) points.add(raw[i]);
+        return points.get_count() >= 2;
+    }
+
+    // Chainage glouton : on part du premier point et on prend chaque fois le
+    // plus proche de ceux qui restent.
+    CoreArray<bool> used(raw.get_count());
+    for (unsigned int i = 0; i < raw.get_count(); i++) used[i] = false;
+
+    unsigned int current = 0u;
+    used[0] = true;
+    points.add(raw[0]);
+
+    for (unsigned int step = 1; step < raw.get_count(); step++) {
+        unsigned int best = 0u;
+        double best_distance = -1.0;
+        for (unsigned int i = 0; i < raw.get_count(); i++) {
+            if (used[i]) continue;
+            const GMathVec3d delta = vsub(raw[i], raw[current]);
+            const double squared = vdot(delta, delta);
+            if (best_distance < 0.0 || squared < best_distance) {
+                best_distance = squared;
+                best = i;
+            }
+        }
+        if (best_distance < 0.0) break;
+        used[best] = true;
+        points.add(raw[best]);
+        current = best;
+    }
+    return points.get_count() >= 2;
+}
+
 // Les positions monde des points de controle, dans l'ordre.
 inline bool
 gather_control_points(OfObject& object, const char *attr_name,
                       CoreVector<GMathVec3d>& points)
 {
+    if (gather_from_geometry(object, points)) return true;
+
     OfAttr *attr = (attr_name != 0 && attr_name[0] != '\0')
                  ? object.get_attribute(attr_name) : 0;
     if (attr == 0) attr = get_points_attr(object);
@@ -597,6 +694,65 @@ public:
         finalize();
     }
 
+    // Enroule la courbe autour d'elle-meme : ce qui etait l'axe devient le
+    // support, et la courbe s'en ecarte pour tourner autour.
+    //
+    // C'est ce qui permet de poser un cable par-dessus un faisceau existant en
+    // lui donnant les memes points de controle : il suit le meme trajet, mais
+    // en helice autour de lui.
+    //
+    // Deux choses le rendent organique plutot que mecanique. Le rayon
+    // d'enroulement varie par un bruit tres basse frequence, donc le cable
+    // colle au faisceau par endroits et s'en ecarte a d'autres. Et la ou il
+    // s'ecarte, il tombe -- l'affaissement est proportionnel a l'ecart, ce qui
+    // suffit a lire « il pend » plutot que « il fait un ventre ».
+    void
+    apply_wrap(const double& radius, const double& turns,
+               const double& variation, const double& variation_frequency,
+               const double& sag, const unsigned int& seed,
+               const GMathVec3d& gravity)
+    {
+        const unsigned int count = m_position.get_count();
+        if (count < 3u || radius <= 1e-9) return;
+
+        const GMathVec3d down = vnorm(gravity);
+        CoreArray<GMathVec3d> moved(count);
+
+        for (unsigned int i = 0; i < count; i++) {
+            const double s = m_arc[i];
+
+            // Un seul bruit sert aux deux effets : c'est voulu. La ou le cable
+            // s'ecarte, il doit aussi tomber ; deux bruits independants
+            // donneraient des ventres et des creux sans rapport entre eux.
+            const double wave = perlin(s * variation_frequency, 0.0, 0.0, seed);
+            const double factor = 1.0 + variation * wave;
+            const double r = radius * ((factor > 0.0) ? factor : 0.0);
+
+            const double angle = 2.0 * M_PI * turns * s;
+            const GMathVec3d& n = m_normal[i];
+            const GMathVec3d b = vnorm(vcross(m_tangent[i], n));
+
+            GMathVec3d p = vadd(m_position[i],
+                                vadd(vscale(n, cos(angle) * r),
+                                     vscale(b, sin(angle) * r)));
+
+            if (sag > 1e-9 && wave > 0.0) {
+                p = vadd(p, vscale(down, sag * wave));
+            }
+            moved[i] = p;
+        }
+
+        for (unsigned int i = 0; i < count; i++) m_position[i] = moved[i];
+
+        for (unsigned int i = 0; i < count; i++) {
+            const unsigned int prev = (i == 0u) ? (m_closed ? count - 1u : 0u) : i - 1u;
+            const unsigned int next = (i + 1u >= count)
+                                    ? (m_closed ? 0u : count - 1u) : i + 1u;
+            m_tangent[i] = vnorm(vsub(m_position[next], m_position[prev]));
+        }
+        finalize();
+    }
+
     // Interrogation a une distance curviligne, en metres depuis le depart.
     // C'est cet acces-la qu'il faut pour distribuer ou faire avancer : il
     // garantit un espacement reel constant, ce qu'un parametre uniforme ne fait
@@ -854,6 +1010,38 @@ apply_noise_from_object(OfObject& object, Path& path)
                      gravity);
 }
 
+// Enroule la courbe si le node porte les attributs correspondants. Vient apres
+// le bruit : l'enroulement doit suivre la courbe deja irreguliere, pas une
+// courbe lisse qu'on froisserait ensuite.
+inline void
+apply_wrap_from_object(OfObject& object, Path& path)
+{
+    const OfAttr *radius = object.get_attribute("wrap_radius");
+    if (radius == 0 || radius->get_double() <= 1e-9) return;
+
+    const OfAttr *turns = object.get_attribute("wrap_turns");
+    const OfAttr *variation = object.get_attribute("wrap_variation");
+    const OfAttr *frequency = object.get_attribute("wrap_variation_frequency");
+    const OfAttr *sag = object.get_attribute("wrap_sag");
+    const OfAttr *seed = object.get_attribute("wrap_seed");
+    const OfAttr *gravity_attr = object.get_attribute("gravity");
+
+    GMathVec3d gravity(0.0, -1.0, 0.0);
+    if (gravity_attr != 0) {
+        gravity = GMathVec3d(gravity_attr->get_double(0),
+                             gravity_attr->get_double(1),
+                             gravity_attr->get_double(2));
+    }
+
+    path.apply_wrap(radius->get_double(),
+                    (turns != 0) ? turns->get_double() : 0.3,
+                    (variation != 0) ? variation->get_double() : 0.0,
+                    (frequency != 0) ? frequency->get_double() : 0.12,
+                    (sag != 0) ? sag->get_double() : 0.0,
+                    (seed != 0) ? (unsigned int) seed->get_long() : 0u,
+                    gravity);
+}
+
 // Construit la courbe depuis les attributs que tous les nodes de courbe
 // partagent : control_points, closed, steps, et le couple interpolation /
 // bend_radius quand il est present. Passer par ici garantit qu'un tube, un
@@ -888,6 +1076,7 @@ build_from_object(OfObject& object, Path& path)
                                  (slack_attr != 0) ? slack_attr->get_double() : 0.05,
                                  gravity, steps)) return false;
         apply_noise_from_object(object, path);
+        apply_wrap_from_object(object, path);
         return true;
     }
 
@@ -910,11 +1099,13 @@ build_from_object(OfObject& object, Path& path)
         }
         if (!path.build_beveled(cv, closed, radii, fallback, steps)) return false;
         apply_noise_from_object(object, path);
+        apply_wrap_from_object(object, path);
         return true;
     }
 
     if (!path.build(cv, closed, steps)) return false;
     apply_noise_from_object(object, path);
+    apply_wrap_from_object(object, path);
     return true;
 }
 

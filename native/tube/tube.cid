@@ -6,6 +6,21 @@ class "GeometryTube" "GeometryPolymesh" {
     attribute_group "curve" {
         doc "La courbe suivie par le tube."
 
+        reference "points_geometry" {
+            filter "Geometry"
+            input "motion" "geometry" "motion_blur"
+            output "geometry"
+            doc "Une geometrie dont les points servent de points de controle, a la place de la table. Un nuage de points disperse sur une surface, un Scatterer, un maillage : tout ce qui porte des points fait l'affaire. C'est la voie pour generer des cables en masse plutot que de les poser un par un."
+        }
+
+        long "points_order" {
+            output "geometry"
+            doc "Dans quel ordre parcourir les points de la geometrie. L'ordre du nuage donne une courbe qui zigzague d'un bout a l'autre ; le chainage part du premier point et prend chaque fois le plus proche, ce qui traverse le nuage sans revenir sur ses pas."
+            preset "Ordre du nuage" "0"
+            preset "Plus proche voisin" "1"
+            value 1
+        }
+
         table "control_points" {
             doc "Les points de controle, dans l'ordre, avec leurs reglages propres. N'importe quel item de scene fait l'affaire ; un locator est le choix naturel. Il en faut au moins deux."
             main_column "point"
@@ -84,6 +99,60 @@ class "GeometryTube" "GeometryPolymesh" {
             numeric_range yes 1 200
             ui_range yes 1 32
             value 8
+        }
+    }
+
+    attribute_group "wrap" {
+        doc "Enroule la courbe autour de son propre trajet. Donner les memes points de controle a deux tubes, l'un droit et l'autre enroule, fait courir le second autour du premier."
+
+        distance "wrap_radius" {
+            output "geometry"
+            doc "Distance a l'axe. A zero, pas d'enroulement."
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 2
+            value 0.0
+        }
+
+        double "wrap_turns" {
+            output "geometry"
+            doc "Tours par unite de longueur. Une petite valeur donne un enroulement tres lent, qui se lit comme un cable pose le long plutot que comme une spirale."
+            animatable yes
+            ui_range yes 0.02 3
+            value 0.3
+        }
+
+        percentage "wrap_variation" {
+            output "geometry"
+            doc "De combien le rayon d'enroulement respire. C'est ce qui fait que le cable colle au faisceau par endroits et s'en ecarte a d'autres, au lieu de tourner a distance constante."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 0.4
+        }
+
+        double "wrap_variation_frequency" {
+            output "geometry"
+            doc "A quelle frequence le cable s'ecarte et se recolle, par unite de longueur. Bas, il ne le fait qu'une ou deux fois sur toute la longueur -- c'est ce qu'on veut pour que ca paraisse accidentel."
+            animatable yes
+            numeric_range yes 1e-05 100
+            ui_range yes 0.02 1
+            value 0.12
+        }
+
+        distance "wrap_sag" {
+            output "geometry"
+            doc "De combien le cable tombe la ou il s'ecarte de l'axe. L'affaissement suit l'ecart, ce qui donne un cable qui pend par endroits plutot qu'un cable qui fait des ventres."
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 1
+            value 0.0
+        }
+
+        long "wrap_seed" {
+            output "geometry"
+            doc "Change ou le cable s'ecarte, sans changer son caractere."
+            numeric_range yes 0.0 1000000
+            value 0
         }
     }
 
@@ -192,6 +261,24 @@ class "GeometryTube" "GeometryPolymesh" {
             numeric_range yes 0.0 0.9
             ui_range yes 0.0 0.5
             value 0.0
+        }
+
+        percentage "strand_spread" {
+            output "geometry"
+            doc "De combien les torons s'ecartent de l'axe entre deux resserrements. C'est ce qui donne l'aspect d'un faisceau reel : serre la ou un collier le tient, ouvert entre. La valeur n'ecarte jamais en dessous de la position serree, donc les torons ne peuvent pas se penetrer."
+            animatable yes
+            numeric_range yes 0.0 10
+            ui_range yes 0.0 2
+            value 0.0
+        }
+
+        double "strand_spread_frequency" {
+            output "geometry"
+            doc "Nombre de resserrements par unite de longueur. Regle sur l'espacement des colliers, le faisceau se pince exactement la ou ils le tiennent."
+            animatable yes
+            numeric_range yes 1e-05 100
+            ui_range yes 0.05 2
+            value 0.4
         }
 
         percentage "strand_noise" {

@@ -75,8 +75,10 @@ protected:
         static const char *const names[] = {
             "noise_amplitude", "noise_frequency", "noise_octaves",
             "noise_roughness", "noise_seed", "noise_fade", "noise_gravity_bias",
-            "point", "bend", "closed", "steps", "radius", "radius_profile",
-            "sides", "cap", "strands", "twist", "strand_gap", "strand_noise",
+            "points_geometry", "points_order", "point", "bend", "closed", "steps", "radius", "radius_profile",
+            "sides", "cap", "strands", "twist", "strand_gap", "strand_noise", "strand_spread",
+            "strand_spread_frequency", "wrap_radius", "wrap_turns",
+            "wrap_variation", "wrap_variation_frequency", "wrap_sag", "wrap_seed",
             "strand_noise_frequency", "interpolation", "bend_radius", "slack", "gravity", "trim_start", "trim_end"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
@@ -165,6 +167,10 @@ private:
         // Un toron unique occupe tout le rayon ; a partir de deux, ils se
         // rangent sur un cercle et leur rayon propre est celui qui les fait
         // s'effleurer sans se penetrer.
+        const double strand_spread =
+            object->get_attribute("strand_spread")->get_double();
+        const double strand_spread_freq =
+            object->get_attribute("strand_spread_frequency")->get_double();
         const double strand_gap = object->get_attribute("strand_gap")->get_double();
         const double strand_noise = object->get_attribute("strand_noise")->get_double();
         const double strand_freq =
@@ -236,8 +242,20 @@ private:
             for (unsigned int strand = 0; strand < strands; strand++) {
                 const double phase = helix
                                    + 2.0 * M_PI * double(strand) / double(strands);
-                double along_n = cos(phase) * strand_offset * scale;
-                double along_b = sin(phase) * strand_offset * scale;
+                // L'ecartement ne descend jamais sous la position serree : le
+                // demi-cosinus reste dans [0, 1], donc les torons s'ouvrent ou
+                // restent joints, mais ne se rapprochent jamais au point de se
+                // penetrer. C'est ce qui laisse la garantie du jeu intacte.
+                double spread = 1.0;
+                if (strands > 1u && strand_spread > 1e-9) {
+                    const double pinch =
+                        0.5 - 0.5 * cos(2.0 * M_PI * arc_here * strand_spread_freq);
+                    spread = 1.0 + strand_spread * pinch;
+                }
+                const double offset_here = strand_offset * scale * spread;
+
+                double along_n = cos(phase) * offset_here;
+                double along_b = sin(phase) * offset_here;
 
                 if (strands > 1u && strand_noise > 1e-9 && strand_margin > 1e-12) {
                     // Un bruit par toron, decale par sa graine, evalue le long

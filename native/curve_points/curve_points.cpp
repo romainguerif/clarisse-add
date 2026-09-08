@@ -61,7 +61,7 @@ protected:
         static const char *const names[] = {
             "noise_amplitude", "noise_frequency", "noise_octaves",
             "noise_roughness", "noise_seed", "noise_fade", "noise_gravity_bias",
-            "control_points", "closed", "steps", "mode", "count", "spacing",
+            "points_geometry", "points_order", "control_points", "closed", "steps", "mode", "count", "spacing",
             "offset", "include_last", "normal_source", "lateral_offset",
             "interpolation", "bend_radius", "slack", "gravity", "end_offset"
         };
