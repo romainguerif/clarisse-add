@@ -32,6 +32,7 @@
 #include <of_object.h>
 #include <of_object_factory.h>
 #include <of_attr.h>
+#include <of_class.h>
 
 #include <module_geometry.h>
 #include <module_polymesh.h>
@@ -123,6 +124,49 @@ public:
     TubeModule() : ModulePolymesh() {}
 
 protected:
+    // Declarer la ressource et ce dont elle depend. Ni DIRTINESS_GEOMETRY dans
+    // on_attribute_change, ni output "geometry" dans le CID ne suffisent a
+    // faire rappeler create_resource : il faut dire explicitement quels
+    // attributs salissent quelle ressource.
+    void
+    module_constructor(OfObject& object) override
+    {
+        ModulePolymesh::module_constructor(object);
+
+        static const char *const names[] = {
+            "control_points", "closed", "steps",
+            "radius", "radius_profile", "sides", "cap"
+        };
+        const unsigned int name_count = sizeof(names) / sizeof(names[0]);
+
+        // Deux passes, et surtout pas de resize : CoreArray::resize(n) fait un
+        // delete[] suivi d'un new[], il ne preserve rien. Et le constructeur
+        // par defaut de OfAttrDirtiness laisse son pointeur non initialise --
+        // donc un tableau redimensionne apres coup part en violation d'acces
+        // dans set_resource_attrs, loin de sa cause.
+        unsigned int count = 0;
+        for (unsigned int i = 0; i < name_count; i++) {
+            if (object.get_attribute(names[i]) != 0) count++;
+        }
+        if (count == 0) return;
+
+        CoreArray<OfAttrDirtiness> attrs(count);
+        unsigned int k = 0;
+        for (unsigned int i = 0; i < name_count; i++) {
+            OfAttr *attr = object.get_attribute(names[i]);
+            if (attr != 0) {
+                // DIRTINESS_ALL, et pas seulement DIRTINESS_GEOMETRY : quand un
+                // locator reference bouge, ce qui remonte est DIRTINESS_MOTION.
+                // Filtrer sur la geometrie seule laissait le tube en retard d'un
+                // changement -- il ne se reconstruisait qu'a la modification
+                // suivante, en relisant au passage la nouvelle position.
+                attrs[k++] = OfAttrDirtiness(attr, OfAttr::DIRTINESS_ALL);
+            }
+        }
+
+        set_resource_attrs(ModuleGeometry::RESOURCE_ID_GEOMETRY, attrs);
+    }
+
     ResourceData *
     create_resource(const int& id, void *data) const override
     {

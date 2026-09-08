@@ -152,6 +152,40 @@ une session de travail.
 
 ---
 
+### `CoreArray::resize(n)` ne preserve rien
+
+Son corps tient en trois lignes : `delete[] m_array; m_count = size;
+m_array = new T[size];`. Tout ce qui etait dedans est perdu, et les nouveaux
+elements sont construits par defaut.
+
+C'est benin sur des scalaires, mortel sur les structures du SDK qui ne
+s'initialisent pas elles-memes. `OfAttrDirtiness()` laisse son pointeur
+`attr` non initialise. Dimensionner large, remplir, puis reduire donne donc un
+tableau de pointeurs aleatoires -- et le plantage tombe plus tard, dans
+`OfAttrPtr::operator=` au fond de `set_resource_attrs`, tres loin de sa cause.
+
+Compter d'abord, allouer a la taille exacte ensuite. La surcharge
+`resize(size, preserve)` existe pour l'autre besoin.
+
+### Faire reconstruire une ressource : le CID ne suffit pas
+
+Pour qu'un module regenere sa geometrie quand un attribut change, ni
+`dirtiness |= OfAttr::DIRTINESS_GEOMETRY` dans `on_attribute_change`, ni
+`output "geometry"` dans le CID ne suffisent. Il faut declarer explicitement,
+dans `module_constructor`, quels attributs salissent quelle ressource :
+
+```cpp
+set_resource_attrs(ModuleGeometry::RESOURCE_ID_GEOMETRY, attrs);
+```
+
+Et y mettre `DIRTINESS_ALL`, pas `DIRTINESS_GEOMETRY` : quand un objet
+**reference** bouge, ce qui remonte est `DIRTINESS_MOTION`. Filtrer sur la
+geometrie seule laisse le node en retard d'un changement -- il se reconstruit a
+la modification suivante en relisant au passage la bonne valeur, ce qui rend le
+symptome trompeur.
+
+---
+
 ## 4. Le langage CID, tel qu'il marche vraiment
 
 Types observés et fonctionnels : `double`, `long`, `bool`, `percentage`,

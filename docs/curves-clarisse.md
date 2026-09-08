@@ -168,31 +168,49 @@ après coup :
   `u=0` d'un côté et `u=1` de l'autre : impossible en vertex-varying. La grille
   UV a donc une colonne de plus que de côtés.
 
-### Le point ouvert, à reprendre ici
+### L'invalidation, résolue
 
-**La géométrie ne se reconstruit pas quand un attribut change.** Après
-déplacement d'un locator, après `radius = 0.5`, après `sides = 6` : toujours
-300 sommets et la même bbox. `create_resource` n'est appelé qu'une fois.
+Le maillage se reconstruit maintenant à chaque changement — mesuré : rayon 0.5
+élargit la bbox, `sides = 6` fait passer de 300 à 150 sommets, et déplacer un
+locator déplace le tube **immédiatement**.
 
-Ce qui a déjà été essayé, sans effet :
+Ce qui ne suffisait pas : ni `dirtiness |= DIRTINESS_GEOMETRY` dans
+`on_attribute_change`, ni `output "geometry"` dans le CID. Il faut **déclarer
+la ressource et ses dépendances** dans `module_constructor` :
 
-1. `on_attribute_change` avec `dirtiness |= OfAttr::DIRTINESS_GEOMETRY` ;
-2. `output "geometry"` dans le CID sur chacun des attributs concernés, et
-   `input "motion" "geometry" "motion_blur"` sur `control_points` — la syntaxe
-   est copiée de `GeometryFur` et de `SceneObjectScatterer`, donc elle est
-   juste, mais elle ne suffit pas seule.
+```cpp
+CoreArray<OfAttrDirtiness> attrs(count);          // taille exacte, voir ci-dessous
+attrs[k] = OfAttrDirtiness(attr, OfAttr::DIRTINESS_ALL);
+set_resource_attrs(ModuleGeometry::RESOURCE_ID_GEOMETRY, attrs);
+```
 
-**La piste suivante, non essayée** : déclarer explicitement la ressource et ses
-dépendances d'attributs dans `module_constructor`, avec
-`ModuleObject::add_resource(RESOURCE_ID_GEOMETRY, attributes)` puis
-`set_resource_attrs` / `set_resource_deps` (`module_object.h:391-399`,
-`OfAttrDirtiness` est défini dans `of_class.h:139`). Filet de sécurité brutal
-si ça ne suffit pas : `ModuleGeometry::dirty_geometries()` (inline, l.178) plus
-`clear_resource(RESOURCE_ID_GEOMETRY)`.
+**Deux pièges, chacun payé d'un essai :**
 
-À noter : rien ne prouve encore que le maillage **s'affiche** correctement.
-Le compte de sommets et la bbox sont justes, mais aucune image n'a été rendue —
-l'orientation des faces, en particulier, n'est validée que par le raisonnement.
+- **`CoreArray::resize(n)` ne préserve rien.** Son corps est
+  `delete[] m_array; m_array = new T[size];` — les éléments déjà remplis sont
+  détruits. Et le constructeur par défaut de `OfAttrDirtiness` laisse son
+  pointeur **non initialisé**. Un tableau dimensionné large puis réduit après
+  remplissage part donc en `EXCEPTION_ACCESS_VIOLATION` dans
+  `OfAttrPtr::operator=`, au fond de `set_resource_attrs`, loin de sa cause.
+  Compter d'abord, allouer à la taille exacte ensuite. Il existe
+  `resize(size, preserve)` pour l'autre besoin.
+- **`DIRTINESS_GEOMETRY` ne suffit pas pour une référence.** Quand un locator
+  bouge, ce qui remonte est `DIRTINESS_MOTION`. Filtrer sur la géométrie seule
+  laissait le tube en retard d'un changement : il se reconstruisait à la
+  modification suivante, en relisant au passage la nouvelle position — un
+  symptôme trompeur, parce que la position finissait par être juste.
+  `DIRTINESS_ALL` sur tous les attributs déclarés règle la question, et nos
+  sept attributs affectent tous la géométrie de toute façon.
+
+### Le rendu, validé
+
+Un rendu de contrôle a été fait (6 s en 1920×1080) sur une courbe en S de quatre
+points, 24 côtés, rayon 0.25, avec un sol et deux lumières. **Le tube est
+correct** : normales sorties du bon côté, pas de vrillage dans les virages,
+caps fermés, ombre portée cohérente, shading lisse. Le repère à torsion minimale
+fait son travail.
+
+Scène de test : `native/tests/make_tube_scene.py`.
 
 ### Piège de test rencontré
 
