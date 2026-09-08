@@ -630,21 +630,36 @@ private:
         if (face_count == 0u) return 0;
 
         // Le filtre par shading group : la seule selection de faces que
-        // Clarisse sache retenir. Un nom vide prend tout le maillage.
-        int wanted_group = -1;
+        // Clarisse sache retenir.
+        //
+        // Quand le nom est vide, on regarde qui alimente le node. Si c'est un
+        // node de selection, on prend son groupe -- personne ne branche une
+        // selection pour ensuite retaper son nom a la main, et laisser tout le
+        // maillage se capitonner sans le moindre signe est le pire des
+        // comportements. Sinon, tout le maillage y passe, comme avant.
+        CoreString wanted;
         const OfAttr *group_attr = object->get_attribute("shading_group");
-        if (group_attr != 0) {
-            const CoreString wanted = group_attr->get_string();
-            if (wanted.get_count() > 0u) {
-                const CoreBasicArray<CoreString>& names =
-                    mesh->get_shading_group_names();
-                for (unsigned int i = 0; i < names.get_count(); i++) {
-                    if (names[i] == wanted) { wanted_group = int(i); break; }
-                }
-                // Un nom qui ne correspond a rien ne doit pas capitonner tout
-                // le maillage par megarde.
-                if (wanted_group < 0) return 0;
+        if (group_attr != 0) wanted = group_attr->get_string();
+
+        if (wanted.get_count() == 0u
+            && source->get_class().get_name() == "GeometrySelect") {
+            const OfAttr *upstream = source->get_attribute("group_name");
+            if (upstream != 0) wanted = upstream->get_string();
+        }
+
+        // L'echappatoire : tout le maillage, malgre une selection en amont.
+        if (wanted == "*") wanted = CoreString();
+
+        int wanted_group = -1;
+        if (wanted.get_count() > 0u) {
+            const CoreBasicArray<CoreString>& names =
+                mesh->get_shading_group_names();
+            for (unsigned int i = 0; i < names.get_count(); i++) {
+                if (names[i] == wanted) { wanted_group = int(i); break; }
             }
+            // Un nom qui ne correspond a rien ne doit pas capitonner tout le
+            // maillage par megarde : mieux vaut ne rien produire, ca se voit.
+            if (wanted_group < 0) return 0;
         }
 
         ModuleSceneItem *item = source->get_module<ModuleSceneItem>();

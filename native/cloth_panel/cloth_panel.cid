@@ -16,7 +16,7 @@ class "GeometryClothPanel" "GeometryPolymesh" {
 
         string "shading_group" {
             output "geometry"
-            doc "Ne capitonner que les polygones de ce shading group. Laisse vide, tout le maillage y passe. C'est la seule selection de faces que Clarisse sache retenir -- elle vient de l'amont, du DCC ou de l'Alembic, et elle survit a tout."
+            doc "Ne capitonner que les polygones de ce shading group. Laisse vide, le node regarde qui l'alimente : si c'est un node de selection, il prend son groupe tout seul -- brancher la selection suffit donc, sans avoir a retaper son nom. Si l'amont n'est pas une selection, tout le maillage y passe. Une etoile force ce dernier cas malgre une selection en amont.\n\nUn nom qui ne correspond a aucun groupe ne produit rien du tout, volontairement : une faute de frappe doit se voir."
             value ""
         }
 
