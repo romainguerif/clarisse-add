@@ -1,0 +1,134 @@
+class "GeometrySdf" "Geometry" {
+    #version 0.1
+    category "/Geometry"
+    doc "Une forme definie par un champ de distance, et non par des polygones. On empile des primitives -- spheres, boites, cylindres, tores -- en les ajoutant, les soustrayant ou les intersectant, avec un raccord arrondi reglable pour chaque operation. Rien n'est jamais tessele : la surface est resolue rayon par rayon, donc elle est exacte a n'importe quel zoom et ne pese rien en memoire.\n\nC'est le vocabulaire de MagicaCSG, et il n'y avait pas de raison d'en inventer un autre. Sa difference ici : chaque valeur est connectable, la pile s'anime, et un groupe entier s'instancie a un million d'exemplaires par un scatter.\n\nLes booleens y sont exacts et sans cas particulier -- ni face coplanaire, ni arete degeneree, ni trou -- parce qu'on ne decoupe aucun maillage : on compare des distances."
+
+    attribute_group "shapes" {
+        doc "La pile, de haut en bas. Chaque ligne s'ajoute a ce que les precedentes ont construit, sauf la premiere qui pose la matiere de depart."
+
+        table "stack" {
+            doc "Les formes empilees, dans l'ordre. Une ligne est soit une primitive, soit -- si on lui donne une source -- un autre node de champ tout entier, ce qui fait les groupes."
+            main_column "item"
+            toggle_rows yes
+            reorder_rows yes
+
+            reference "item" {
+                filter "SceneItem"
+                input "motion" "geometry" "motion_blur"
+                output "geometry"
+                doc "L'objet qui porte la position, la rotation et l'echelle de cette forme. Un locator est le choix naturel : on le deplace avec l'outil de transformation habituel, et la forme suit. C'est ce qui evite d'avoir a inventer un manipulateur."
+            }
+
+            long "shape" {
+                output "geometry"
+                doc "La primitive. Toutes ont une distance exacte, aucune n'est approchee."
+                preset "Sphere" "0"
+                preset "Boite" "1"
+                preset "Cylindre" "2"
+                preset "Capsule" "3"
+                preset "Cone" "4"
+                preset "Tore" "5"
+                preset "Plan" "6"
+                value 0
+            }
+
+            long "operation" {
+                output "geometry"
+                doc "Ce que cette forme fait a ce qui est deja construit. La premiere ligne pose la matiere : son operation est ignoree."
+                preset "Ajouter" "0"
+                preset "Soustraire" "1"
+                preset "Intersecter" "2"
+                value 0
+            }
+
+            distance "blend" {
+                output "geometry"
+                doc "Rayon du raccord arrondi avec ce qui precede. A zero l'arete est franche. C'est la signature du modelage par champ de distance, et ce qu'aucun booleen sur maillage ne sait faire : le raccord n'est ni sur une forme ni sur l'autre, il nait entre les deux."
+                animatable yes
+                ui_range yes 0.0 1
+                value 0.0
+            }
+
+            double[3] "size" {
+                output "geometry"
+                doc "Les dimensions, en unites locales. Leur sens depend de la forme : rayon pour une sphere (premiere valeur seule) ; demi-cotes pour une boite ; rayon, demi-hauteur pour un cylindre et une capsule ; rayon de base, demi-hauteur, rayon de sommet pour un cone ; grand rayon, petit rayon pour un tore. Le plan les ignore : c'est le plan Y du repere de l'objet."
+                animatable yes
+                value 1 1 1
+            }
+
+            distance "rounding" {
+                output "geometry"
+                doc "Arrondit la primitive elle-meme, en la gonflant vers l'exterieur. C'est ce qui donne une boite a coins ronds sans changer de primitive."
+                animatable yes
+                ui_range yes 0.0 1
+                value 0.0
+            }
+
+            reference "group" {
+                filter "Geometry"
+                input "geometry"
+                output "geometry"
+                doc "Un autre node de champ, pris tout entier a la place de la primitive. C'est ce qui fait les groupes : on construit un sous-ensemble ailleurs, on le range dans une ligne, et on le combine comme une forme unique."
+            }
+        }
+    }
+
+    attribute_group "surface" {
+        doc "Ce que le rendu voit."
+
+        long "uv_mode" {
+            output "geometry"
+            doc "Comment les UV sont fabriques. Une surface implicite n'a aucun depliage naturel -- il n'y a pas de faces a plier -- donc on projette. Le triplanaire melange trois projections selon la normale et ne fait de couture nulle part : c'est le choix par defaut de tout le monde, et le seul qui tienne sur une forme quelconque."
+            preset "Triplanaire" "0"
+            preset "Planaire (XZ)" "1"
+            preset "Cylindrique" "2"
+            preset "Spherique" "3"
+            value 0
+        }
+
+        distance "uv_scale" {
+            output "geometry"
+            doc "Taille du motif projete, en unites du monde."
+            animatable yes
+            ui_range yes 0.01 10
+            value 1
+        }
+
+    }
+
+    attribute_group "quality" {
+        doc "La resolution du champ. Ces reglages changent la precision, pas la forme."
+
+        long "max_steps" {
+            output "geometry"
+            doc "Nombre maximal de pas le long d'un rayon. Un rayon qui rase la surface en consomme beaucoup ; s'il plafonne, il manque la surface et laisse un trou. La mesure dit qu'un rayon ordinaire en prend une vingtaine, et que le plafond ne sert qu'aux rasants."
+            numeric_range yes 8 4096
+            ui_range yes 64 512
+            value 256
+        }
+
+        double "step_scale" {
+            output "geometry"
+            doc "Fraction de la distance dont on avance a chaque pas. Un vaut le pas plein, et c'est le bon reglage : la distance est une borne inferieure garantie, on ne peut pas traverser la surface en l'avancant en entier. Baisser cette valeur pour « etre sur » est exactement contre-productif -- on epuise le plafond de pas avant d'arriver, et les rasants disparaissent par plaques. Mesure et verifie."
+            animatable yes
+            numeric_range yes 0.1 1
+            ui_range yes 0.5 1
+            value 1
+        }
+
+        double "precision" {
+            output "geometry"
+            doc "Seuil d'arret, en fraction de la distance parcourue. Proportionnel et non absolu : un objet vu de loin n'a pas besoin de la meme finesse que le meme objet vu de pres, et un seuil fixe ferait ramer l'un ou trembler l'autre."
+            numeric_range yes 0.000001 0.01
+            ui_range yes 0.00001 0.001
+            value 0.0001
+        }
+
+        distance "padding" {
+            output "geometry"
+            doc "Marge ajoutee a la boite englobante. Elle rattrape ce que les raccords arrondis debordent au-dela des primitives, qu'on ne sait pas borner exactement."
+            ui_range yes 0.0 5
+            value 0.1
+        }
+    }
+}
