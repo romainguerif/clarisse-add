@@ -201,6 +201,36 @@ depuis du code — rien qui ressemble à un `set_current_tool` dans `gui/` ni da
 reste à trouver. En attendant, *Draw Points* crée la plume et la vise ; il reste
 à la choisir dans la barre.
 
+### Le bruit, et le faisceau qui ne se traverse pas
+
+Le bruit fractal est ce qui separe une courbe mathematique d'un cable pose a la
+main. Trois precautions le rendent utilisable :
+
+- **il est projete dans le plan normal.** Une composante le long de la courbe
+  allongerait et raccourcirait le cable, ce qui ferait deriver les UV et le
+  pavage des modules poses dessus ;
+- **sa frequence se compte en unites monde**, pas en parametre de courbe : sinon
+  un cable deux fois plus long aurait des ondulations deux fois plus larges,
+  alors que c'est la meme matiere ;
+- **il s'eteint aux extremites** sur une largeur reglable, parce qu'un cable
+  branche ne bouge pas la ou il est accroche.
+
+Plus un biais de gravite, qui tire l'ondulation vers le bas — un cable
+s'affaisse plus qu'il ne se souleve.
+
+**Le faisceau garantit la non-interpenetration par construction, sans aucune
+detection de collision.** Sans jeu, les torons se touchent exactement : leur
+rayon vaut  avec , et la distance entre deux centres
+voisins vaut exactement deux fois ce rayon.  les fait maigrir sans
+deplacer leurs centres, ce qui libere une marge egale a . Si
+l'ondulation propre a chaque toron est bornee par cette marge, deux voisins qui
+viennent l'un vers l'autre au maximum s'effleurent sans jamais se penetrer.
+
+Un detail qui compte : c'est la **norme** du deplacement qu'il faut borner, pas
+chaque composante separement. Borner les deux axes du plan de section
+laisserait passer un facteur racine de deux dans les diagonales — et c'est
+justement la que deux torons voisins se rejoignent.
+
 ### Les embouts
 
 `curve_points` a un mode **Extrémités** : deux points, et surtout **deux

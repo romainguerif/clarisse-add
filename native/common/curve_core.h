@@ -134,6 +134,106 @@ control_index(const unsigned int& span, const int& offset,
     return (unsigned int) i;
 }
 
+// --- bruit -----------------------------------------------------------------
+//
+// Un cable pose a la main n'est jamais lisse. Le bruit qui suit est ce qui
+// separe une courbe mathematique d'un cable, et c'est le meilleur rapport
+// resultat / lignes de code de tout le fichier.
+//
+// Trois precautions le rendent utilisable plutot que joli en apparence :
+//
+//   - il est projete dans le plan normal a la tangente. Une composante le long
+//     de la courbe allongerait et raccourcirait le cable, ce qui ferait deriver
+//     les UV et le pavage des modules poses dessus.
+//   - sa frequence se compte en unites monde et non en parametre de courbe :
+//     sinon un cable deux fois plus long aurait des ondulations deux fois plus
+//     larges, alors que c'est la meme matiere.
+//   - il s'eteint aux extremites, sur une largeur reglable. Un cable branche ne
+//     bouge pas la ou il est accroche.
+
+inline double
+noise_fade(const double& t)
+{
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+inline unsigned int
+noise_hash(const int& x, const int& y, const int& z, const unsigned int& seed)
+{
+    unsigned int h = seed + 374761393u;
+    h += (unsigned int) x * 3266489917u;
+    h = ((h << 17) | (h >> 15)) * 668265263u;
+    h += (unsigned int) y * 2246822519u;
+    h = ((h << 13) | (h >> 19)) * 374761393u;
+    h += (unsigned int) z * 3266489917u;
+    h ^= h >> 15;
+    h *= 2246822519u;
+    h ^= h >> 13;
+    return h;
+}
+
+inline double
+noise_gradient(const int& ix, const int& iy, const int& iz,
+               const double& dx, const double& dy, const double& dz,
+               const unsigned int& seed)
+{
+    const unsigned int h = noise_hash(ix, iy, iz, seed) & 15u;
+    const double u = (h < 8u) ? dx : dy;
+    const double v = (h < 4u) ? dy : ((h == 12u || h == 14u) ? dx : dz);
+    return ((h & 1u) ? -u : u) + ((h & 2u) ? -v : v);
+}
+
+// Perlin 3D classique. Rend a peu pres [-1, 1].
+inline double
+perlin(const double& x, const double& y, const double& z,
+       const unsigned int& seed)
+{
+    const int ix = (int) floor(x);
+    const int iy = (int) floor(y);
+    const int iz = (int) floor(z);
+    const double fx = x - double(ix);
+    const double fy = y - double(iy);
+    const double fz = z - double(iz);
+    const double u = noise_fade(fx);
+    const double v = noise_fade(fy);
+    const double w = noise_fade(fz);
+
+    const double n000 = noise_gradient(ix,      iy,      iz,      fx,       fy,       fz,       seed);
+    const double n100 = noise_gradient(ix + 1,  iy,      iz,      fx - 1.0, fy,       fz,       seed);
+    const double n010 = noise_gradient(ix,      iy + 1,  iz,      fx,       fy - 1.0, fz,       seed);
+    const double n110 = noise_gradient(ix + 1,  iy + 1,  iz,      fx - 1.0, fy - 1.0, fz,       seed);
+    const double n001 = noise_gradient(ix,      iy,      iz + 1,  fx,       fy,       fz - 1.0, seed);
+    const double n101 = noise_gradient(ix + 1,  iy,      iz + 1,  fx - 1.0, fy,       fz - 1.0, seed);
+    const double n011 = noise_gradient(ix,      iy + 1,  iz + 1,  fx,       fy - 1.0, fz - 1.0, seed);
+    const double n111 = noise_gradient(ix + 1,  iy + 1,  iz + 1,  fx - 1.0, fy - 1.0, fz - 1.0, seed);
+
+    const double x00 = n000 + u * (n100 - n000);
+    const double x10 = n010 + u * (n110 - n010);
+    const double x01 = n001 + u * (n101 - n001);
+    const double x11 = n011 + u * (n111 - n011);
+    const double y0 = x00 + v * (x10 - x00);
+    const double y1 = x01 + v * (x11 - x01);
+    return y0 + w * (y1 - y0);
+}
+
+// Somme d'octaves, chacune deux fois plus fine et `roughness` fois moins forte.
+inline double
+fbm(const GMathVec3d& p, const double& frequency, const unsigned int& octaves,
+    const double& roughness, const unsigned int& seed)
+{
+    double total = 0.0;
+    double amplitude = 1.0;
+    double normalizer = 0.0;
+    double f = frequency;
+    for (unsigned int i = 0; i < octaves; i++) {
+        total += amplitude * perlin(p[0] * f, p[1] * f, p[2] * f, seed + i * 7919u);
+        normalizer += amplitude;
+        amplitude *= roughness;
+        f *= 2.0;
+    }
+    return (normalizer > 1e-9) ? total / normalizer : 0.0;
+}
+
 // Transport du repere par double reflet. La premiere reflexion amene le repere
 // du plan de l'echantillon courant vers celui du suivant, la seconde corrige
 // l'ecart de tangente restant.
@@ -427,6 +527,76 @@ public:
     inline const double& get_arc_length(const unsigned int& i) const { return m_arc[i]; }
     inline const bool& is_closed() const { return m_closed; }
 
+    // Deplace la courbe par un bruit fractal, sans changer sa longueur ni la
+    // decrocher de ses extremites. A appeler apres build : le repere et les
+    // longueurs sont recalcules ensuite.
+    void
+    apply_noise(const double& amplitude, const double& frequency,
+                unsigned int octaves, const double& roughness,
+                const unsigned int& seed, const double& fade_length,
+                const double& gravity_bias, const GMathVec3d& gravity)
+    {
+        const unsigned int count = m_position.get_count();
+        if (count < 3u || amplitude <= 1e-9) return;
+        if (octaves < 1u) octaves = 1u;
+        if (octaves > 8u) octaves = 8u;
+
+        const GMathVec3d down = vnorm(gravity);
+        CoreArray<GMathVec3d> moved(count);
+
+        for (unsigned int i = 0; i < count; i++) {
+            const GMathVec3d& p = m_position[i];
+
+            // Trois evaluations decalees donnent un vecteur, la ou une seule ne
+            // donnerait qu'un scalaire. Les decalages sont arbitraires mais
+            // fixes : le bruit doit etre le meme d'une evaluation a l'autre.
+            GMathVec3d offset(
+                fbm(p, frequency, octaves, roughness, seed),
+                fbm(vadd(p, GMathVec3d(31.4, 17.7, 5.3)), frequency, octaves,
+                    roughness, seed + 104729u),
+                fbm(vadd(p, GMathVec3d(-9.1, 44.2, 23.8)), frequency, octaves,
+                    roughness, seed + 224737u));
+
+            // Retirer la composante tangentielle : le cable ondule, il ne
+            // s'allonge pas.
+            const GMathVec3d& t = m_tangent[i];
+            offset = vsub(offset, vscale(t, vdot(offset, t)));
+
+            // Biais de gravite : un cable qui pend s'affaisse plus qu'il ne se
+            // souleve. On tire la moitie basse du bruit vers le bas.
+            if (gravity_bias > 0.0) {
+                const GMathVec3d flat = vsub(down, vscale(t, vdot(down, t)));
+                offset = vadd(vscale(offset, 1.0 - gravity_bias),
+                              vscale(flat, gravity_bias * fabs(vdot(offset, down))));
+            }
+
+            // Fondu aux extremites. Sur une courbe fermee il n'y a pas de bout,
+            // donc pas de fondu.
+            double weight = 1.0;
+            if (!m_closed && fade_length > 1e-9) {
+                const double from_start = m_arc[i];
+                const double from_end = m_length - m_arc[i];
+                const double nearest = (from_start < from_end) ? from_start : from_end;
+                if (nearest < fade_length) {
+                    const double s = nearest / fade_length;
+                    weight = s * s * (3.0 - 2.0 * s);
+                }
+            }
+
+            moved[i] = vadd(p, vscale(offset, amplitude * weight));
+        }
+
+        for (unsigned int i = 0; i < count; i++) m_position[i] = moved[i];
+
+        for (unsigned int i = 0; i < count; i++) {
+            const unsigned int prev = (i == 0u) ? (m_closed ? count - 1u : 0u) : i - 1u;
+            const unsigned int next = (i + 1u >= count)
+                                    ? (m_closed ? 0u : count - 1u) : i + 1u;
+            m_tangent[i] = vnorm(vsub(m_position[next], m_position[prev]));
+        }
+        finalize();
+    }
+
     // Interrogation a une distance curviligne, en metres depuis le depart.
     // C'est cet acces-la qu'il faut pour distribuer ou faire avancer : il
     // garantit un espacement reel constant, ce qu'un parametre uniforme ne fait
@@ -650,6 +820,40 @@ private:
     bool m_closed;
 };
 
+// Applique le bruit si le node porte les attributs correspondants. Passer par
+// ici plutot que par chaque node evite qu'un tube et un nuage de points poses
+// sur les memes locators ondulent differemment.
+inline void
+apply_noise_from_object(OfObject& object, Path& path)
+{
+    const OfAttr *amplitude = object.get_attribute("noise_amplitude");
+    if (amplitude == 0 || amplitude->get_double() <= 1e-9) return;
+
+    const OfAttr *frequency = object.get_attribute("noise_frequency");
+    const OfAttr *octaves = object.get_attribute("noise_octaves");
+    const OfAttr *roughness = object.get_attribute("noise_roughness");
+    const OfAttr *seed = object.get_attribute("noise_seed");
+    const OfAttr *fade = object.get_attribute("noise_fade");
+    const OfAttr *bias = object.get_attribute("noise_gravity_bias");
+    const OfAttr *gravity_attr = object.get_attribute("gravity");
+
+    GMathVec3d gravity(0.0, -1.0, 0.0);
+    if (gravity_attr != 0) {
+        gravity = GMathVec3d(gravity_attr->get_double(0),
+                             gravity_attr->get_double(1),
+                             gravity_attr->get_double(2));
+    }
+
+    path.apply_noise(amplitude->get_double(),
+                     (frequency != 0) ? frequency->get_double() : 0.5,
+                     (octaves != 0) ? (unsigned int) octaves->get_long() : 2u,
+                     (roughness != 0) ? roughness->get_double() : 0.5,
+                     (seed != 0) ? (unsigned int) seed->get_long() : 0u,
+                     (fade != 0) ? fade->get_double() : 0.0,
+                     (bias != 0) ? bias->get_double() : 0.0,
+                     gravity);
+}
+
 // Construit la courbe depuis les attributs que tous les nodes de courbe
 // partagent : control_points, closed, steps, et le couple interpolation /
 // bend_radius quand il est present. Passer par ici garantit qu'un tube, un
@@ -680,9 +884,11 @@ build_from_object(OfObject& object, Path& path)
                                  gravity_attr->get_double(1),
                                  gravity_attr->get_double(2));
         }
-        return path.build_catenary(cv, closed,
-                                   (slack_attr != 0) ? slack_attr->get_double() : 0.05,
-                                   gravity, steps);
+        if (!path.build_catenary(cv, closed,
+                                 (slack_attr != 0) ? slack_attr->get_double() : 0.05,
+                                 gravity, steps)) return false;
+        apply_noise_from_object(object, path);
+        return true;
     }
 
     if (mode == 1) {
@@ -702,9 +908,14 @@ build_from_object(OfObject& object, Path& path)
                 radii.add((value < 0.0) ? fallback : value);
             }
         }
-        return path.build_beveled(cv, closed, radii, fallback, steps);
+        if (!path.build_beveled(cv, closed, radii, fallback, steps)) return false;
+        apply_noise_from_object(object, path);
+        return true;
     }
-    return path.build(cv, closed, steps);
+
+    if (!path.build(cv, closed, steps)) return false;
+    apply_noise_from_object(object, path);
+    return true;
 }
 
 } // namespace curve_core

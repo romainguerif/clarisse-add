@@ -73,8 +73,11 @@ protected:
         ModulePolymesh::module_constructor(object);
 
         static const char *const names[] = {
+            "noise_amplitude", "noise_frequency", "noise_octaves",
+            "noise_roughness", "noise_seed", "noise_fade", "noise_gravity_bias",
             "point", "bend", "closed", "steps", "radius", "radius_profile",
-            "sides", "cap", "strands", "twist", "interpolation", "bend_radius", "slack", "gravity", "trim_start", "trim_end"
+            "sides", "cap", "strands", "twist", "strand_gap", "strand_noise",
+            "strand_noise_frequency", "interpolation", "bend_radius", "slack", "gravity", "trim_start", "trim_end"
         };
         const unsigned int name_count = sizeof(names) / sizeof(names[0]);
 
@@ -162,12 +165,25 @@ private:
         // Un toron unique occupe tout le rayon ; a partir de deux, ils se
         // rangent sur un cercle et leur rayon propre est celui qui les fait
         // s'effleurer sans se penetrer.
+        const double strand_gap = object->get_attribute("strand_gap")->get_double();
+        const double strand_noise = object->get_attribute("strand_noise")->get_double();
+        const double strand_freq =
+            object->get_attribute("strand_noise_frequency")->get_double();
+
         double strand_radius = radius;
         double strand_offset = 0.0;
+        double strand_margin = 0.0;
         if (strands > 1u) {
             const double s = sin(M_PI / double(strands));
-            strand_radius = radius * s / (1.0 + s);
-            strand_offset = radius - strand_radius;
+            const double tight = radius * s / (1.0 + s);
+            strand_offset = radius - tight;
+            // Le jeu fait maigrir les torons sans deplacer leurs centres. La
+            // marge liberee est exactement ce dont chacun dispose pour onduler :
+            // si deux voisins viennent l'un vers l'autre de cette marge, ils
+            // s'effleurent sans se penetrer. La garantie est geometrique, il n'y
+            // a aucune detection de collision a faire.
+            strand_radius = tight * (1.0 - strand_gap);
+            strand_margin = tight * strand_gap;
         }
 
         const unsigned int quad_rings = closed ? rings : rings - 1u;
@@ -220,10 +236,30 @@ private:
             for (unsigned int strand = 0; strand < strands; strand++) {
                 const double phase = helix
                                    + 2.0 * M_PI * double(strand) / double(strands);
+                double along_n = cos(phase) * strand_offset * scale;
+                double along_b = sin(phase) * strand_offset * scale;
+
+                if (strands > 1u && strand_noise > 1e-9 && strand_margin > 1e-12) {
+                    // Un bruit par toron, decale par sa graine, evalue le long
+                    // de la courbe. On borne la NORME du deplacement et non
+                    // chaque composante : borner separement laisserait passer
+                    // un facteur racine de deux dans les diagonales, et c'est
+                    // justement la que deux torons voisins se rejoignent.
+                    const double u = arc_here * strand_freq;
+                    const double wn = perlin(u, 0.0, double(strand) * 13.7, 7717u);
+                    const double wb = perlin(u, 5.5, double(strand) * 13.7, 9973u);
+                    const double magnitude = sqrt(wn * wn + wb * wb);
+                    const double allowed = strand_margin * strand_noise * scale;
+                    const double factor = (magnitude > 1e-12)
+                                        ? allowed * ((magnitude > 1.0) ? 1.0 / magnitude : 1.0)
+                                        : 0.0;
+                    along_n += wn * factor;
+                    along_b += wb * factor;
+                }
+
                 const GMathVec3d axis =
                     (strands > 1u)
-                    ? vadd(centre, vadd(vscale(n, cos(phase) * strand_offset * scale),
-                                        vscale(b, sin(phase) * strand_offset * scale)))
+                    ? vadd(centre, vadd(vscale(n, along_n), vscale(b, along_b)))
                     : centre;
 
                 for (unsigned int s = 0; s < sides; s++) {
