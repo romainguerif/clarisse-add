@@ -76,7 +76,7 @@ protected:
             "noise_amplitude", "noise_frequency", "noise_octaves",
             "noise_roughness", "noise_seed", "noise_fade", "noise_gravity_bias",
             "points_geometry", "points_order", "point", "bend", "closed", "steps", "radius", "radius_profile",
-            "sides", "cap", "strands", "twist", "strand_gap", "strand_noise", "strand_spread",
+            "sides", "cap", "strands", "twist", "strand_gap", "strand_noise", "strand_sag", "strand_spread",
             "strand_spread_frequency", "wrap_radius", "wrap_turns",
             "wrap_variation", "wrap_variation_frequency", "wrap_sag", "wrap_seed",
             "strand_noise_frequency", "interpolation", "bend_radius", "slack", "gravity", "trim_start", "trim_end"
@@ -171,6 +171,7 @@ private:
             object->get_attribute("strand_spread")->get_double();
         const double strand_spread_freq =
             object->get_attribute("strand_spread_frequency")->get_double();
+        const double strand_sag = object->get_attribute("strand_sag")->get_double();
         const double strand_gap = object->get_attribute("strand_gap")->get_double();
         const double strand_noise = object->get_attribute("strand_noise")->get_double();
         const double strand_freq =
@@ -215,6 +216,14 @@ private:
 
         const double total = path.get_length();
 
+        const OfAttr *gravity_attr = object->get_attribute("gravity");
+        GMathVec3d down(0.0, -1.0, 0.0);
+        if (gravity_attr != 0) {
+            down = vnorm(GMathVec3d(gravity_attr->get_double(0),
+                                    gravity_attr->get_double(1),
+                                    gravity_attr->get_double(2)));
+        }
+
         // --- sommets -----------------------------------------------------
         for (unsigned int r = 0; r < rings; r++) {
             const double t = (rings > 1u) ? double(r) / double(rings - 1u) : 0.0;
@@ -257,6 +266,35 @@ private:
                 double along_n = cos(phase) * offset_here;
                 double along_b = sin(phase) * offset_here;
 
+                // L'affaissement propre au toron et son ondulation puisent
+                // dans le meme budget : la marge que le jeu a liberee. Les
+                // sommer avant de borner est ce qui garde la garantie de
+                // non-penetration vraie quels que soient les deux reglages --
+                // les borner separement laisserait leur somme la depasser.
+                double extra_n = 0.0;
+                double extra_b = 0.0;
+
+                if (strands > 1u && strand_sag > 1e-9) {
+                    // Nul aux deux bouts, maximal au milieu : un brin tenu a
+                    // ses extremites ne pend pas la ou on le tient.
+                    const double bell = (total > 1e-9)
+                                      ? sin(M_PI * (arc_here / total)) : 0.0;
+                    // Chaque toron a sa propre amplitude, mais toujours la
+                    // meme : le faisceau ne doit pas changer d'aspect entre
+                    // deux evaluations.
+                    const double share =
+                        0.5 + 0.5 * perlin(double(strand) * 7.3, 0.0, 0.0, 4241u);
+                    const double amount = strand_sag * bell * share;
+
+                    // La gravite projetee dans le plan de la section : c'est la
+                    // seule direction ou le toron peut tomber sans changer la
+                    // longueur du cable.
+                    const GMathVec3d flat =
+                        vnorm(vsub(down, vscale(tangent_at, vdot(down, tangent_at))));
+                    extra_n += amount * vdot(flat, n);
+                    extra_b += amount * vdot(flat, b);
+                }
+
                 if (strands > 1u && strand_noise > 1e-9 && strand_margin > 1e-12) {
                     // Un bruit par toron, decale par sa graine, evalue le long
                     // de la courbe. On borne la NORME du deplacement et non
@@ -269,11 +307,23 @@ private:
                     const double magnitude = sqrt(wn * wn + wb * wb);
                     const double allowed = strand_margin * strand_noise * scale;
                     const double factor = (magnitude > 1e-12)
-                                        ? allowed * ((magnitude > 1.0) ? 1.0 / magnitude : 1.0)
+                                        ? allowed / ((magnitude > 1.0) ? magnitude : 1.0)
                                         : 0.0;
-                    along_n += wn * factor;
-                    along_b += wb * factor;
+                    extra_n += wn * factor;
+                    extra_b += wb * factor;
                 }
+
+                if (strands > 1u && strand_margin > 1e-12) {
+                    const double magnitude = sqrt(extra_n * extra_n
+                                                  + extra_b * extra_b);
+                    if (magnitude > strand_margin * scale) {
+                        const double clamp = strand_margin * scale / magnitude;
+                        extra_n *= clamp;
+                        extra_b *= clamp;
+                    }
+                }
+                along_n += extra_n;
+                along_b += extra_b;
 
                 const GMathVec3d axis =
                     (strands > 1u)

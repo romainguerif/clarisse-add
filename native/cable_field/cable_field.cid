@@ -1,0 +1,154 @@
+class "GeometryCableField" "GeometryPolymesh" {
+    #version 0.1
+    category "/Geometry/Polymesh"
+    doc "Tend des cables en masse entre deux nuages de points. Un cable par paire, chacun avec son mou et son bruit propres. C'est la voie pour remplir un volume de faisceaux ou de fibres sans poser un seul locator."
+
+    attribute_group "points" {
+        doc "D'ou partent et ou arrivent les cables."
+
+        reference "points_start" {
+            filter "Geometry"
+            input "motion" "geometry" "motion_blur"
+            output "geometry"
+            doc "La geometrie dont les points servent de departs. N'importe quoi qui porte des points : un nuage disperse sur une surface, un Scatterer, les sommets d'un maillage."
+        }
+
+        reference "points_end" {
+            filter "Geometry"
+            input "motion" "geometry" "motion_blur"
+            output "geometry"
+            doc "La geometrie dont les points servent d'arrivees. Laissee vide, les cables relient les points du premier nuage entre eux."
+        }
+
+        long "pairing" {
+            output "geometry"
+            doc "Comment apparier les deux nuages. Par indice relie le premier au premier ; par proximite cherche pour chaque depart l'arrivee la plus proche, ce qui donne des cables courts et lisibles ; au hasard croise tout, ce qui donne l'enchevetrement."
+            preset "Par indice" "0"
+            preset "Par proximite" "1"
+            preset "Au hasard" "2"
+            value 0
+        }
+
+        long "count" {
+            output "geometry"
+            doc "Nombre de cables. Zero les prend tous."
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 500
+            value 0
+        }
+
+        long "seed" {
+            output "geometry"
+            doc "Change l'appariement au hasard et toutes les variations, sans changer leur caractere."
+            numeric_range yes 0.0 1000000
+            value 0
+        }
+    }
+
+    attribute_group "cable" {
+        doc "La forme de chaque cable."
+
+        distance "radius" {
+            output "geometry"
+            doc "Rayon des cables."
+            animatable yes
+            numeric_range yes 1e-06 1000000
+            ui_range yes 0.001 0.5
+            value 0.02
+        }
+
+        percentage "radius_variation" {
+            output "geometry"
+            doc "De combien le rayon varie d'un cable a l'autre. Des cables tous identiques se voient immediatement."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 0.3
+        }
+
+        long "sides" {
+            output "geometry"
+            doc "Nombre de cotes de la section. A cette echelle, six suffisent souvent."
+            numeric_range yes 3 64
+            ui_range yes 3 16
+            value 6
+        }
+
+        long "steps" {
+            output "geometry"
+            doc "Nombre de segments le long de chaque cable."
+            numeric_range yes 2 1000
+            ui_range yes 4 64
+            value 16
+        }
+    }
+
+    attribute_group "shape" {
+        doc "Ce qui fait qu'un cable pend et ondule plutot que d'aller droit."
+
+        percentage "slack" {
+            output "geometry"
+            doc "Mou, en fraction de la distance entre les deux points d'accroche. Chaque cable resout sa propre chainette."
+            animatable yes
+            numeric_range yes 0.0 10
+            ui_range yes 0.0 0.6
+            value 0.08
+        }
+
+        percentage "slack_variation" {
+            output "geometry"
+            doc "De combien le mou varie d'un cable a l'autre."
+            animatable yes
+            numeric_range yes 0.0 1
+            value 0.5
+        }
+
+        double[3] "gravity" {
+            output "geometry"
+            doc "Direction vers laquelle les cables pendent."
+            animatable yes
+            value 0.0 -1 0.0
+        }
+
+        distance "noise_amplitude" {
+            output "geometry"
+            doc "Ondulation de chaque cable, prise perpendiculairement a son trajet."
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 0.5
+            value 0.0
+        }
+
+        double "noise_frequency" {
+            output "geometry"
+            doc "Nombre d'ondulations par unite de longueur monde."
+            animatable yes
+            numeric_range yes 1e-05 1000
+            ui_range yes 0.05 5
+            value 0.5
+        }
+
+        long "noise_octaves" {
+            output "geometry"
+            doc "Nombre de couches de bruit."
+            numeric_range yes 1 8
+            ui_range yes 1 4
+            value 2
+        }
+
+        percentage "noise_roughness" {
+            output "geometry"
+            doc "Force de chaque couche par rapport a la precedente."
+            numeric_range yes 0.0 1
+            value 0.5
+        }
+
+        distance "noise_fade" {
+            output "geometry"
+            doc "Longueur sur laquelle l'ondulation s'eteint aux deux bouts de chaque cable."
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 1
+            value 0.2
+        }
+    }
+}

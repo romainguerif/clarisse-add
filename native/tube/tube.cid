@@ -281,6 +281,15 @@ class "GeometryTube" "GeometryPolymesh" {
             value 0.4
         }
 
+        distance "strand_sag" {
+            output "geometry"
+            doc "De combien chaque toron pend, independamment de ses voisins. Dans un faisceau reel les brins ne sont jamais tendus pareil : c'est ce qui empeche un faisceau de ressembler a un cable unique strie. L'affaissement est nul aux extremites et maximal au milieu, comme un brin tenu a ses deux bouts."
+            animatable yes
+            numeric_range yes 0.0 1000000
+            ui_range yes 0.0 0.5
+            value 0.0
+        }
+
         percentage "strand_noise" {
             output "geometry"
             doc "Ondulation propre a chaque toron, en fraction du jeu disponible. A 1 les torons s'effleurent au plus serre mais ne se penetrent jamais : la borne est geometrique, pas une detection de collision."
