@@ -1,0 +1,42 @@
+class "ToolFaceSelect" "Tool" {
+    #version 0.1
+    category "Create"
+    ui_weight 47
+    doc "Designe des faces dans la vue, a la souris, comme dans n'importe quel logiciel de modelisation. Clic pour ajouter, Ctrl pour retirer, glisser pour peindre. Les indices vont dans la table d'un node GeometrySelect, qui en fait un shading group -- donc tout ce qui sait lire un shading group sait lire cette selection.\n\nL'outil est dans la barre d'outils et non dans un node, parce qu'un outil enferme dans un node ne sert que ce node : celui-ci ecrit dans celui qu'on lui designe, quel qu'il soit."
+
+    attribute_group "selection" {
+        reference "target" {
+            filter "SceneItem"
+            doc "Le node GeometrySelect a remplir. Laisse vide, l'outil prend l'objet selectionne dans la scene s'il en est un."
+        }
+
+        long "mode" {
+            doc "Ce que fait un clic simple. Ctrl inverse toujours vers Retirer, quel que soit ce reglage -- c'est le raccourci qu'on a dans les doigts."
+            preset "Ajouter" "0"
+            preset "Retirer" "1"
+            value 0
+        }
+
+        bool "paint" {
+            doc "Continuer a designer tant qu'on garde le bouton enfonce. Pratique pour une bande de faces, penible pour une face isolee."
+            value yes
+        }
+
+        bool "backfaces" {
+            doc "Autoriser la selection des faces qui tournent le dos a la vue. Eteint, on ne prend que ce qu'on voit -- ce qui est presque toujours ce qu'on veut."
+            value no
+        }
+    }
+
+    attribute_group "display" {
+        bool "show_selection" {
+            doc "Surligner les faces deja choisies. C'est le seul retour visuel de l'outil : sans lui on selectionne a l'aveugle jusqu'au prochain calcul de la geometrie."
+            value yes
+        }
+
+        double[3] "highlight_color" {
+            doc "Couleur du surlignage."
+            value 1 0.55 0.1
+        }
+    }
+}
