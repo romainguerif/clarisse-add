@@ -1,0 +1,80 @@
+class "GeometryMirror" "GeometryPolymesh" {
+    #version 0.1
+    category "/Geometry/Polymesh"
+    doc "Miroir de geometrie : reflechit une maille autour d'un plan, soude les cotes qui se touchent, peut couper au plan. L'equivalent, chez nous, du Mirror Modifier de 3ds Max plus le Modifier de Blender — le weld des sommets coïncidents est le truc qu'aucun des deux ne fait chez nous, et c'est exactement ce qu'on a ajoute. Le plan est dans l'espace monde : on peut le fixer avec centre et norme, ou le piloter avec un locator, et le manipulateur de viewport fait le travail."
+
+    attribute_group "source" {
+        doc "La geometrie source, en entree."
+
+        reference "geometry" {
+            filter "Geometry"
+            input "motion" "geometry" "motion_blur"
+            output "geometry"
+            doc "La maille a mirroir. N'importe quoi qui produit une polymesh : un de nos nodes (toile, tube, nappes), un import, un cube natif. C'est l'equivalent de l'input du mirror modifier des modifier."
+        }
+    }
+
+    attribute_group "plan" {
+        doc "Le plan de miroir. Deux facons : donner centre et norme, ou pointer un locator qui les porte."
+
+        bool "use_locator" {
+            output "geometry"
+            doc "Quand c'est actif, le centre et la norme sont lus depuis le locator au lieu d'etre fixes. Le locator est l'outil de placement : on le deplace, on le fait pivoter, et le miroir suit. C'est exactement le pattern que l'on utilise dans le node SDF."
+            value no
+        }
+
+        reference "locator" {
+            filter "SceneItem"
+            output "geometry"
+            doc "Le locator qui porte le plan. Sa position est le centre, son axe Y pointant donne la normale. On le met ou on veut et on le fait tourner : c'est le manipulateur habituel qui fait le travail, et on a besoin de rien d'autre."
+            value 0
+        }
+
+        double[3] "center" {
+            output "geometry"
+            doc "Centre du plan, dans l'espace monde. Ignore quand use_locator est actif."
+            animatable yes
+            value 0.0 0.0 0.0
+        }
+
+        double[3] "normal" {
+            output "geometry"
+            doc "Normale du plan, dans l'espace monde. Elle normalise d'elle-meme (pas besoin qu'elle soit de longueur 1) et ne peut etre nulle. Ignore quand use_locator est actif."
+            animatable yes
+            value 0.0 0.0 1.0
+        }
+    }
+
+    attribute_group "mirror" {
+        doc "Ce qu'on fait a la copie, en partant de la reflection elle-meme."
+
+        distance "offset" {
+            output "geometry"
+            doc "Decale la copie le long de la normale du plan. Positif = la copie est poussee du cote du centre vers la normale, negatif = dans l'autre sens. C'est le Mirror Center de 3ds Max : pour faire un double-panneau avec une entaile entre les deux. Si non zero, le weld ne peut pas fermer le trait — c'est attendu."
+            animatable yes
+            numeric_range yes -1000000 1000000
+            ui_range yes -2 2
+            value 0.0
+        }
+
+        bool "clamp" {
+            output "geometry"
+            doc "Coupe la geometrie au plan et ne garde que le cote pointe par la normale. L'equivalent du clipping de Blender : au lieu d'avoir la geometrie + son miroir qui se chevauchent, on a une seule moitie propre, puis le mirror la complete. C'est la voie propre quand l'entree de depart est deja symetrique."
+            value no
+        }
+
+        bool "weld" {
+            output "geometry"
+            doc "Soude les sommets des deux moities qui tombent au meme endroit. C'est le Mirror + Merge Vertices de 3ds Max et le weld de Blender, que Clarisse n'a pas en natif. Le resultats est un seul maillage symetrique traversant, pas deux copies superposees."
+            value no
+        }
+
+        distance "weld_threshold" {
+            output "geometry"
+            doc "Tolerance de soudure. A zero, on ne soude que les sommets qui tombent exactement au meme endroit au bit flottant pres. En positif, on agrandit le domaine : c'est ce qui permet de souder deux cotes qui sont a un pixel l'un de l'autre sans les coller a la main."
+            numeric_range yes 0.0 10
+            ui_range yes 0.0 0.01
+            value 0.0
+        }
+    }
+}
