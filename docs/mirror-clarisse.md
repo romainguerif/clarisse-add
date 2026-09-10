@@ -64,20 +64,23 @@ Un seul module C++ (`GeometryMirrorModule`, dérivé de `ModulePolymesh`) :
 
 ## 📋 Étapes
 
+> **Statut réel du code (2026-09-10)** : `mirror.cpp` implémente les étapes 1 et 2
+> (skeleton + `read_source()`), `build_mesh()` retourne la source telle quelle.
+> Les étapes 3 à 6 ne sont **pas** codées. Le dossier `native/mirror/` est encore
+> non suivi par git (`?? native/mirror/`). La node de test `qwen_test` (même
+> pattern, cube 1 m) est validée de bout en bout : build → deploy → rendu OK.
+
 1. **Échafaudage module** — skeleton `GeometryMirrorModule` (classe, helpers
    `read_*`, `set_resource_attrs`, `create_resource` délégué, footer
    `IX_MODULE_CLBK`). **Fait** : `python build.py mirror` compile.
 2. **Lecture source** — `read_source()` sur le polymesh d'entrée en espace
    monde. **Fait** : compile, retourne 0 si géométrie vide.
 3. **Miroir** — réflexion + offset des sommets, assemblage source + copie.
-   **Fait** : compile, testé dans Clarisse (cube sur le plan → cube double).
-4. **Clamp** — clipping demi-plan par polygone. **Fait** : compile, cube
-   coupé → moitié exacte, pas de trou ni de dérive.
+   **À coder**.
+4. **Clamp** — clipping demi-plan par polygone. **À coder**.
 5. **Weld** — union-find sur clés quantisées (grille = `weld_threshold`).
-   **Fait** : compile, maillage unique traversant (sélection : un seul
-   sommet au centre de la jointure).
-6. **UI wiring** — branchement des 8 attributs. **Fait** : chaque attribut
-   déplace la géométrie dans Clarisse.
+   **À coder**.
+6. **UI wiring** — branchement des 8 attributs. **À coder**.
 7. **Docs + git** — ce fichier + index à jour, commit, push.
 
 ## ✅ Critères de validation
