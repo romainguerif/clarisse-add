@@ -1,0 +1,17 @@
+class "QwenTest" "GeometryPolymesh" {
+    #version 0.1
+    category "/Geometry/Polymesh"
+    doc "Node de test : produit un cube de 1m a l'origine. Sert a verifier que la chaine de build (cmagen, cl, link) et le chargement du module dans Clarisse fonctionnent."
+
+    attribute_group "options" {
+        doc "Taille du cube."
+        double "size" {
+            output "geometry"
+            doc "Cote du cube, centre sur l'origine."
+            animatable yes
+            numeric_range yes 0.0 100
+            ui_range yes 0.1 2
+            value 1.0
+        }
+    }
+}
